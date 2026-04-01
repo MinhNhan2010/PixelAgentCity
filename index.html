@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Pixel AI Agent Manager - Quản lý AI Agent trong văn phòng pixel art tương tác">
+    <title>🎮 Pixel AI Agent Manager</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Scanline overlay for retro effect -->
+    <div class="scanlines"></div>
+    
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <div class="logo-icon">
+                <canvas id="logoCanvas" width="32" height="32"></canvas>
+            </div>
+            <h1 class="logo-text">PIXEL<span class="logo-highlight">AGENTS</span></h1>
+            <div class="version-badge">v3.0</div>
+        </div>
+        <div class="header-center">
+            <div class="status-bar">
+                <div class="status-item">
+                    <span class="status-dot active"></span>
+                    <span class="status-label">Agents Online:</span>
+                    <span class="status-value" id="agentsOnline">0</span>
+                </div>
+                <div class="status-divider"></div>
+                <div class="status-item">
+                    <span class="status-dot warning"></span>
+                    <span class="status-label">Tasks:</span>
+                    <span class="status-value" id="activeTasks">0</span>
+                </div>
+                <div class="status-divider"></div>
+                <div class="status-item">
+                    <span class="status-dot info"></span>
+                    <span class="status-label">CPU:</span>
+                    <span class="status-value" id="cpuUsage">0%</span>
+                </div>
+            </div>
+        </div>
+        <div class="header-right">
+            <button class="btn-pixel" id="btnAddAgent" title="Thêm Agent mới">
+                <span>+ AGENT</span>
+            </button>
+            <button class="btn-pixel btn-secondary" id="btnSettings" title="Cài đặt">
+                <span>⚙️</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Left Panel - Office View -->
+        <section class="office-panel">
+            <div class="panel-header">
+                <h2>🏢 Văn Phòng AI</h2>
+                <div class="panel-controls">
+                    <button class="icon-btn" id="btnZoomIn" title="Phóng to">+</button>
+                    <button class="icon-btn" id="btnZoomOut" title="Thu nhỏ">-</button>
+                    <button class="icon-btn" id="btnFullscreen" title="Toàn màn hình">⛶</button>
+                </div>
+            </div>
+            <div class="office-viewport" id="officeViewport">
+                <canvas id="officeCanvas"></canvas>
+                <!-- Agent speech bubbles rendered here -->
+                <div class="speech-bubbles" id="speechBubbles"></div>
+            </div>
+            <!-- Mini-map -->
+            <div class="minimap" id="minimap">
+                <canvas id="minimapCanvas" width="150" height="100"></canvas>
+            </div>
+            <!-- Bottom Toolbar -->
+            <div class="office-toolbar">
+                <div class="toolbar-group">
+                    <button class="toolbar-btn" data-tool="floor" title="Đặt sàn">Floor</button>
+                    <button class="toolbar-btn" data-tool="wall" title="Đặt tường">Wall</button>
+                    <button class="toolbar-btn" data-tool="erase" title="Xóa">Erase</button>
+                    <button class="toolbar-btn" data-tool="furniture" title="Đặt nội thất">Furniture</button>
+                </div>
+                <div class="toolbar-group">
+                    <button class="toolbar-btn toolbar-primary" id="btnAddAgentToolbar" title="Thêm Agent">+ Agent</button>
+                    <button class="toolbar-btn toolbar-accent" data-tool="layout" title="Bố cục">Layout</button>
+                    <button class="toolbar-btn" data-tool="settings" title="Cài đặt">Settings</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Panel - Agent Management -->
+        <section class="management-panel">
+            <!-- Tab Navigation -->
+            <div class="tab-nav">
+                <button class="tab-btn active" data-tab="agents">
+                    <span class="tab-icon">👾</span> Agents
+                </button>
+                <button class="tab-btn" data-tab="tasks">
+                    <span class="tab-icon">📋</span> Tasks
+                </button>
+                <button class="tab-btn" data-tab="logs">
+                    <span class="tab-icon">📝</span> Logs
+                </button>
+                <button class="tab-btn" data-tab="stats">
+                    <span class="tab-icon">📊</span> Stats
+                </button>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="tab-content">
+                <!-- Agents Tab -->
+                <div class="tab-pane active" id="tab-agents">
+                    <div class="agent-list" id="agentList">
+                        <!-- Agent cards rendered by JS -->
+                    </div>
+                </div>
+
+                <!-- Tasks Tab -->
+                <div class="tab-pane" id="tab-tasks">
+                    <div class="task-header">
+                        <h3>Quản Lý Công Việc</h3>
+                        <button class="btn-pixel btn-small" id="btnAddTask">+ Task</button>
+                    </div>
+                    <div class="task-list" id="taskList">
+                        <!-- Task items rendered by JS -->
+                    </div>
+                </div>
+
+                <!-- Logs Tab -->
+                <div class="tab-pane" id="tab-logs">
+                    <div class="log-header">
+                        <h3>Activity Logs</h3>
+                        <button class="btn-pixel btn-small" id="btnClearLogs">Clear</button>
+                    </div>
+                    <div class="log-console" id="logConsole">
+                        <!-- Log entries rendered by JS -->
+                    </div>
+                </div>
+
+                <!-- Stats Tab -->
+                <div class="tab-pane" id="tab-stats">
+                    <div class="stats-grid" id="statsGrid">
+                        <!-- Stats cards rendered by JS -->
+                    </div>
+                    <div class="chart-container">
+                        <h3>Hiệu Suất Agent</h3>
+                        <canvas id="performanceChart" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Bottom Status Bar -->
+    <footer class="footer-bar">
+        <div class="footer-left">
+            <span class="pixel-clock" id="pixelClock">00:00:00</span>
+            <span class="footer-divider">|</span>
+            <span class="footer-text">🎮 Pixel AI Agent Manager</span>
+        </div>
+        <div class="footer-right">
+            <span class="footer-text" id="memoryUsage">Memory: 0 MB</span>
+            <span class="footer-divider">|</span>
+            <span class="footer-text">Uptime: <span id="uptime">00:00:00</span></span>
+        </div>
+    </footer>
+
+    <!-- Modal: Add Agent -->
+    <div class="modal-overlay" id="modalAddAgent">
+        <div class="modal pixel-border">
+            <div class="modal-header">
+                <h2>🤖 Thêm Agent Mới</h2>
+                <button class="modal-close" id="closeAddAgent">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="pixel-label">Tên Agent</label>
+                    <input type="text" class="pixel-input" id="agentName" placeholder="PixelBot-001">
+                </div>
+                <div class="form-group">
+                    <label class="pixel-label">Vai Trò</label>
+                    <select class="pixel-select" id="agentRole">
+                        <option value="coder">💻 Coder</option>
+                        <option value="reviewer">🔍 Reviewer</option>
+                        <option value="tester">🧪 Tester</option>
+                        <option value="designer">🎨 Designer</option>
+                        <option value="devops">🚀 DevOps</option>
+                        <option value="researcher">📚 Researcher</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="pixel-label">Model AI</label>
+                    <select class="pixel-select" id="agentModel">
+                        <option value="claude-opus">Claude Opus 4</option>
+                        <option value="claude-sonnet">Claude Sonnet 4</option>
+                        <option value="gemini-pro">Gemini 2.5 Pro</option>
+                        <option value="gpt-4">GPT-4o</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="pixel-label">Màu Sắc</label>
+                    <div class="color-picker" id="colorPicker">
+                        <div class="color-option selected" data-color="#4ecdc4" style="background:#4ecdc4"></div>
+                        <div class="color-option" data-color="#ff6b6b" style="background:#ff6b6b"></div>
+                        <div class="color-option" data-color="#ffd93d" style="background:#ffd93d"></div>
+                        <div class="color-option" data-color="#6c5ce7" style="background:#6c5ce7"></div>
+                        <div class="color-option" data-color="#a8e6cf" style="background:#a8e6cf"></div>
+                        <div class="color-option" data-color="#ff8a5c" style="background:#ff8a5c"></div>
+                        <div class="color-option" data-color="#ea8685" style="background:#ea8685"></div>
+                        <div class="color-option" data-color="#78e08f" style="background:#78e08f"></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="pixel-label">Thư Mục Làm Việc</label>
+                    <input type="text" class="pixel-input" id="agentWorkDir" placeholder="/projects/my-app">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-pixel btn-secondary" id="cancelAddAgent">Hủy</button>
+                <button class="btn-pixel" id="confirmAddAgent">✨ Tạo Agent</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Add Task -->
+    <div class="modal-overlay" id="modalAddTask">
+        <div class="modal pixel-border">
+            <div class="modal-header">
+                <h2>📋 Thêm Công Việc</h2>
+                <button class="modal-close" id="closeAddTask">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="pixel-label">Tiêu Đề</label>
+                    <input type="text" class="pixel-input" id="taskTitle" placeholder="Implement feature X">
+                </div>
+                <div class="form-group">
+                    <label class="pixel-label">Mô Tả</label>
+                    <textarea class="pixel-input pixel-textarea" id="taskDesc" placeholder="Chi tiết công việc..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="pixel-label">Độ Ưu Tiên</label>
+                    <select class="pixel-select" id="taskPriority">
+                        <option value="low">🟢 Thấp</option>
+                        <option value="medium" selected>🟡 Trung Bình</option>
+                        <option value="high">🟠 Cao</option>
+                        <option value="critical">🔴 Khẩn Cấp</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="pixel-label">Giao Cho Agent</label>
+                    <select class="pixel-select" id="taskAssignee">
+                        <option value="">-- Chọn Agent --</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-pixel btn-secondary" id="cancelAddTask">Hủy</button>
+                <button class="btn-pixel" id="confirmAddTask">✅ Tạo Task</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="pixel-engine.js"></script>
+    <script src="agents.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
