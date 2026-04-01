@@ -1,10 +1,21 @@
 /**
- * Pixel AI Agent Manager v2 - Enhanced UI Controller
+ * Pixel AI Agent Manager v3 - Enhanced UI Controller
  */
 
 document.addEventListener('DOMContentLoaded', () => {
     const engine = new PixelEngine('officeCanvas', 'minimapCanvas');
     const manager = new AgentManager();
+    const layoutEditor = new LayoutEditor(engine);
+
+    // Hook ghost preview into engine render
+    const origRender = engine.render.bind(engine);
+    engine.render = function() {
+        origRender();
+    };
+    // Add ghost drawing after main render via post-render hook
+    engine._postRender = () => {
+        layoutEditor.drawGhost(engine.ctx, engine.scale, engine.camera);
+    };
 
     const DOM = {
         agentsOnline: document.getElementById('agentsOnline'),
@@ -124,8 +135,8 @@ document.addEventListener('DOMContentLoaded', () => {
             DOM.agentList.innerHTML = `<div style="text-align:center;padding:40px 20px"><div style="font-size:48px;margin-bottom:16px">🤖</div><div style="font-family:'Press Start 2P';font-size:9px;color:var(--text-muted);margin-bottom:12px">Chưa có Agent nào</div><div style="font-size:12px;color:var(--text-muted);line-height:1.8">Nhấn <span style="color:var(--accent-primary)">+ AGENT</span> để thêm</div></div>`;
             return;
         }
-        const roleEmojis = {coder:'💻',reviewer:'🔍',tester:'🧪',designer:'🎨',devops:'🚀',researcher:'📚'};
-        const roleNames = {coder:'Coder',reviewer:'Reviewer',tester:'Tester',designer:'Designer',devops:'DevOps',researcher:'Researcher'};
+        const roleEmojis = {coder:'💻',reviewer:'🔍',tester:'🧪',designer:'🎨',devops:'🚀',researcher:'📚',analyst:'📊',security:'🛡️',backend:'⚙️',mobile:'📱',writer:'✍️'};
+        const roleNames = {coder:'Coder',reviewer:'Reviewer',tester:'Tester',designer:'Designer',devops:'DevOps',researcher:'Researcher',analyst:'Analyst',security:'Security',backend:'Backend',mobile:'Mobile',writer:'Writer'};
         const stars = n => '⭐'.repeat(n);
         const moodIcon = m => m>=80?'😊':m>=60?'😐':m>=40?'😟':'😡';
         const energyBar = e => {
@@ -332,6 +343,12 @@ document.addEventListener('DOMContentLoaded', () => {
             {name:'GeminiDev-002',role:'reviewer',model:'gemini-pro',color:'#6c5ce7',workDir:'/projects/backend'},
             {name:'TestRunner-003',role:'tester',model:'claude-sonnet',color:'#78e08f',workDir:'/projects/tests'},
             {name:'DesignPix-004',role:'designer',model:'gpt-4',color:'#ff6b6b',workDir:'/projects/ui'},
+            {name:'DevOps-005',role:'devops',model:'claude-haiku',color:'#ffa502',workDir:'/infra/pipelines'},
+            {name:'DataWiz-006',role:'analyst',model:'gemini-ultra',color:'#a29bfe',workDir:'/data/analytics'},
+            {name:'SecGuard-007',role:'security',model:'gpt-4-turbo',color:'#fd79a8',workDir:'/security/audit'},
+            {name:'APIForge-008',role:'backend',model:'claude-opus',color:'#00cec9',workDir:'/api/services'},
+            {name:'MobileX-009',role:'mobile',model:'gemini-pro',color:'#e17055',workDir:'/mobile/app'},
+            {name:'DocBot-010',role:'writer',model:'claude-sonnet',color:'#81ecec',workDir:'/docs/wiki'},
         ];
         defs.forEach((d,i)=>{
             setTimeout(()=>{
@@ -340,7 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 manager.addLog(a.name,'🎉 Đã tham gia văn phòng!','success');
                 setTimeout(()=>engine.showSpeechBubble(a.id,'Sẵn sàng! 🚀',3000),2500+i*400);
                 refreshUI();
-            },i*1000);
+            },i*800);
         });
         setTimeout(()=>{
             const tasks = [
@@ -348,16 +365,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 {title:'Review Auth Module',description:'Kiểm tra security',priority:'medium',assigneeId:'agent-2'},
                 {title:'Write Unit Tests',description:'Test API endpoints',priority:'medium',assigneeId:'agent-3'},
                 {title:'Design Dashboard UI',description:'Thiết kế giao diện dashboard',priority:'high',assigneeId:'agent-4'},
+                {title:'Deploy K8s Cluster',description:'Thiết lập Kubernetes production',priority:'critical',assigneeId:'agent-5'},
+                {title:'Build ML Pipeline',description:'Xây dựng data pipeline ETL',priority:'high',assigneeId:'agent-6'},
+                {title:'Penetration Testing',description:'Kiểm tra lỗ hổng bảo mật',priority:'critical',assigneeId:'agent-7'},
+                {title:'REST API v2',description:'Phát triển API endpoints mới',priority:'high',assigneeId:'agent-8'},
+                {title:'React Native App',description:'Xây dựng ứng dụng mobile',priority:'medium',assigneeId:'agent-9'},
+                {title:'API Documentation',description:'Viết tài liệu kỹ thuật API',priority:'low',assigneeId:'agent-10'},
                 {title:'Optimize Queries',description:'Cải thiện DB performance',priority:'high'},
                 {title:'Update API Docs',description:'Cập nhật swagger docs',priority:'low'},
                 {title:'Security Audit',description:'Kiểm tra bảo mật toàn hệ thống',priority:'critical'},
+                {title:'Load Testing',description:'Kiểm tra hiệu năng hệ thống',priority:'medium'},
+                {title:'Docker Compose Setup',description:'Cấu hình môi trường dev',priority:'medium'},
             ];
             tasks.forEach((t,i)=>setTimeout(()=>{
                 manager.createTask(t);
                 if(t.assigneeId)engine.updateAgentStatus(t.assigneeId,'working');
                 refreshUI();
-            },i*250));
-        },4500);
+            },i*200));
+        },9000);
     }
 
     // Background particles
@@ -374,19 +399,40 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btnZoomOut').addEventListener('click',()=>{engine.scale=Math.max(1,engine.scale-0.5);});
     document.getElementById('btnFullscreen').addEventListener('click',()=>{document.getElementById('officeViewport').requestFullscreen?.();});
 
-    // Toolbar buttons
+    // Toolbar buttons — connect to Layout Editor
     document.querySelectorAll('.toolbar-btn[data-tool]').forEach(btn => {
         btn.addEventListener('click', () => {
             const tool = btn.dataset.tool;
-            // Toggle active state
             const wasActive = btn.classList.contains('active');
             document.querySelectorAll('.toolbar-btn[data-tool]').forEach(b => b.classList.remove('active'));
-            if (!wasActive) {
-                btn.classList.add('active');
-                engine.editMode = tool;
-                showToast(`🔧 Chế độ: ${tool.charAt(0).toUpperCase()+tool.slice(1)}`, 'info');
-            } else {
-                engine.editMode = null;
+
+            if (tool === 'layout' || tool === 'floor' || tool === 'wall' || tool === 'erase' || tool === 'furniture') {
+                // Open layout editor
+                if (!wasActive) {
+                    btn.classList.add('active');
+                    layoutEditor.toggle(true);
+                    if (tool === 'floor') {
+                        layoutEditor.currentTool = 'floor';
+                        layoutEditor.panel.querySelector('[data-floor="wood"]')?.click();
+                    } else if (tool === 'erase') {
+                        layoutEditor.currentTool = 'erase';
+                        layoutEditor.panel.querySelector('[data-letool="erase"]')?.click();
+                    } else if (tool === 'furniture') {
+                        layoutEditor.currentTool = 'furniture';
+                        layoutEditor.panel.querySelector('[data-letool="furniture"]')?.click();
+                    } else if (tool === 'layout') {
+                        layoutEditor.currentTool = 'select';
+                        layoutEditor.panel.querySelector('[data-letool="select"]')?.click();
+                    }
+                    showToast(`🏗️ Layout Editor mở`, 'info');
+                } else {
+                    layoutEditor.toggle(false);
+                }
+            } else if (tool === 'settings') {
+                if (!wasActive) {
+                    btn.classList.add('active');
+                    showToast('⚙️ Cài đặt (sắp ra mắt)', 'info');
+                }
             }
         });
     });

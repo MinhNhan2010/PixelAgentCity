@@ -96,13 +96,23 @@ class PixelEngine {
         f.push({ t: 'counter', x: 25 * T, y: 1.3 * T, w: 4 });
         f.push({ t: 'fridge', x: 28 * T, y: 1.3 * T });
         f.push({ t: 'plant', x: 17.3 * T, y: 5 * T }, { t: 'plant', x: 29 * T, y: 9 * T });
-        // Lounge: sofa, bookshelf, painting, desk, rug
+        // Lounge: sofa, bookshelf, painting, desks, rug
         f.push({ t: 'sofa', x: 24 * T, y: 17 * T });
         f.push({ t: 'bookshelf', x: 28 * T, y: 13.3 * T });
         f.push({ t: 'painting', x: 20 * T, y: 13.2 * T });
         f.push({ t: 'plant', x: 17.3 * T, y: 20 * T }, { t: 'plant', x: 29 * T, y: 20 * T });
-        f.push({ t: 'desk', x: 18 * T, y: 18 * T, slotIdx: this.deskSlots.length });
-        this.deskSlots.push({ tx: 18, ty: 18, x: 18.5 * this.T, y: 18.5 * this.T, occupied: false, agentId: null });
+        // Lounge desks (3)
+        const loungeDesks = [[18, 18], [22, 18], [18, 15]];
+        loungeDesks.forEach(([dx, dy]) => {
+            f.push({ t: 'desk', x: dx * T, y: dy * T, slotIdx: this.deskSlots.length });
+            this.deskSlots.push({ tx: dx, ty: dy, x: (dx + 0.5) * T, y: (dy + 0.5) * T, occupied: false, agentId: null });
+        });
+        // Kitchen desks (2)
+        const kitchenDesks = [[24, 6], [27, 6]];
+        kitchenDesks.forEach(([dx, dy]) => {
+            f.push({ t: 'desk', x: dx * T, y: dy * T, slotIdx: this.deskSlots.length });
+            this.deskSlots.push({ tx: dx, ty: dy, x: (dx + 0.5) * T, y: (dy + 0.5) * T, occupied: false, agentId: null });
+        });
     }
 
     // === DRAWING HELPERS ===
@@ -162,12 +172,27 @@ class PixelEngine {
             case 'bookshelf': this.drawBookshelf(x, y); break;
             case 'plant': this.drawPlant(x, y); break;
             case 'mtable': this.drawMtable(x, y); break;
-            case 'mchair': this.drawMchair(x, y, f.dir); break;
+            case 'mchair': case 'chair': this.drawMchair(x, y, f.dir); break;
             case 'painting': this.drawPainting(x, y); break;
             case 'sofa': this.drawSofa(x, y); break;
             case 'vending': this.drawVending(x, y); break;
             case 'coffee': this.drawCoffee(x, y); break;
             case 'clock': this.drawClock(x, y); break;
+            case 'table_small': this.drawTableSmall(x, y); break;
+            case 'table_low': this.drawTableLow(x, y); break;
+            case 'armchair': this.drawArmchair(x, y); break;
+            case 'bed_single': this.drawBedSingle(x, y); break;
+            case 'bed_double': this.drawBedDouble(x, y); break;
+            case 'rug': this.drawRug(x, y); break;
+            case 'pillow': this.drawPillow(x, y); break;
+            case 'cabinet': this.drawCabinet(x, y); break;
+            case 'shelf': this.drawShelf(x, y); break;
+            case 'boxes': this.drawBoxes(x, y); break;
+            case 'fridge': this.drawFridge(x, y); break;
+            case 'counter': this.drawCounter(x, y); break;
+            case 'cactus': this.drawCactus(x, y); break;
+            case 'lamp': this.drawLamp(x, y); break;
+            case 'pictureframe': this.drawPictureFrame(x, y); break;
             case 'counter': this.drawCounter(x, y, f.w || 3); break;
             case 'fridge': this.drawFridge(x, y); break;
             case 'boxes': this.drawBoxes(x, y); break;
@@ -289,6 +314,126 @@ class PixelEngine {
         if (Math.sin(this.time * 0.06) > 0) this.px(x + 4, y - 2, 1, 3, 'rgba(200,200,200,0.3)');
         this.px(x + T * 0.5, y + T, 5, 5, '#f0f0f0');
         this.px(x + T * 0.35, y + T, 3, 1, '#8b6914');
+    }
+
+    drawTableSmall(x, y) {
+        const T = this.T;
+        this.px(x+2, y+T*1.2, 2, T*0.3, '#5c3d2e');
+        this.px(x+T*1.5-4, y+T*1.2, 2, T*0.3, '#5c3d2e');
+        this.px(x, y, T*1.5, T*1.2, '#6b4f3a');
+        this.px(x+1, y+1, T*1.5-2, T*1.2-2, '#7d5e47');
+        this.px(x, y, T*1.5, 2, '#9b7a56');
+    }
+
+    drawTableLow(x, y) {
+        const T = this.T;
+        this.px(x, y+T*1.2, 2, 2, '#5c3d2e');
+        this.px(x+T*2-2, y+T*1.2, 2, 2, '#5c3d2e');
+        this.px(x, y, T*2, T*1.2, '#cc8e60');
+        this.px(x+1, y+1, T*2-2, T*1.2-2, '#de9b6b');
+        this.px(x, y, T*2, 2, '#e8ab7d');
+    }
+
+    drawArmchair(x, y) {
+        const T = this.T;
+        this.px(x, y, T*1.5, T*1.5, '#f3a647');
+        this.px(x+2, y+2, T*1.5-4, T*1, '#fbc371');
+        this.px(x, y, 3, T*1.5, '#df8f32');
+        this.px(x+T*1.5-3, y, 3, T*1.5, '#df8f32');
+        this.px(x, y, T*1.5, 3, '#c97d26');
+        this.px(x+T*0.5, y+T*0.3, T*0.5, T*0.5, '#85c1e9');
+    }
+
+    drawBedSingle(x, y) {
+        const T = this.T;
+        this.px(x, y, T*2, 4, '#8c6838');
+        this.px(x, y+T*3-2, T*2, 2, '#8c6838');
+        this.px(x+2, y+4, T*2-4, T*0.8, '#fff');
+        this.px(x+2, y+T*1.1, T*2-4, T*1.8, '#85c1e9');
+    }
+
+    drawBedDouble(x, y) {
+        const T = this.T;
+        this.px(x, y, T*3, 4, '#8c6838');
+        this.px(x, y+T*3-2, T*3, 2, '#8c6838');
+        this.px(x+2, y+4, T*1.2, T*0.8, '#fff');
+        this.px(x+T*1.6, y+4, T*1.2, T*0.8, '#fff');
+        this.px(x+2, y+T*1.1, T*3-4, T*1.8, '#85c1e9');
+    }
+
+    drawRug(x, y) {
+        const T = this.T;
+        this.px(x, y, T*3, T*2, '#85c1e9');
+        this.px(x+2, y+2, T*3-4, T*2-4, '#aed6f1');
+    }
+
+    drawPillow(x, y) {
+        this.px(x, y, this.T*0.5, this.T*0.5, '#85c1e9');
+    }
+
+    drawCabinet(x, y) {
+        const T = this.T;
+        this.px(x, y, T*2, T*1.8, '#c38755');
+        this.px(x+1, y+1, T-2, T*1.8-2, '#d69762');
+        this.px(x+T+1, y+1, T-2, T*1.8-2, '#d69762');
+        this.px(x+T-4, y+T*0.8, 2, T*0.4, '#a36d40');
+        this.px(x+T+2, y+T*0.8, 2, T*0.4, '#a36d40');
+    }
+
+    drawShelf(x, y) {
+        this.px(x, y, this.T*2, this.T*0.8, '#a36d40');
+        this.px(x, y, this.T*2, 2, '#8c5931');
+    }
+
+    drawBoxes(x, y) {
+        const T = this.T;
+        this.px(x+2, y+T-6, T-4, 8, '#d69762');
+        this.px(x, y, T-2, T-4, '#c38755');
+        this.px(x+1, y+3, T-4, 1, '#a36d40');
+    }
+
+    drawFridge(x, y) {
+        const T = this.T;
+        this.px(x, y, T, T*2, '#d5dbdb');
+        this.px(x+1, y+1, T-2, T*0.6, '#ebedef');
+        this.px(x+1, y+T*0.6+2, T-2, T*1.4-3, '#ebedef');
+        this.px(x+T-4, y+T*0.3, 2, T*0.2, '#bdc3c7');
+        this.px(x+T-4, y+T, 2, T*0.4, '#bdc3c7');
+    }
+
+    drawCounter(x, y) {
+        const T = this.T;
+        this.px(x, y, T*3, T*1.5, '#ebedef');
+        this.px(x, y, T*3, T*0.4, '#bdc3c7');
+        this.px(x+T*0.5, y+2, T*0.8, T*0.3, '#7f8c8d');
+        this.px(x+T*2, y+T*0.5, T-2, T-2, '#d5dbdb');
+    }
+
+    drawCactus(x, y) {
+        const T = this.T;
+        this.px(x+3, y+T-4, 6, 4, '#e67e22');
+        this.px(x+4, y+2, 4, T-4, '#27ae60');
+        this.px(x+2, y+6, 2, 4, '#2ecc71');
+        this.px(x+8, y+8, 2, 6, '#2ecc71');
+    }
+
+    drawLamp(x, y) {
+        const T = this.T;
+        this.px(x+T*0.4, y+T-2, 4, T+2, '#7f8c8d');
+        this.px(x+T*0.3, y+T*2-2, 8, 2, '#95a5a6');
+        this.px(x+2, y, T-4, T, '#f1c40f');
+        if (Math.sin(this.time*0.05)>0) {
+            this.ctx.globalAlpha = 0.2;
+            this.px(x-T, y+T, T*3, T*3, '#f1c40f');
+            this.ctx.globalAlpha = 1;
+        }
+    }
+
+    drawPictureFrame(x, y) {
+        this.px(x, y, 8, 12, '#a36d40');
+        this.px(x+1, y+1, 6, 10, '#ecf0f1');
+        this.px(x+2, y+2, 4, 3, '#3498db');
+        this.px(x+2, y+5, 4, 6, '#2ecc71');
     }
 
     drawClock(x, y) {
@@ -507,6 +652,8 @@ class PixelEngine {
         // Overlays
         this.agentSprites.forEach(sp => this.drawOverlays(sp));
         this.drawMinimap();
+        
+        if (this._postRender) this._postRender();
         requestAnimationFrame(() => this.render());
     }
 }
