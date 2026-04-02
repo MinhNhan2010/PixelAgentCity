@@ -1,514 +1,772 @@
 /**
- * Pixel AI Agent Manager v3 - Enhanced UI Controller
+ * PixelAgent City — Main App Controller (Game Mode)
+ * Fixed: correct PixelEngine API, proper Start Screen flow, addAgentSprite
  */
+(function () {
+    'use strict';
 
-document.addEventListener('DOMContentLoaded', () => {
-    const engine = new PixelEngine('officeCanvas', 'minimapCanvas');
-    const manager = new AgentManager();
-    const layoutEditor = new LayoutEditor(engine);
-    const chatbox = new AgentChatbox(manager, engine);
+    let engine, manager, editor, chatbox, game;
 
-    // Connect engine reference for free roaming
-    manager.engine = engine;
-
-    // Hook ghost preview into engine render
-    const origRender = engine.render.bind(engine);
-    engine.render = function() {
-        origRender();
-    };
-    // Add ghost drawing after main render via post-render hook
-    engine._postRender = () => {
-        layoutEditor.drawGhost(engine.ctx, engine.scale, engine.camera);
-    };
-
-    const DOM = {
-        agentsOnline: document.getElementById('agentsOnline'),
-        activeTasks: document.getElementById('activeTasks'),
-        cpuUsage: document.getElementById('cpuUsage'),
-        agentList: document.getElementById('agentList'),
-        taskList: document.getElementById('taskList'),
-        logConsole: document.getElementById('logConsole'),
-        statsGrid: document.getElementById('statsGrid'),
-        pixelClock: document.getElementById('pixelClock'),
-        memoryUsage: document.getElementById('memoryUsage'),
-        uptime: document.getElementById('uptime'),
-        toastContainer: document.getElementById('toastContainer'),
-    };
-
-    drawLogo();
-
-    // Canvas click -> select agent in sidebar
-    engine.onAgentClick = (agentId) => {
-        // Open chatbox with clicked agent
-        chatbox.openWithAgent(agentId);
-
-        // Also switch sidebar to agents tab
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-        document.querySelector('[data-tab="agents"]').classList.add('active');
-        document.getElementById('tab-agents').classList.add('active');
-        refreshAgentList();
-        setTimeout(() => {
-            const card = document.querySelector(`[data-agent-id="${agentId}"]`);
-            if (card) { card.scrollIntoView({behavior:'smooth',block:'center'}); card.classList.add('selected'); }
-        }, 100);
-    };
-
-    // ======= TABS =======
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-            document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
-            btn.classList.add('active');
-            document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
-        });
-    });
-
-    // ======= MODALS =======
-    const modalAgent = document.getElementById('modalAddAgent');
-    const modalTask = document.getElementById('modalAddTask');
-
-    document.getElementById('btnAddAgent').addEventListener('click', ()=>modalAgent.classList.add('active'));
-    document.getElementById('closeAddAgent').addEventListener('click', ()=>modalAgent.classList.remove('active'));
-    document.getElementById('cancelAddAgent').addEventListener('click', ()=>modalAgent.classList.remove('active'));
-
-    document.querySelectorAll('.color-option').forEach(opt => {
-        opt.addEventListener('click', () => {
-            document.querySelectorAll('.color-option').forEach(o=>o.classList.remove('selected'));
-            opt.classList.add('selected');
-        });
-    });
-
-    document.getElementById('confirmAddAgent').addEventListener('click', () => {
-        const name = document.getElementById('agentName').value.trim();
-        if (!name) { showToast('⚠️ Vui lòng nhập tên agent!','warning'); return; }
-        const agent = manager.createAgent({
-            name,
-            role: document.getElementById('agentRole').value,
-            model: document.getElementById('agentModel').value,
-            color: document.querySelector('.color-option.selected')?.dataset.color||'#4ecdc4',
-            workDir: document.getElementById('agentWorkDir').value.trim(),
-        });
-        engine.addAgentSprite(agent);
-        manager.addLog(agent.name,'🎉 Đã tham gia văn phòng!','success');
-        showToast(`✨ ${agent.name} đã được tạo!`,'success');
-        setTimeout(()=>engine.showSpeechBubble(agent.id,'Xin chào! 👋',4000),2000);
-        document.getElementById('agentName').value='';
-        document.getElementById('agentWorkDir').value='';
-        modalAgent.classList.remove('active');
-        refreshUI();
-    });
-
-    document.getElementById('btnAddTask').addEventListener('click', ()=>{refreshTaskAssigneeSelect();modalTask.classList.add('active');});
-    document.getElementById('closeAddTask').addEventListener('click', ()=>modalTask.classList.remove('active'));
-    document.getElementById('cancelAddTask').addEventListener('click', ()=>modalTask.classList.remove('active'));
-
-    document.getElementById('confirmAddTask').addEventListener('click', () => {
-        const title = document.getElementById('taskTitle').value.trim();
-        if (!title) { showToast('⚠️ Vui lòng nhập tiêu đề!','warning'); return; }
-        const assigneeId = document.getElementById('taskAssignee').value;
-        manager.createTask({title, description:document.getElementById('taskDesc').value.trim(), priority:document.getElementById('taskPriority').value, assigneeId:assigneeId||null});
-        if (assigneeId) {
-            const a = manager.getAgent(assigneeId);
-            manager.addLog(a.name,`📋 Nhận task: ${title}`,'info');
-            engine.updateAgentStatus(assigneeId,'working');
-            engine.showSpeechBubble(assigneeId,'Bắt đầu làm! 💪',3000);
+    // ============ START SCREEN ============
+    function initStartScreen() {
+        // Animated particles
+        const pc = document.getElementById('startParticles');
+        if (pc) {
+            for (let i = 0; i < 40; i++) {
+                const s = document.createElement('div');
+                s.className = 'sp';
+                s.style.left = Math.random() * 100 + '%';
+                s.style.animationDuration = (6 + Math.random() * 8) + 's';
+                s.style.animationDelay = Math.random() * 5 + 's';
+                s.style.width = (1 + Math.random() * 2) + 'px';
+                s.style.height = s.style.width;
+                const colors = ['#4ecdc4', '#6c5ce7', '#ffd93d', '#ff6b6b', '#78e08f'];
+                s.style.background = colors[Math.floor(Math.random() * colors.length)];
+                pc.appendChild(s);
+            }
         }
-        showToast(`📋 Task "${title}" đã được tạo!`,'success');
-        document.getElementById('taskTitle').value='';
-        document.getElementById('taskDesc').value='';
-        modalTask.classList.remove('active');
-        refreshUI();
-    });
 
-    document.querySelectorAll('.modal-overlay').forEach(ov=>{
-        ov.addEventListener('click',e=>{if(e.target===ov)ov.classList.remove('active');});
-    });
+        drawStartLogo();
 
-    document.getElementById('btnClearLogs').addEventListener('click', ()=>{manager.clearLogs();refreshLogs();showToast('🗑️ Đã xóa logs!','info');});
+        // Check for saved game (show Continue button)
+        const tempGame = new GameState();
+        const hasSave = tempGame.loadGame();
+        const btnContinue = document.getElementById('btnContinue');
+        if (hasSave && btnContinue) {
+            btnContinue.style.display = 'flex';
+        }
 
-    // ======= UI RENDERING =======
-    function refreshUI() { refreshAgentList(); refreshTaskList(); refreshLogs(); refreshStats(); refreshHeader(); }
+        // Button events
+        document.getElementById('btnNewGame').onclick = startNewGame;
+        if (btnContinue) btnContinue.onclick = continueGame;
+        document.getElementById('btnHowToPlay').onclick = () =>
+            document.getElementById('modalHowToPlay').classList.add('active');
+        document.getElementById('closeHowToPlay').onclick = () =>
+            document.getElementById('modalHowToPlay').classList.remove('active');
 
-    function refreshHeader() {
-        const s = manager.getStats();
-        DOM.agentsOnline.textContent = s.agentsOnline;
-        DOM.activeTasks.textContent = s.activeTasks + s.pendingTasks;
-        DOM.cpuUsage.textContent = Math.floor(15+s.agentsOnline*10+Math.random()*5)+'%';
+        const closeHtp2 = document.getElementById('closeHowToPlay2');
+        if (closeHtp2) closeHtp2.onclick = () =>
+            document.getElementById('modalHowToPlay').classList.remove('active');
     }
 
-    function refreshAgentList() {
-        const agents = manager.getAllAgents();
-        if (!agents.length) {
-            DOM.agentList.innerHTML = `<div style="text-align:center;padding:40px 20px"><div style="font-size:48px;margin-bottom:16px">🤖</div><div style="font-family:'Press Start 2P';font-size:9px;color:var(--text-muted);margin-bottom:12px">Chưa có Agent nào</div><div style="font-size:12px;color:var(--text-muted);line-height:1.8">Nhấn <span style="color:var(--accent-primary)">+ AGENT</span> để thêm</div></div>`;
-            return;
+    function drawStartLogo() {
+        const c = document.getElementById('startLogoCanvas');
+        if (!c) return;
+        const ctx = c.getContext('2d');
+        const p = [
+            '..####..',
+            '.#....#.',
+            '#.####.#',
+            '#.#..#.#',
+            '#.#..#.#',
+            '#.####.#',
+            '#......#',
+            '########',
+        ];
+        const s = 8;
+        ctx.clearRect(0, 0, 64, 64);
+        p.forEach((row, y) => {
+            [...row].forEach((ch, x) => {
+                if (ch === '#') {
+                    ctx.fillStyle = '#4ecdc4';
+                    ctx.fillRect(x * s, y * s, s, s);
+                    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+                    ctx.fillRect(x * s, y * s, s, 1);
+                }
+            });
+        });
+    }
+
+    function drawLogoSmall() {
+        const c = document.getElementById('logoCanvas');
+        if (!c) return;
+        const ctx = c.getContext('2d');
+        const p = ['..##..', '.#..#.', '#.##.#', '#.##.#', '#....#', '######'];
+        const s = 5;
+        ctx.clearRect(0, 0, 32, 32);
+        p.forEach((row, y) => {
+            [...row].forEach((ch, x) => {
+                if (ch === '#') {
+                    ctx.fillStyle = '#4ecdc4';
+                    ctx.fillRect(x * s + 1, y * s + 1, s, s);
+                }
+            });
+        });
+    }
+
+    // ============ GAME FLOW ============
+    function startNewGame() {
+        // Clear all old data
+        localStorage.removeItem('pixelAgentData');
+        localStorage.removeItem('pixelAgentLayout');
+        localStorage.removeItem('pixelAgentGameState');
+
+        game = new GameState();
+        game.startNewGame();
+        hideStartScreen();
+        initGameWorld(true);
+    }
+
+    function continueGame() {
+        game = new GameState();
+        game.loadGame();
+        game.continueGame();
+        hideStartScreen();
+        initGameWorld(false);
+    }
+
+    function hideStartScreen() {
+        document.getElementById('startScreen').classList.add('hidden');
+        document.getElementById('gameHeader').style.display = '';
+        document.getElementById('gameHud').style.display = '';
+        document.getElementById('mainContent').style.display = '';
+        document.getElementById('footerBar').style.display = '';
+    }
+
+    function showStartScreen() {
+        document.getElementById('startScreen').classList.remove('hidden');
+        document.getElementById('gameHeader').style.display = 'none';
+        document.getElementById('gameHud').style.display = 'none';
+        document.getElementById('mainContent').style.display = 'none';
+        document.getElementById('footerBar').style.display = 'none';
+        document.getElementById('gameOverOverlay').classList.remove('show');
+        const win = document.getElementById('winOverlay');
+        win.style.display = 'none';
+        win.classList.remove('show');
+        // Refresh continue button
+        const tempGame = new GameState();
+        const btn = document.getElementById('btnContinue');
+        if (btn) btn.style.display = tempGame.loadGame() ? 'flex' : 'none';
+    }
+
+    // ============ WORLD INIT ============
+    function initGameWorld(isNewGame) {
+        drawLogoSmall();
+
+        // PixelEngine takes string IDs (canvas ID, minimap ID)
+        engine = new PixelEngine('officeCanvas', 'minimapCanvas');
+
+        // AgentManager takes engine reference
+        manager = new AgentManager(engine);
+
+        // LayoutEditor takes (engine, minimapCanvas element)
+        const minimapCanvas = document.getElementById('minimapCanvas');
+        editor = new LayoutEditor(engine, minimapCanvas);
+
+        // Chatbox
+        chatbox = new AgentChatbox(manager, engine);
+
+        // Connect game callbacks
+        connectGameCallbacks();
+
+        // Load saved agent data OR create starter agents
+        if (isNewGame) {
+            createStarterAgents();
+        } else {
+            const loaded = manager.loadFromStorage();
+            if (!loaded || manager.agents.size === 0) {
+                createStarterAgents();
+            }
         }
-        const roleEmojis = {coder:'💻',reviewer:'🔍',tester:'🧪',designer:'🎨',devops:'🚀',researcher:'📚',analyst:'📊',security:'🛡️',backend:'⚙️',mobile:'📱',writer:'✍️'};
-        const roleNames = {coder:'Coder',reviewer:'Reviewer',tester:'Tester',designer:'Designer',devops:'DevOps',researcher:'Researcher',analyst:'Analyst',security:'Security',backend:'Backend',mobile:'Mobile',writer:'Writer'};
-        const stars = n => '⭐'.repeat(n);
-        const moodIcon = m => m>=80?'😊':m>=60?'😐':m>=40?'😟':'😡';
-        const energyBar = e => {
-            const filled = Math.round(e/10);
-            return `<span style="color:${e>60?'var(--accent-success)':e>30?'var(--accent-warning)':'var(--accent-tertiary)'}">${'█'.repeat(filled)}${'░'.repeat(10-filled)}</span>`;
+
+        bindUIEvents();
+
+        // Game loop (day/night tick every frame)
+        let lastTick = performance.now();
+        function loop(ts) {
+            const dt = (ts - lastTick) / 1000;
+            lastTick = ts;
+            if (game && game.started && !game.isGameOver) {
+                game.tickDay(dt);
+                // Night overlay
+                const nightEl = document.getElementById('nightOverlay');
+                if (nightEl) nightEl.style.background = `rgba(5,5,30,${game.getNightOverlayAlpha() * 0.35})`;
+                // Day fill bar
+                const dayFill = document.getElementById('hudDayFill');
+                if (dayFill) dayFill.style.width = game.getDayProgress() + '%';
+                // Time icon
+                const timeIcon = document.getElementById('hudTimeIcon');
+                if (timeIcon) timeIcon.textContent = game.getTimeIcon();
+                // Day transition
+                if (game.showingDayTransition) {
+                    showDayTransition();
+                    game.showingDayTransition = false;
+                }
+            }
+            requestAnimationFrame(loop);
+        }
+        requestAnimationFrame(loop);
+
+        // Simulation tick (agent AI)
+        setInterval(() => {
+            if (!game.isPaused && !game.isGameOver && game.started) {
+                for (let i = 0; i < game.gameSpeed; i++) {
+                    manager.simulateTick();
+                }
+                // Sync engine sprites with agent statuses
+                manager.agents.forEach(a => {
+                    engine.updateAgentStatus(a.id, a.status);
+                });
+            }
+        }, 500);
+
+        // HUD refresh every second
+        setInterval(() => {
+            if (game.started && !game.isGameOver) {
+                refreshHUD();
+                refreshAgentList();
+                refreshTaskList();
+            }
+        }, 1000);
+
+        // Auto-save every 30s
+        setInterval(() => {
+            if (game.started && !game.isGameOver) {
+                game.updateSalaryCache(Array.from(manager.agents.values()));
+                game.saveGame(manager);
+                manager.saveToStorage();
+            }
+        }, 30000);
+
+        // Initial data
+        setTimeout(() => {
+            game.generateContracts(3);
+            refreshHUD();
+            refreshAgentList();
+            refreshTaskList();
+            refreshRoleSelect();
+            updateClock();
+        }, 200);
+
+        setInterval(updateClock, 1000);
+        createParticles();
+    }
+
+    function createStarterAgents() {
+        manager.createAgent({ name: 'PixelCoder-01', role: 'coder', model: 'claude-sonnet', color: '#4ecdc4' });
+        manager.createAgent({ name: 'TestBot-01', role: 'tester', model: 'gemini-pro', color: '#ffd93d' });
+        manager.addLog('system', '👋 Studio khởi động! Chào mừng đến PixelAgent City!', 'success');
+    }
+
+    // ============ GAME CALLBACKS ============
+    function connectGameCallbacks() {
+        game.onCoinsChange = (amount) => {
+            showCoinPopup(amount);
+            const el = document.querySelector('.hud-coins .hud-value');
+            if (el) {
+                el.classList.add('bump');
+                setTimeout(() => el.classList.remove('bump'), 200);
+            }
         };
 
-        DOM.agentList.innerHTML = agents.map(a => `
-            <div class="agent-card ${engine.selectedAgent===a.id?'selected':''}" style="--agent-color:${a.color}" data-agent-id="${a.id}">
+        game.onDayEnd = (day, salary) => {
+            manager.addLog('system', `📅 Ngày ${day} bắt đầu! Lương đã trả: -${salary}Ⓒ`, 'warning');
+            refreshHUD();
+        };
+
+        game.onContractComplete = (contract, bonus) => {
+            showToast(`✅ "${contract.title}" hoàn thành! +${contract.reward + bonus}Ⓒ`, 'success');
+            manager.addLog('system', `🎉 Contract "${contract.title}" xong! +${contract.reward + bonus}Ⓒ`, 'success');
+        };
+
+        game.onContractFail = (contract) => {
+            showToast(`❌ "${contract.title}" thất bại! Rep -0.4`, 'error');
+            manager.addLog('system', `💔 Contract "${contract.title}" hết hạn!`, 'error');
+        };
+
+        game.onLevelUp = (level, milestone) => {
+            showLevelUp(level, milestone);
+            manager.addLog('system', `🎊 Level Up → ${level}: ${milestone.title}`, 'success');
+            refreshRoleSelect();
+            if (level >= 10) showWinScreen();
+        };
+
+        game.onGameOver = () => showGameOver();
+
+        game.onNewContracts = () => {
+            const badge = document.getElementById('hudContractBadge');
+            if (badge) badge.textContent = game.availableContracts.length;
+        };
+
+        // Hook completeTask to report to game
+        const origComplete = manager.completeTask.bind(manager);
+        manager.completeTask = function(taskId) {
+            origComplete(taskId);
+            if (game) {
+                game.onTaskCompleted(taskId);
+                game.sfx.taskComplete();
+            }
+        };
+    }
+
+    // ============ HUD ============
+    function refreshHUD() {
+        const agents = Array.from(manager.agents.values());
+        game.updateSalaryCache(agents);
+        setText('hudCoins', game.formatCoins(game.coins));
+        setText('hudDay', game.day);
+        setText('hudRep', game.reputation.toFixed(1));
+        setText('hudLevel', game.companyLevel);
+        setText('hudSalary', `-${game._currentSalary}/day`);
+        setText('hudContractBadge', game.availableContracts.length);
+        setText('agentsOnline', agents.length);
+        setText('activeTasks', manager.tasks.filter(t => t.status !== 'completed').length);
+        setText('cpuUsage', Math.min(99, agents.length * 8 + Math.floor(Math.random() * 10)) + '%');
+        const xpFill = document.getElementById('hudXpFill');
+        if (xpFill) xpFill.style.width = game.getXPProgress() + '%';
+    }
+
+    function setText(id, val) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+    }
+
+    // ============ COIN POPUP ============
+    function showCoinPopup(amount) {
+        const container = document.getElementById('coinPopups');
+        if (!container) return;
+        const el = document.createElement('div');
+        el.className = 'coin-popup ' + (amount >= 0 ? 'earn' : 'spend');
+        el.textContent = (amount >= 0 ? '+' : '') + amount + 'Ⓒ';
+        const hudCoins = document.querySelector('.hud-coins');
+        if (hudCoins) {
+            const r = hudCoins.getBoundingClientRect();
+            el.style.left = r.left + 'px';
+            el.style.top = (r.bottom + 4) + 'px';
+        } else {
+            el.style.left = '60px'; el.style.top = '80px';
+        }
+        container.appendChild(el);
+        setTimeout(() => el.remove(), 1300);
+    }
+
+    // ============ DAY TRANSITION ============
+    function showDayTransition() {
+        const el = document.getElementById('dayTransition');
+        if (!el) return;
+        setText('dayTransNum', game.day);
+        const icon = document.getElementById('dayIcon');
+        if (icon) icon.textContent = game.getTimeIcon();
+        const subs = ['Good morning! ☕', 'A new day begins!', "Let's build! 🚀", 'Time to work! 💪'];
+        setText('dayTransSub', subs[Math.floor(Math.random() * subs.length)]);
+        el.classList.remove('show');
+        void el.offsetWidth;
+        el.classList.add('show');
+        setTimeout(() => el.classList.remove('show'), 2500);
+    }
+
+    // ============ GAME OVER ============
+    function showGameOver() {
+        const el = document.getElementById('gameOverOverlay');
+        const stats = document.getElementById('gameOverStats');
+        if (stats) stats.innerHTML = `
+            📅 Tồn tại: <strong>${game.day}</strong> ngày<br>
+            💰 Kiếm được: <strong>${game.formatCoins(game.totalEarned)}</strong>Ⓒ<br>
+            ✅ Contract Done: <strong>${game.completedContracts}</strong><br>
+            🏢 Level: <strong>${game.companyLevel}</strong>
+        `;
+        if (el) el.classList.add('show');
+    }
+
+    function showLevelUp(level, milestone) {
+        const el = document.getElementById('levelUpOverlay');
+        setText('levelUpLevel', `Level ${level}`);
+        setText('levelUpName', milestone.title);
+        setText('levelUpUnlock', `🔓 Unlock: ${milestone.unlock}`);
+        if (el) el.classList.add('show');
+    }
+
+    function showWinScreen() {
+        const el = document.getElementById('winOverlay');
+        const stats = document.getElementById('winStats');
+        if (stats) stats.innerHTML = `
+            📅 Ngày: <strong>${game.day}</strong><br>
+            💰 Kiếm được: <strong>${game.formatCoins(game.totalEarned)}</strong>Ⓒ<br>
+            ✅ Contracts: <strong>${game.completedContracts}</strong>
+        `;
+        if (el) { el.style.display = ''; el.classList.add('show'); }
+    }
+
+    // ============ CONTRACT BOARD ============
+    function openContractBoard() {
+        refreshContractBoard();
+        document.getElementById('modalContracts').classList.add('active');
+    }
+
+    function refreshContractBoard() {
+        const renderCard = (c, isActive) => {
+            const [diffIcon] = game.getDifficultyBadge(c.difficulty);
+            const pct = c.tasksNeeded > 0 ? Math.floor((c.tasksCompleted / c.tasksNeeded) * 100) : 0;
+            const urgentCls = c.daysRemaining <= 1 ? 'urgent' : '';
+            return `
+            <div class="contract-card ${isActive ? 'active-contract' : ''}">
+                <div class="contract-card-header">
+                    <span class="contract-title">${diffIcon} ${c.title}</span>
+                    <span class="contract-diff ${c.difficulty}">${c.difficulty}</span>
+                </div>
+                <div class="contract-desc">${c.description}</div>
+                <div class="contract-meta">
+                    <div class="contract-meta-item">💰 <span class="reward-val">${c.reward}Ⓒ</span></div>
+                    <div class="contract-meta-item">⏰ <span class="deadline-val ${urgentCls}">${c.daysRemaining}d</span></div>
+                    <div class="contract-meta-item">📝 ${c.tasksCompleted}/${c.tasksNeeded}</div>
+                </div>
+                <div class="contract-roles">${c.requiredRoles.map(r => `<span class="contract-role-tag">${r}</span>`).join('')}</div>
+                ${isActive ? `
+                    <div class="contract-progress-wrap">
+                        <div class="contract-progress-bar"><div class="contract-progress-fill" style="width:${pct}%"></div></div>
+                    </div>` : `
+                    <div class="contract-actions">
+                        <button class="btn-pixel btn-small btn-danger btn-reject-contract" data-id="${c.id}">Pass</button>
+                        <button class="btn-pixel btn-small btn-accept-contract" data-id="${c.id}">Accept ✅</button>
+                    </div>`}
+            </div>`;
+        };
+
+        const activeEl = document.getElementById('activeContractsList');
+        if (activeEl) activeEl.innerHTML = game.activeContracts.length
+            ? game.activeContracts.map(c => renderCard(c, true)).join('')
+            : '<div style="font-size:11px;color:var(--text-muted);padding:12px;text-align:center">Chưa có contract nào đang chạy</div>';
+
+        const availEl = document.getElementById('availableContractsList');
+        if (availEl) availEl.innerHTML = game.availableContracts.length
+            ? game.availableContracts.map(c => renderCard(c, false)).join('')
+            : '<div style="font-size:11px;color:var(--text-muted);padding:12px;text-align:center">Không có contract mới. Đợi ngày mới!</div>';
+
+        document.querySelectorAll('.btn-accept-contract').forEach(btn => {
+            btn.onclick = () => acceptContractAction(btn.dataset.id);
+        });
+        document.querySelectorAll('.btn-reject-contract').forEach(btn => {
+            btn.onclick = () => { game.rejectContract(btn.dataset.id); refreshContractBoard(); refreshHUD(); };
+        });
+    }
+
+    function acceptContractAction(contractId) {
+        const contract = game.acceptContract(contractId);
+        if (!contract) return;
+        const types = ['feature', 'bugfix', 'review', 'test', 'design', 'research'];
+        const prio = { easy: 'low', medium: 'medium', hard: 'high', epic: 'high' };
+        for (let i = 0; i < contract.tasksNeeded; i++) {
+            const tid = manager.createTask({
+                title: `${contract.title} — Task ${i + 1}`,
+                description: `Part ${i + 1} of "${contract.title}"`,
+                type: types[Math.floor(Math.random() * types.length)],
+                priority: prio[contract.difficulty] || 'medium',
+            });
+            contract.generatedTasks.push(tid);
+        }
+        showToast(`📋 Nhận "${contract.title}"! ${contract.tasksNeeded} tasks created.`, 'info');
+        manager.addLog('system', `📋 Contract "${contract.title}" — ${contract.tasksNeeded} tasks, ${contract.deadline} ngày`, 'info');
+        refreshContractBoard();
+        refreshHUD();
+        refreshTaskList();
+        document.getElementById('modalContracts').classList.remove('active');
+    }
+
+    // ============ ROLE SELECT ============
+    function refreshRoleSelect() {
+        const sel = document.getElementById('agentRole');
+        if (!sel) return;
+        const emoji = { coder:'💻', reviewer:'🔍', tester:'🧪', designer:'🎨', devops:'⚙️', researcher:'🔬', analyst:'📊', security:'🛡️', backend:'🗄️', mobile:'📱', writer:'✍️' };
+        sel.innerHTML = '';
+        Object.keys(game.hiringCosts).forEach(role => {
+            const unlocked = game.isRoleUnlocked(role);
+            const cost = game.hiringCosts[role];
+            const opt = document.createElement('option');
+            opt.value = role;
+            opt.textContent = `${emoji[role] || '🤖'} ${role.charAt(0).toUpperCase() + role.slice(1)} — ${cost}Ⓒ`;
+            if (!unlocked) { opt.disabled = true; opt.textContent += ` 🔒 Lv.${game.roleUnlockLevel[role]}`; }
+            sel.appendChild(opt);
+        });
+        updateHireCost();
+    }
+
+    function updateHireCost() {
+        const sel = document.getElementById('agentRole');
+        const badge = document.getElementById('hireCost');
+        if (sel && badge) badge.textContent = `💰 ${game.hiringCosts[sel.value] || 100}Ⓒ`;
+    }
+
+    // ============ UI EVENTS ============
+    function bindUIEvents() {
+        const openHire = () => { refreshRoleSelect(); document.getElementById('modalAddAgent').classList.add('active'); };
+        document.getElementById('btnAddAgent').onclick = openHire;
+        document.getElementById('btnAddAgentToolbar')?.addEventListener('click', openHire);
+        document.getElementById('closeAddAgent').onclick = () => document.getElementById('modalAddAgent').classList.remove('active');
+        document.getElementById('cancelAddAgent').onclick = () => document.getElementById('modalAddAgent').classList.remove('active');
+        document.getElementById('agentRole').onchange = updateHireCost;
+
+        document.getElementById('confirmAddAgent').onclick = () => {
+            const name = document.getElementById('agentName').value.trim() || `Agent-${Date.now().toString(36).slice(-4)}`;
+            const role = document.getElementById('agentRole').value;
+            const model = document.getElementById('agentModel').value;
+            const colorEl = document.querySelector('.color-option.selected');
+            const color = colorEl ? colorEl.dataset.color : '#4ecdc4';
+
+            if (!game.isRoleUnlocked(role)) {
+                showToast(`🔒 Role "${role}" cần Level ${game.roleUnlockLevel[role]}!`, 'error'); return;
+            }
+            const cost = game.hiringCosts[role] || 100;
+            if (!game.canAfford(cost)) {
+                showToast(`💸 Không đủ tiền! Cần ${cost}Ⓒ, có ${game.coins}Ⓒ`, 'error'); return;
+            }
+            game.spend(cost, `Hire: ${name}`);
+            manager.createAgent({ name, role, model, color });
+            game.sfx.hire();
+            showToast(`🤖 ${name} joined! (-${cost}Ⓒ)`, 'success');
+            manager.addLog(name, `Joined as ${role}`, 'success');
+            document.getElementById('modalAddAgent').classList.remove('active');
+            document.getElementById('agentName').value = '';
+            refreshAgentList(); refreshHUD();
+        };
+
+        document.querySelectorAll('.color-option').forEach(el => {
+            el.onclick = () => { document.querySelectorAll('.color-option').forEach(o => o.classList.remove('selected')); el.classList.add('selected'); };
+        });
+
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+                btn.classList.add('active');
+                const pane = document.getElementById('tab-' + btn.dataset.tab);
+                if (pane) pane.classList.add('active');
+                if (btn.dataset.tab === 'stats') refreshStats();
+                if (btn.dataset.tab === 'logs') refreshLogs();
+            };
+        });
+
+        document.getElementById('btnZoomIn')?.addEventListener('click', () => engine.zoomTo(engine.scale + 0.5));
+        document.getElementById('btnZoomOut')?.addEventListener('click', () => engine.zoomTo(engine.scale - 0.5));
+
+        document.getElementById('btnContracts').onclick = openContractBoard;
+        document.getElementById('closeContracts').onclick = () => document.getElementById('modalContracts').classList.remove('active');
+
+        // Speed button cycle 1x→2x→3x→1x
+        document.getElementById('btnSpeed').onclick = () => {
+            const speeds = [1, 2, 3];
+            game.gameSpeed = speeds[(speeds.indexOf(game.gameSpeed) + 1) % speeds.length];
+            const btn = document.getElementById('btnSpeed');
+            btn.textContent = `▶ ${game.gameSpeed}x`;
+            btn.classList.toggle('active', game.gameSpeed > 1);
+            game.sfx.click();
+        };
+
+        document.getElementById('btnPauseGame').onclick = () => {
+            game.isPaused = !game.isPaused;
+            const btn = document.getElementById('btnPauseGame');
+            btn.textContent = game.isPaused ? '▶' : '⏸';
+            btn.classList.toggle('paused', game.isPaused);
+            game.sfx.click();
+        };
+
+        document.getElementById('btnRetry').onclick = () => {
+            document.getElementById('gameOverOverlay').classList.remove('show');
+            startNewGame();
+        };
+        document.getElementById('btnBackToMenu').onclick = () => showStartScreen();
+        document.getElementById('btnPlayOn')?.addEventListener('click', () => {
+            const el = document.getElementById('winOverlay');
+            el.classList.remove('show'); el.style.display = 'none';
+        });
+        document.getElementById('btnWinMenu')?.addEventListener('click', () => showStartScreen());
+        document.getElementById('btnCloseLevelUp').onclick = () =>
+            document.getElementById('levelUpOverlay').classList.remove('show');
+
+        document.getElementById('btnSettings').onclick = () => {
+            if (confirm('⚠️ Reset toàn bộ game data?')) { localStorage.clear(); location.reload(); }
+        };
+        document.getElementById('btnClearLogs')?.addEventListener('click', () => { manager.logs = []; refreshLogs(); });
+        document.getElementById('btnFullscreen')?.addEventListener('click', () => {
+            const vp = document.getElementById('officeViewport');
+            if (document.fullscreenElement) document.exitFullscreen();
+            else vp.requestFullscreen?.();
+        });
+
+        // Layout editor toolbar buttons
+        document.querySelectorAll('.toolbar-btn[data-tool]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tool = btn.dataset.tool;
+                if (tool === 'layout') { editor.toggle(); return; }
+                document.querySelectorAll('.toolbar-btn[data-tool]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                editor.setTool(tool);
+                if (!editor.active) editor.toggle();
+            });
+        });
+    }
+
+    // ============ AGENT LIST ============
+    function refreshAgentList() {
+        const list = document.getElementById('agentList');
+        if (!list) return;
+        const agents = Array.from(manager.agents.values());
+
+        if (agents.length === 0) {
+            list.innerHTML = `
+                <div style="text-align:center;padding:40px 20px;color:var(--text-muted)">
+                    <div style="font-size:36px;margin-bottom:12px">🤖</div>
+                    <div style="font-family:var(--font-pixel);font-size:8px;margin-bottom:8px">Studio trống vắng</div>
+                    <div style="font-size:11px">Click <strong>+ HIRE</strong> để tuyển agent!</div>
+                </div>`;
+            return;
+        }
+
+        const roleEmoji = {coder:'💻',reviewer:'🔍',tester:'🧪',designer:'🎨',devops:'⚙️',researcher:'🔬',analyst:'📊',security:'🛡️',backend:'🗄️',mobile:'📱',writer:'✍️'};
+
+        list.innerHTML = agents.map(a => {
+            const salary = game.salaries[a.role] || 15;
+            const task = manager.tasks.find(t => (t.assigneeId === a.id || t.assignee === a.id) && t.status !== 'completed');
+            const pct = task ? (task.progress || 0) : 0;
+            return `
+            <div class="agent-card ${a.status}" data-agent-id="${a.id}" draggable="true" style="--agent-color:${a.color}">
                 <div class="agent-card-header">
-                    <canvas class="agent-avatar" width="40" height="40" data-agent-color="${a.color}" data-agent-role="${a.role}"></canvas>
+                    <canvas class="agent-avatar" width="40" height="40" data-color="${a.color}" data-role="${a.role}"></canvas>
                     <div class="agent-info">
                         <div class="agent-name">${a.name}</div>
-                        <div class="agent-role">${roleEmojis[a.role]} ${roleNames[a.role]} · ${a.model}</div>
+                        <div class="agent-role">${roleEmoji[a.role]||'🤖'} ${a.role} · Lv${a.level||1} · ${salary}Ⓒ/day</div>
                     </div>
                     <span class="agent-status-badge ${a.status}">${a.status}</span>
                 </div>
                 <div class="agent-card-body">
                     <div class="agent-meta-row">
-                        <span class="meta-item" title="Cấp độ">${stars(a.skillLevel)} Lv.${a.skillLevel}</span>
-                        <span class="meta-item" title="Tâm trạng">${moodIcon(a.mood)} ${a.mood}%</span>
+                        <span class="meta-item">❤️ ${Math.floor(a.mood||80)}%</span>
+                        <span class="meta-item">⚡ ${Math.floor(a.energy||100)}%</span>
+                        <span class="meta-item">⭐ ${a.xp||0}xp</span>
                     </div>
-                    <div class="agent-meta-row">
-                        <span class="meta-item" title="Năng lượng" style="font-family:monospace;font-size:10px">⚡ ${energyBar(a.energy)}</span>
-                    </div>
-                    ${a.currentTask ? `
-                        <div class="agent-task"><span class="task-emoji">📋</span>${a.currentTask.title}</div>
-                        <div class="agent-progress">
-                            <div class="progress-bar"><div class="progress-fill" style="width:${a.progress}%"></div></div>
-                            <div class="progress-text">${Math.floor(a.progress)}%</div>
-                        </div>
-                    ` : `<div class="agent-task"><span class="task-emoji">💤</span>Đang chờ công việc...</div>`}
+                    ${task ? `<div class="agent-task"><span class="task-emoji">📋</span> ${task.title}</div>
+                    <div class="agent-progress">
+                        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+                        <div class="progress-text">${Math.floor(pct)}%</div>
+                    </div>` : ''}
                 </div>
                 <div class="agent-card-footer">
-                    <button class="agent-action-btn" onclick="app.pauseAgent('${a.id}')" title="Tạm dừng">⏸</button>
-                    <button class="agent-action-btn" onclick="app.messageAgent('${a.id}')" title="Nhắn tin">💬</button>
-                    <button class="agent-action-btn" onclick="app.focusAgent('${a.id}')" title="Focus">🎯</button>
-                    <button class="agent-action-btn danger" onclick="app.removeAgent('${a.id}')" title="Xóa">🗑️</button>
+                    <button class="agent-action-btn" title="Focus" onclick="window._focusAgent('${a.id}')">🔍</button>
+                    <button class="agent-action-btn danger" title="Fire" onclick="window._fireAgent('${a.id}')">🗑️</button>
                 </div>
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
 
-        // Make agent cards draggable
-        requestAnimationFrame(()=>{
-            document.querySelectorAll('.agent-card').forEach(card => {
-                card.setAttribute('draggable', 'true');
-            });
-            document.querySelectorAll('.agent-avatar').forEach(c=>drawAgentAvatar(c,c.dataset.agentColor,c.dataset.agentRole));
-        });
+        list.querySelectorAll('.agent-avatar').forEach(c => drawAgentAvatar(c, c.dataset.color));
+        chatbox?.setupDragListeners?.();
     }
 
+    window._fireAgent = (id) => {
+        const a = manager.agents.get(id);
+        if (!a || !confirm(`Giải tán ${a.name}?`)) return;
+        engine.removeAgentSprite(id);
+        manager.removeAgent(id);
+        refreshAgentList(); refreshHUD();
+        showToast(`👋 ${a.name} đã rời đi`, 'warning');
+    };
+
+    window._focusAgent = (id) => {
+        const sp = engine.agentSprites.get(id);
+        if (sp) { engine.camera.x = -sp.x * engine.scale + engine.canvas.width / 2; engine.camera.y = -sp.y * engine.scale + engine.canvas.height / 2; }
+    };
+
+    function drawAgentAvatar(canvas, color) {
+        const ctx = canvas.getContext('2d');
+        const s = 5;
+        ctx.clearRect(0, 0, 40, 40);
+        ctx.fillStyle = color || '#4ecdc4';
+        ctx.fillRect(2*s, 0, 4*s, 3*s);
+        ctx.fillRect(1*s, 3*s, 6*s, 3*s);
+        ctx.fillStyle = '#0a0e1a';
+        ctx.fillRect(3*s, s, s, s);
+        ctx.fillRect(5*s, s, s, s);
+        ctx.fillStyle = color || '#4ecdc4';
+        ctx.globalAlpha = 0.7;
+        ctx.fillRect(2*s, 6*s, 2*s, 2*s);
+        ctx.fillRect(5*s, 6*s, 2*s, 2*s);
+        ctx.globalAlpha = 1;
+    }
+
+    // ============ TASK LIST ============
     function refreshTaskList() {
-        const tasks = manager.getAllTasks();
-        if (!tasks.length) {
-            DOM.taskList.innerHTML = `<div style="text-align:center;padding:40px 20px"><div style="font-size:48px;margin-bottom:16px">📋</div><div style="font-family:'Press Start 2P';font-size:9px;color:var(--text-muted)">Chưa có Task nào</div></div>`;
+        const list = document.getElementById('taskList');
+        if (!list) return;
+        const tasks = manager.tasks;
+        if (tasks.length === 0) {
+            list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted);font-size:11px">📋 Nhận Contract để tạo tasks!</div>';
             return;
         }
-        const pEmoji = {low:'🟢',medium:'🟡',high:'🟠',critical:'🔴'};
-        const statusLabels = {pending:'pending','in-progress':'in-progress',completed:'completed',blocked:'🔒 blocked',review:'📝 review'};
-        DOM.taskList.innerHTML = tasks.map(t=>{
-            const assignee = t.assigneeId ? manager.getAgent(t.assigneeId) : null;
-            const statusClass = t.status === 'blocked' ? 'pending' : t.status === 'review' ? 'in-progress' : t.status;
-            const depInfo = t.dependsOn?.length ? `<div style="font-size:9px;color:var(--text-muted);margin-top:4px">🔗 Phụ thuộc: ${t.dependsOn.length} task</div>` : '';
-            const reviewInfo = t.reviewStatus === 'rejected' ? '<div style="font-size:9px;color:var(--accent-tertiary);margin-top:4px">❌ Bị reject — đang sửa lại</div>' : 
-                              t.reviewStatus === 'pending' ? '<div style="font-size:9px;color:var(--accent-info);margin-top:4px">📝 Đang chờ review</div>' : '';
+        const pEmoji = { low:'🟢', medium:'🟡', high:'🔴' };
+        list.innerHTML = tasks.slice(-20).reverse().map(t => {
+            const agent = t.assigneeId ? manager.agents.get(t.assigneeId) : null;
             return `<div class="task-item">
-                <div class="task-item-header"><span class="task-title">${t.title}</span><span class="task-priority">${pEmoji[t.priority]}</span></div>
-                ${t.description?`<div class="task-description">${t.description}</div>`:''}
-                <div class="task-meta">
-                    <span class="task-assignee">${assignee?`👾 ${assignee.name}`:'— Chưa giao'}</span>
-                    <span class="task-status-tag ${statusClass}">${statusLabels[t.status] || t.status}</span>
+                <div class="task-item-header">
+                    <span class="task-title">${t.title}</span>
+                    <span class="task-priority">${pEmoji[t.priority]||'🟡'}</span>
                 </div>
-                ${depInfo}${reviewInfo}
-                ${t.status==='in-progress'?`<div class="agent-progress" style="margin-top:8px"><div class="progress-bar"><div class="progress-fill" style="width:${t.progress}%"></div></div><div class="progress-text">${Math.floor(t.progress)}%</div></div>`:''}
+                <div class="task-description">${t.description||''}</div>
+                <div class="task-meta">
+                    ${agent ? `<span class="task-assignee">🤖 ${agent.name}</span>` : '<span style="color:var(--text-muted);font-size:10px">Chưa assign</span>'}
+                    <span class="task-status-tag ${t.status}">${t.status}</span>
+                </div>
+                ${t.progress > 0 ? `<div class="agent-progress" style="margin-top:6px"><div class="progress-bar"><div class="progress-fill" style="width:${t.progress}%"></div></div></div>` : ''}
             </div>`;
         }).join('');
     }
 
-    function refreshLogs() {
-        const logs = manager.getLogs(100);
-        DOM.logConsole.innerHTML = logs.map(l=>`<div class="log-entry ${l.type}"><span class="log-time">${fmtTime(l.time)}</span><span class="log-agent">[${l.agent}]</span><span class="log-message">${l.message}</span></div>`).join('');
-    }
-
+    // ============ STATS ============
     function refreshStats() {
-        const s = manager.getStats();
-        DOM.statsGrid.innerHTML = `
-            <div class="stat-card"><div class="stat-value">${s.totalTasksCompleted}</div><div class="stat-label">Tasks Done</div></div>
-            <div class="stat-card"><div class="stat-value">${fmtNum(s.totalLinesWritten)}</div><div class="stat-label">Lines Written</div></div>
-            <div class="stat-card"><div class="stat-value">${s.totalCommits}</div><div class="stat-label">Commits</div></div>
-            <div class="stat-card"><div class="stat-value">${s.totalErrors}</div><div class="stat-label">Errors</div></div>
-            <div class="stat-card"><div class="stat-value">${s.blockedTasks || 0}</div><div class="stat-label">🔒 Blocked</div></div>
-            <div class="stat-card"><div class="stat-value">${s.reviewTasks || 0}</div><div class="stat-label">📝 Review</div></div>
-        `;
-        drawPerformanceChart();
+        const grid = document.getElementById('statsGrid');
+        if (!grid) return;
+        const agents = Array.from(manager.agents.values());
+        grid.innerHTML = `
+            <div class="stat-card"><div class="stat-value">${game.formatCoins(game.totalEarned)}</div><div class="stat-label">Total Earned</div></div>
+            <div class="stat-card"><div class="stat-value">${game.formatCoins(game.totalSpent)}</div><div class="stat-label">Total Spent</div></div>
+            <div class="stat-card"><div class="stat-value">${game.completedContracts}</div><div class="stat-label">Contracts ✅</div></div>
+            <div class="stat-card"><div class="stat-value">${game.failedContracts}</div><div class="stat-label">Failed ❌</div></div>
+            <div class="stat-card"><div class="stat-value">${agents.length}</div><div class="stat-label">Agents</div></div>
+            <div class="stat-card"><div class="stat-value">${manager.tasks.filter(t=>t.status==='completed').length}</div><div class="stat-label">Tasks Done</div></div>`;
     }
 
-    function refreshTaskAssigneeSelect() {
-        const sel = document.getElementById('taskAssignee');
-        sel.innerHTML = '<option value="">-- Chọn Agent --</option>' + manager.getAllAgents().map(a=>`<option value="${a.id}">${a.name} (${a.role})</option>`).join('');
+    function refreshLogs() {
+        const el = document.getElementById('logConsole');
+        if (!el) return;
+        el.innerHTML = (manager.logs || []).slice(0, 50).map(l =>
+            `<div class="log-entry ${l.type||''}">
+                <span class="log-time">${l.time||''}</span>
+                <span class="log-agent">${l.agent||'system'}</span>
+                <span class="log-message">${l.message||''}</span>
+            </div>`
+        ).join('');
     }
 
-    // ======= AGENT ACTIONS =======
-    window.app = {
-        pauseAgent(id) {
-            const a = manager.getAgent(id); if(!a) return;
-            if (a.status==='idle'&&a.currentTask) { a.status='working'; engine.updateAgentStatus(id,'working'); showToast(`▶️ ${a.name} tiếp tục`,'info'); }
-            else { a.status='idle'; engine.updateAgentStatus(id,'idle'); showToast(`⏸️ ${a.name} tạm dừng`,'warning'); }
-            manager.addLog(a.name, a.status==='idle'?'⏸ Tạm dừng':'▶️ Tiếp tục');
-            refreshUI();
-        },
-        messageAgent(id) {
-            chatbox.openWithAgent(id);
-        },
-        focusAgent(id) {
-            const sp = engine.agentSprites.get(id);
-            if (sp) {
-                engine.selectedAgent = id;
-                engine.camera.x = -sp.x * engine.scale + engine.canvas.width/2;
-                engine.camera.y = -sp.y * engine.scale + engine.canvas.height/2;
-                showToast(`🎯 Focus: ${sp.name}`,'info');
-            }
-        },
-        removeAgent(id) {
-            const a = manager.getAgent(id); if(!a) return;
-            if (confirm(`Xóa ${a.name}?`)) {
-                engine.removeAgentSprite(id); manager.removeAgent(id);
-                manager.addLog(a.name,'👋 Đã rời văn phòng','warning');
-                showToast(`🗑️ ${a.name} đã bị xóa`,'warning');
-                refreshUI();
-            }
-        }
-    };
-
-    // ======= UTILITIES =======
-    function fmtTime(d) { return d.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
-    function fmtNum(n) { return n>=1000?(n/1000).toFixed(1)+'K':n.toString(); }
-
-    function showToast(msg,type='info') {
+    // ============ TOAST ============
+    function showToast(msg, type = 'info') {
+        const c = document.getElementById('toastContainer');
+        if (!c) return;
+        const icons = { success:'✅', error:'❌', warning:'⚠️', info:'ℹ️' };
         const t = document.createElement('div');
         t.className = `toast ${type}`;
-        const icons = {info:'ℹ️',success:'✅',warning:'⚠️',error:'❌'};
         t.innerHTML = `<span class="toast-icon">${icons[type]||'ℹ️'}</span><span class="toast-message">${msg}</span>`;
-        DOM.toastContainer.appendChild(t);
-        setTimeout(()=>{t.style.animation='toastSlideIn 0.3s ease reverse';setTimeout(()=>t.remove(),300);},3000);
+        c.appendChild(t);
+        setTimeout(() => {
+            t.style.opacity = '0'; t.style.transform = 'translateX(100%)'; t.style.transition = 'all 0.3s';
+            setTimeout(() => t.remove(), 300);
+        }, 4000);
     }
+    window.showToast = showToast;
 
-    function drawLogo() {
-        const c = document.getElementById('logoCanvas'), ctx = c.getContext('2d');
-        ctx.imageSmoothingEnabled = false;
-        const px = [
-            [0,0,'#4ecdc4'],[1,0,'#4ecdc4'],[2,0,'#4ecdc4'],[3,0,'#4ecdc4'],[4,0,'#4ecdc4'],[5,0,'#4ecdc4'],[6,0,'#4ecdc4'],[7,0,'#4ecdc4'],
-            [3,-3,'#6c5ce7'],[4,-3,'#6c5ce7'],[3,-2,'#6c5ce7'],[4,-2,'#6c5ce7'],[3,-1,'#4ecdc4'],[4,-1,'#4ecdc4'],
-            [0,1,'#4ecdc4'],[7,1,'#4ecdc4'],[0,2,'#4ecdc4'],[7,2,'#4ecdc4'],[0,3,'#4ecdc4'],[7,3,'#4ecdc4'],[0,4,'#4ecdc4'],[7,4,'#4ecdc4'],
-            [0,5,'#4ecdc4'],[1,5,'#4ecdc4'],[2,5,'#4ecdc4'],[3,5,'#4ecdc4'],[4,5,'#4ecdc4'],[5,5,'#4ecdc4'],[6,5,'#4ecdc4'],[7,5,'#4ecdc4'],
-            [1,1,'#1a2236'],[2,1,'#1a2236'],[3,1,'#1a2236'],[4,1,'#1a2236'],[5,1,'#1a2236'],[6,1,'#1a2236'],
-            [1,2,'#1a2236'],[6,2,'#1a2236'],[1,3,'#1a2236'],[6,3,'#1a2236'],
-            [1,4,'#1a2236'],[2,4,'#1a2236'],[3,4,'#1a2236'],[4,4,'#1a2236'],[5,4,'#1a2236'],[6,4,'#1a2236'],
-            [2,2,'#fff'],[3,2,'#fff'],[5,2,'#fff'],[4,2,'#1a2236'],[2,3,'#4ecdc4'],[5,3,'#4ecdc4'],[3,3,'#ff6b6b'],[4,3,'#ff6b6b'],
-        ];
-        px.forEach(([x,y,c])=>{ctx.fillStyle=c;ctx.fillRect((x+4)*3,(y+12)*3,3,3);});
-    }
-
-    function drawAgentAvatar(canvas, color, role) {
-        const ctx = canvas.getContext('2d'); ctx.imageSmoothingEnabled=false; ctx.clearRect(0,0,40,40);
-        const s=3, ox=5, oy=4;
-        const p = (x,y,c)=>{ctx.fillStyle=c;ctx.fillRect(ox+x*s,oy+y*s,s,s);};
-        const lh = (h,a)=>{const n=parseInt(h.replace('#',''),16);return `#${(1<<24|Math.min(255,(n>>16)+a)<<16|Math.min(255,((n>>8)&0xff)+a)<<8|Math.min(255,(n&0xff)+a)).toString(16).slice(1)}`;};
-        for(let x=1;x<=6;x++) for(let y=0;y<=4;y++) p(x,y,lh(color,20));
-        for(let x=0;x<=7;x++) for(let y=5;y<=8;y++) p(x,y,color);
-        p(2,2,'#fff');p(3,2,'#fff');p(5,2,'#fff');p(4,2,lh(color,20));p(2,3,'#111');p(5,3,'#111');
-        const rc={coder:'#4ecdc4',reviewer:'#6c5ce7',tester:'#78e08f',designer:'#ff6b6b',devops:'#ffd93d',researcher:'#74b9ff'};
-        for(let x=0;x<=7;x++) p(x,-1,rc[role]||'#fff');
-        p(2,9,'#2d3748');p(3,9,'#2d3748');p(5,9,'#2d3748');p(4,9,'#2d3748');
-    }
-
-    function drawPerformanceChart() {
-        const canvas = document.getElementById('performanceChart');
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        const w = canvas.width = canvas.parentElement.clientWidth-32, h = canvas.height = 200;
-        ctx.clearRect(0,0,w,h);
-
-        const history = manager.performanceHistory;
-        const data = history.length >= 2 ? history : Array.from({length:20},(_,i)=>({productivity:40+Math.sin(i*0.4)*15+Math.random()*10, tasks:i}));
-
-        // Grid
-        ctx.strokeStyle = 'rgba(78,205,196,0.06)'; ctx.lineWidth=1;
-        for(let i=0;i<5;i++){const y=(h/5)*i+20;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
-
-        // Line
-        const step = w/(data.length-1||1);
-        ctx.strokeStyle='#4ecdc4';ctx.lineWidth=2;ctx.lineJoin='round';ctx.beginPath();
-        data.forEach((p,i)=>{const x=i*step,y=h-(p.productivity/100)*(h-40)-20;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
-        ctx.stroke();
-
-        // Fill
-        const grad = ctx.createLinearGradient(0,0,0,h);
-        grad.addColorStop(0,'rgba(78,205,196,0.15)');grad.addColorStop(1,'rgba(78,205,196,0)');
-        ctx.lineTo(w,h);ctx.lineTo(0,h);ctx.closePath();ctx.fillStyle=grad;ctx.fill();
-
-        // Points
-        data.forEach((p,i)=>{ctx.fillStyle='#4ecdc4';ctx.fillRect(i*step-2,h-(p.productivity/100)*(h-40)-22,4,4);});
-    }
-
-    // ======= INIT =======
-    function restoreFromStorage() {
-        const loaded = manager.loadFromStorage();
-        if (!loaded) return false;
-
-        // Re-create engine sprites for all loaded agents
-        const agents = manager.getAllAgents();
-        if (agents.length === 0) return false;
-
-        agents.forEach((a, i) => {
-            setTimeout(() => {
-                engine.addAgentSprite(a);
-                engine.updateAgentStatus(a.id, a.status);
-                refreshUI();
-            }, i * 200);
-        });
-
-        manager.addLog('System', '📂 Đã khôi phục dữ liệu!', 'success');
-        return true;
-    }
-
-    function createDefaults() {
-        const defs = [
-            {name:'ClaudeBot-001',role:'coder',model:'claude-opus',color:'#4ecdc4',workDir:'/projects/frontend'},
-            {name:'GeminiDev-002',role:'reviewer',model:'gemini-pro',color:'#6c5ce7',workDir:'/projects/backend'},
-            {name:'TestRunner-003',role:'tester',model:'claude-sonnet',color:'#78e08f',workDir:'/projects/tests'},
-            {name:'DesignPix-004',role:'designer',model:'gpt-4',color:'#ff6b6b',workDir:'/projects/ui'},
-            {name:'DevOps-005',role:'devops',model:'claude-haiku',color:'#ffa502',workDir:'/infra/pipelines'},
-            {name:'DataWiz-006',role:'analyst',model:'gemini-ultra',color:'#a29bfe',workDir:'/data/analytics'},
-            {name:'SecGuard-007',role:'security',model:'gpt-4-turbo',color:'#fd79a8',workDir:'/security/audit'},
-            {name:'APIForge-008',role:'backend',model:'claude-opus',color:'#00cec9',workDir:'/api/services'},
-            {name:'MobileX-009',role:'mobile',model:'gemini-pro',color:'#e17055',workDir:'/mobile/app'},
-            {name:'DocBot-010',role:'writer',model:'claude-sonnet',color:'#81ecec',workDir:'/docs/wiki'},
-        ];
-        defs.forEach((d,i)=>{
-            setTimeout(()=>{
-                const a = manager.createAgent(d);
-                engine.addAgentSprite(a);
-                manager.addLog(a.name,'🎉 Đã tham gia văn phòng!','success');
-                setTimeout(()=>engine.showSpeechBubble(a.id,'Sẵn sàng! 🚀',3000),2500+i*400);
-                refreshUI();
-            },i*800);
-        });
-        setTimeout(()=>{
-            const tasks = [
-                {title:'Setup CI/CD Pipeline',description:'Cấu hình GitHub Actions',priority:'high',assigneeId:'agent-1'},
-                {title:'Review Auth Module',description:'Kiểm tra security',priority:'medium',assigneeId:'agent-2'},
-                {title:'Write Unit Tests',description:'Test API endpoints',priority:'medium',assigneeId:'agent-3'},
-                {title:'Design Dashboard UI',description:'Thiết kế giao diện dashboard',priority:'high',assigneeId:'agent-4'},
-                {title:'Deploy K8s Cluster',description:'Thiết lập Kubernetes production',priority:'critical',assigneeId:'agent-5'},
-                {title:'Build ML Pipeline',description:'Xây dựng data pipeline ETL',priority:'high',assigneeId:'agent-6'},
-                {title:'Penetration Testing',description:'Kiểm tra lỗ hổng bảo mật',priority:'critical',assigneeId:'agent-7'},
-                {title:'REST API v2',description:'Phát triển API endpoints mới',priority:'high',assigneeId:'agent-8'},
-                {title:'React Native App',description:'Xây dựng ứng dụng mobile',priority:'medium',assigneeId:'agent-9'},
-                {title:'API Documentation',description:'Viết tài liệu kỹ thuật API',priority:'low',assigneeId:'agent-10'},
-                {title:'Optimize Queries',description:'Cải thiện DB performance',priority:'high'},
-                {title:'Update API Docs',description:'Cập nhật swagger docs',priority:'low'},
-                {title:'Security Audit',description:'Kiểm tra bảo mật toàn hệ thống',priority:'critical'},
-                {title:'Load Testing',description:'Kiểm tra hiệu năng hệ thống',priority:'medium'},
-                {title:'Docker Compose Setup',description:'Cấu hình môi trường dev',priority:'medium'},
-            ];
-            tasks.forEach((t,i)=>setTimeout(()=>{
-                manager.createTask(t);
-                if(t.assigneeId)engine.updateAgentStatus(t.assigneeId,'working');
-                refreshUI();
-            },i*200));
-        },9000);
-    }
-
-    // Background particles
-    for(let i=0;i<12;i++){
-        const p=document.createElement('div');p.className='particle';
-        p.style.left=Math.random()*100+'%';p.style.animationDuration=(8+Math.random()*12)+'s';
-        p.style.animationDelay=Math.random()*8+'s';p.style.width=(1+Math.random()*2)+'px';p.style.height=p.style.width;
-        p.style.background=['#4ecdc4','#6c5ce7','#ffd93d','#ff6b6b'][Math.floor(Math.random()*4)];
-        document.body.appendChild(p);
-    }
-
-    // Zoom controls
-    document.getElementById('btnZoomIn').addEventListener('click',()=>{engine.scale=Math.min(5,engine.scale+0.5);});
-    document.getElementById('btnZoomOut').addEventListener('click',()=>{engine.scale=Math.max(1,engine.scale-0.5);});
-    document.getElementById('btnFullscreen').addEventListener('click',()=>{document.getElementById('officeViewport').requestFullscreen?.();});
-
-    // Toolbar buttons — connect to Layout Editor
-    document.querySelectorAll('.toolbar-btn[data-tool]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const tool = btn.dataset.tool;
-            const wasActive = btn.classList.contains('active');
-            document.querySelectorAll('.toolbar-btn[data-tool]').forEach(b => b.classList.remove('active'));
-
-            if (tool === 'layout' || tool === 'floor' || tool === 'wall' || tool === 'erase' || tool === 'furniture') {
-                // Open layout editor
-                if (!wasActive) {
-                    btn.classList.add('active');
-                    layoutEditor.toggle(true);
-                    if (tool === 'floor') {
-                        layoutEditor.currentTool = 'floor';
-                        layoutEditor.panel.querySelector('[data-floor="wood"]')?.click();
-                    } else if (tool === 'erase') {
-                        layoutEditor.currentTool = 'erase';
-                        layoutEditor.panel.querySelector('[data-letool="erase"]')?.click();
-                    } else if (tool === 'furniture') {
-                        layoutEditor.currentTool = 'furniture';
-                        layoutEditor.panel.querySelector('[data-letool="furniture"]')?.click();
-                    } else if (tool === 'layout') {
-                        layoutEditor.currentTool = 'select';
-                        layoutEditor.panel.querySelector('[data-letool="select"]')?.click();
-                    }
-                    showToast(`🏗️ Layout Editor mở`, 'info');
-                } else {
-                    layoutEditor.toggle(false);
-                }
-            } else if (tool === 'settings') {
-                if (!wasActive) {
-                    btn.classList.add('active');
-                    showToast('⚙️ Cài đặt (sắp ra mắt)', 'info');
-                }
-            }
-        });
-    });
-    // Toolbar + Agent button
-    const toolbarAddBtn = document.getElementById('btnAddAgentToolbar');
-    if (toolbarAddBtn) toolbarAddBtn.addEventListener('click', () => { document.getElementById('modalAddAgent').classList.add('active'); });
-
-    // Settings button — reset data
-    document.getElementById('btnSettings').addEventListener('click', () => {
-        if (confirm('🗑️ Xóa toàn bộ dữ liệu đã lưu và reset về mặc định?')) {
-            manager.clearStorage();
-            localStorage.removeItem('pixelAgentLayout');
-            showToast('🔄 Đã xóa dữ liệu! Đang reload...', 'warning');
-            setTimeout(() => location.reload(), 1000);
+    // ============ MISC ============
+    function createParticles() {
+        for (let i = 0; i < 15; i++) {
+            const p = document.createElement('div');
+            p.className = 'particle';
+            p.style.left = Math.random() * 100 + '%';
+            p.style.animationDuration = 10 + Math.random() * 20 + 's';
+            p.style.animationDelay = Math.random() * 10 + 's';
+            document.body.appendChild(p);
         }
-    });
-
-    // Try to restore saved data; if none, create defaults
-    const restored = restoreFromStorage();
-    if (restored) {
-        showToast('📂 Đã khôi phục dữ liệu từ phiên trước!', 'success');
-    } else {
-        createDefaults();
     }
-    manager.startSimulation();
 
-    // Save on page unload
-    window.addEventListener('beforeunload', () => {
-        manager.saveToStorage();
-    });
+    function updateClock() {
+        const c = document.getElementById('pixelClock');
+        if (c) c.textContent = new Date().toLocaleTimeString('vi-VN');
+    }
 
-    setInterval(()=>{DOM.pixelClock.textContent=new Date().toLocaleTimeString('vi-VN');},1000);
-    setInterval(()=>{
-        const s=manager.getStats(),sec=s.uptime;
-        DOM.uptime.textContent=`${String(Math.floor(sec/7200)).padStart(2,'0')}:${String(Math.floor((sec%7200)/120)).padStart(2,'0')}:${String(Math.floor((sec%120)/2)).padStart(2,'0')}`;
-        DOM.memoryUsage.textContent=`Memory: ${(128+manager.getAllAgents().length*42+Math.random()*8).toFixed(0)} MB`;
-        refreshHeader();
-        manager.getAllAgents().forEach(a=>engine.updateAgentStatus(a.id,a.status));
-    },1000);
-    setInterval(()=>{refreshAgentList();refreshTaskList();refreshLogs();},2000);
-    setInterval(refreshStats,5000);
-
-    DOM.pixelClock.textContent=new Date().toLocaleTimeString('vi-VN');
-    refreshUI();
-    setTimeout(()=>{showToast('🎮 Pixel AI Agent Manager v3.0!','success');manager.addLog('System','🚀 Hệ thống đã khởi động','success');},500);
-});
+    // ============ BOOT ============
+    document.addEventListener('DOMContentLoaded', initStartScreen);
+})();

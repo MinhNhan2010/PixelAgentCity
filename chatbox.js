@@ -16,92 +16,103 @@ class AgentChatbox {
         this.dragPos = { x: 0, y: 0 };
         this.isDragging = false;
 
-        // Role-specific response templates
+        // Role-specific response templates with Game Context
         this.roleResponses = {
             coder: {
-                greeting: ['Chào bạn! Tôi đang code, có gì không? 💻', 'Hey! Cần tôi viết gì nào? ⌨️'],
-                working: ['Đang code đây... {task} đang tiến triển tốt!', 'Hiện đang implement {task}, khá thú vị!', 'Code review xong rồi, đang refactor một chút...'],
-                idle: ['Đang chờ task mới, muốn tôi code gì? ✨', 'Rảnh rỗi quá, cho tôi task đi!'],
-                help: ['Bạn cần tôi code feature gì?', 'Tôi có thể viết code bằng JS, Python, Go...', 'Muốn tôi viết API hay Frontend?'],
-                opinion: ['Theo tôi nên dùng TypeScript cho type safety 🔒', 'Clean code quan trọng hơn clever code!', 'SOLID principles là nền tảng tốt!'],
+                greeting: ['Chào bạn! Tôi đang code, có gì không? 💻', 'Hey! Cần tôi viết gì nào? Boss trả lương tôi rồi chứ? ⌨️'],
+                working: ['Đang code đây... {task} sắp xong rồi, hy vọng được thưởng! 💸', 'Hiện đang implement {task}, khá thú vị!'],
+                idle: ['Đang chờ contract mới, tiền lương vẫn tính nhé! ✨', 'Rảnh rỗi quá, sếp nhận contract đi!'],
+                help: ['Bạn cần tôi code feature gì cho contract?', 'Tôi có thể viết code bằng JS, Python, Go...'],
+                opinion: ['Code lỗi có bị trừ lương không sếp? 😅', 'Clean code quan trọng hơn clever code!'],
+                salary: ['Lương tôi 15Ⓒ/ngày là hơi bèo đó nha sếp! 😂', 'Tiền nong sòng phẳng, code rốp rẻng! 💸'],
             },
             reviewer: {
-                greeting: ['Xin chào! Tôi review code đây 🔍', 'Hey! Gửi PR nào, tôi review liền!'],
-                working: ['Đang review {task}... phát hiện vài issues rồi', 'Code quality check cho {task} đang tiến triển'],
-                idle: ['Sẵn sàng review! Gửi code cho tôi nhé 📝', 'Có PR nào cần review không?'],
-                help: ['Tôi kiểm tra code quality, best practices', 'Gửi tôi xem code, tôi sẽ feedback!'],
-                opinion: ['Code readable > Code clever! 📖', 'Test coverage rất quan trọng!', 'Nên viết comments cho phần phức tạp'],
+                greeting: ['Xin chào! Cứ đưa code lỗi đây, tôi lấy lương xứng đáng 🔍', 'Hey! Gửi PR nào, tôi review liền!'],
+                working: ['Đang review {task}... hi vọng sếp không phạt ai viết code này', 'Code quality check cho {task} đang tiến triển'],
+                idle: ['Sẵn sàng review! Nhận contract đi boss 📝', 'Có PR nào cần review không? Ngồi không ngại quá'],
+                help: ['Tôi kiểm tra code quality, best practices, kiếm tiền cho công ty!', 'Gửi tôi xem code, tôi sẽ feedback!'],
+                opinion: ['Code readable giúp team hoàn thành contract sớm! 📖', 'Test coverage cao thì đỡ tốn tiền đền bù!'],
+                salary: ['Review dạo kiếm sống, sếp nhớ trả lương đúng hạn! 💸', 'Công sức soi bug cũng đáng giá ngàn vàng!'],
             },
             tester: {
-                greeting: ['Xin chào! QA tester đây 🧪', 'Hey! Tôi sẽ test mọi thứ!'],
-                working: ['Testing {task}... đã phát hiện vài edge cases', 'Automation tests cho {task} đang chạy...'],
-                idle: ['Cần test gì không? Tôi rảnh nè!', 'Mọi thứ đang pass tests ✅'],
-                help: ['Tôi viết unit tests, integration tests, E2E', 'Gửi tôi feature, tôi sẽ viết test cases!'],
-                opinion: ['100% coverage không thực tế, nhưng 80% là tối thiểu!', 'Test Driven Development rất hiệu quả!'],
+                greeting: ['Xin chào! QA tester đây, bug là tiền 🧪', 'Hey! Tôi sẽ test mọi thứ!'],
+                working: ['Testing {task}... bắt được bug là có xp!', 'Automation tests cho {task} đang chạy...'],
+                idle: ['Cần test gì không? Rảnh rỗi dễ sinh nông nổi!', 'Mọi thứ đang pass tests ✅ Contract thành công!'],
+                help: ['Tôi viết unit tests để bảo vệ uy tín công ty (Reputation)', 'Gửi tôi feature, tôi sẽ viết test cases!'],
+                opinion: ['100% coverage không thực tế, nhưng đừng để Rep tụt thê thảm!', 'Test Driven Development rất hiệu quả!'],
+                salary: ['Lương tester bọt bèo quá sếp ơi! 📉', 'Test cẩn thận để không rớt Reputation!'],
             },
             designer: {
-                greeting: ['Hi! Designer here 🎨', 'Chào bạn! Cần thiết kế gì nào?'],
-                working: ['Đang thiết kế {task}... sắp xong wireframe!', 'UI cho {task} đang rất đẹp! ✨'],
-                idle: ['Muốn tôi design gì? 🖌️', 'Rảnh rỗi, cho tôi design challenge đi!'],
-                help: ['Tôi thiết kế UI/UX, icons, illustrations', 'Cần mockup hay prototype?'],
-                opinion: ['Design system rất quan trọng! 🎯', 'Less is more — Minimalism là chìa khóa!', 'Dark mode luôn cool hơn! 🌙'],
+                greeting: ['Hi! Designer here 🎨 Tiền nào của nấy nha sếp!', 'Chào bạn! Cần thiết kế giao diện ngàn đô không?'],
+                working: ['Đang thiết kế {task}... sắp xong wireframe rồi!', 'UI cho {task} đang rất đẹp, khách sẽ thích! ✨'],
+                idle: ['Muốn tôi design gì? 🖌️ Chờ hoài chán quá', 'Sếp hết tiền nhận contract mới rồi à?'],
+                help: ['Tôi thiết kế UI/UX để công ty nhanh lên level', 'Cần mockup hay prototype?'],
+                opinion: ['Design system xịn thì bán app mới được giá! 🎯', 'Less is more — Minimalism là chìa khóa!'],
+                salary: ['Thiết kế là nghệ thuật, mà nghệ thuật thì đắt tiền! 💸🎨', 'Tăng lương đi sếp, mắt tôi tăng độ rồi!'],
             },
             devops: {
-                greeting: ['DevOps here! Infra vẫn stable 🚀', 'Chào! Có gì cần deploy không?'],
-                working: ['Đang {task}... CI/CD pipeline chạy ngon!', 'Kubernetes cluster cho {task} đang setup...'],
-                idle: ['Infrastructure stable, CPU 42%, RAM 68% 📊', 'Monitoring dashboards xanh 🟢'],
-                help: ['Tôi quản lý servers, CI/CD, Docker, K8s', 'Cần deploy hay scale gì?'],
-                opinion: ['Infrastructure as Code là must-have!', 'GitOps > manual deployment! 🔄', 'Zero downtime deployment là tiêu chuẩn!'],
+                greeting: ['DevOps here! Infra tốn tiền lắm đấy 🚀', 'Chào! Có gì cần deploy không?'],
+                working: ['Đang {task}... Server tính phí theo giờ đấy nhé!', 'Kubernetes cluster cho {task} đang setup...'],
+                idle: ['Infrastructure stable, rảnh là tốt! 🟢', 'Monitoring dashboards xanh rờn, yên tâm trả lương!'],
+                help: ['Tôi quản lý servers, giảm thiểu chi phí mây cho sếp', 'Cần deploy hay scale gì?'],
+                opinion: ['Sập server là sếp đền ốm tiền contract! 🔄', 'Zero downtime deployment là tiêu chuẩn!'],
+                salary: ['Lương DevOps lúc nào cũng phải top tier nhé! 🤑', 'Server chạy tốt, lương phải đều!'],
             },
             researcher: {
-                greeting: ['Xin chào! Tôi đang nghiên cứu 📚', 'Hi! Có câu hỏi gì thú vị không?'],
-                working: ['Nghiên cứu {task}... rất nhiều paper hay!', 'Đang phân tích data cho {task}...'],
-                idle: ['Có topic nào cần research không? 🧠', 'Đang đọc paper mới trên arXiv...'],
-                help: ['Tôi nghiên cứu AI/ML, algorithms', 'Muốn tôi survey topic gì?'],
-                opinion: ['Transformer architecture đang thay đổi mọi thứ!', 'Data quality > Data quantity! 📊'],
+                greeting: ['Xin chào! Tôi đang nghiên cứu 📚 Đầu tư R&D tốn kém đấy', 'Hi! Có câu hỏi gì thú vị không?'],
+                working: ['Nghiên cứu {task}... tốn nhiều XP quá!', 'Đang phân tích data cho {task}...'],
+                idle: ['Có topic nào cần dùng não không sếp? 🧠', 'Đang đọc paper... vẫn xin tính lương!'],
+                help: ['Tôi nghiên cứu AI/ML để công ty mau thăng cấp', 'Muốn tôi survey topic gì?'],
+                opinion: ['Công ty Level cao mới có dự án ngon! 📈', 'Data quality > Data quantity! 📊'],
+                salary: ['Nghiên cứu khoa học cần tiền tài trợ! 💸', 'Trả lương đi sếp để mua sách mới!'],
             },
             analyst: {
-                greeting: ['Hi! Data analyst đây 📊', 'Business insights ready! 📈'],
-                working: ['Phân tích {task}... số liệu rất thú vị!', 'Dashboard cho {task} sắp xong!'],
-                idle: ['Cần phân tích data gì không? 📉', 'Đang theo dõi metrics...'],
-                help: ['Tôi phân tích data, tạo reports', 'Cần insights hay visualization?'],
-                opinion: ['Data-driven decisions là key! 🔑', 'A/B testing trước khi scale!'],
+                greeting: ['Hi! Data analyst đây 📊 Doanh thu nay sao?', 'Business insights ready! 📈'],
+                working: ['Phân tích {task}... công ty đang lãi hay lỗ?', 'Dashboard cho {task} sắp xong!'],
+                idle: ['Cần phân tích tài chính công ty không? 📉', 'Đang tính xem công ty đủ tiền trả lương đến bao giờ...'],
+                help: ['Tôi tối ưu lợi nhuận cho sếp', 'Cần insights hay visualization?'],
+                opinion: ['Reputation thấp khó nhận hợp đồng béo lắm sếp! 🔑', 'A/B testing trước khi release!'],
+                salary: ['Phân tích thấy lương tôi bèo nhất phòng! 😭', 'KPI tốt thì sếp phải thưởng chứ!'],
             },
             security: {
-                greeting: ['Security team here 🛡️', 'Hệ thống an toàn! Có gì cần audit?'],
-                working: ['Đang audit {task}... tìm thấy vài concerns', 'Penetration testing {task} đang chạy...'],
-                idle: ['Watching for threats... 👀', 'Mọi thứ secure, HTTPS everywhere ✅'],
-                help: ['Tôi audit security, pen testing, compliance', 'Gửi code, tôi check vulnerabilities!'],
-                opinion: ['Never trust user input! 🚫', 'Encryption at rest AND in transit!', 'Security by design, not afterthought!'],
+                greeting: ['Security team here 🛡️ Hệ thống an toàn!', 'Hacker xâm nhập là công ty đền hợp đồng vỡ mặt nha!'],
+                working: ['Đang audit {task}... tìm thấy lỗ hổng tốn tiền rồi', 'Penetration testing {task} đang chạy...'],
+                idle: ['Watching for threats... 👀', 'Mọi thứ secure, Rep an toàn! ✅'],
+                help: ['Tôi audit hệ thống để giữ chân khách hàng', 'Gửi code, tôi check vulnerability!'],
+                opinion: ['Rò rỉ dữ liệu = Phá sản! 🚫', 'Security by design, not afterthought!'],
+                salary: ['Lương bảo mật phải cao, không tôi hack sập công ty! (Đùa thôi 😂)', 'Bảo vệ tài sản công ty thì phải trả cho xứng đáng!'],
             },
             backend: {
-                greeting: ['Backend dev here! ⚙️ API đang chạy ngon', 'Hi! Cần API mới không?'],
-                working: ['Đang develop {task}... database schema xong!', 'REST endpoints cho {task} đang test...'],
-                idle: ['API Gateway chạy ổn, latency < 50ms ⚡', 'Cần endpoint mới không?'],
-                help: ['Tôi build APIs, microservices, databases', 'REST hay GraphQL?'],
-                opinion: ['Microservices khi đúng thời điểm!', 'Cache everything that makes sense! 🗃️'],
+                greeting: ['Backend dev here! ⚙️ Database tốn bao nhiêu GB rồi?', 'Hi! Cần API mới không?'],
+                working: ['Đang develop {task}... sắp xong phase này của contract!', 'REST endpoints cho {task} đang test...'],
+                idle: ['Server rảnh rang thế này, sếp nhận dự án đi ⚡', 'Cần endpoint mới không?'],
+                help: ['Tôi build backend gánh vác cả công ty', 'REST hay GraphQL?'],
+                opinion: ['Cache tốt giảm chi phí server sếp ạ! 🗃️', 'Microservices khi đúng thời điểm!'],
+                salary: ['Lương tôi 💸 mua được ly cà phê mỗi ngày thôi à sếp?', 'Backend phức tạp, lương cũng phải tỉ lệ thuận chứ!'],
             },
             mobile: {
-                greeting: ['Mobile dev đây! 📱 App đang stable', 'Hi! Cross-platform hay native?'],
-                working: ['Build {task}... hot reload đang ngon! 🔥', 'UI component cho {task} rendering đẹp!'],
-                idle: ['App Store rating 4.8 ⭐', 'Cần thêm feature mobile gì?'],
-                help: ['React Native, Flutter, Swift, Kotlin', 'Cần mobile app hay responsive web?'],
-                opinion: ['PWA ngày càng mạnh! 💪', 'Performance trên mobile cực kỳ quan trọng!'],
+                greeting: ['Mobile dev đây! 📱 Rating app cao có thưởng không sếp?', 'Hi! Cross-platform hay native?'],
+                working: ['Build {task}... sắp bàn giao app lấy tiền rồi!', 'UI component cho {task} rendering đẹp!'],
+                idle: ['Khách nào cần làm app mobile gọi tôi nhé ⭐', 'Sếp nhận hợp đồng mobile app đi!'],
+                help: ['Làm app iOS, Android lấy tiền tỷ!', 'Cần mobile app hay responsive web?'],
+                opinion: ['App xịn khách hàng tip thêm xèng! 💪', 'Performance trên mobile cực kỳ quan trọng!'],
+                salary: ['Sếp trả tôi theo giờ đi, code mobile căng mắt quá! 💸📱', 'Làm app khó, lương cao hợp lý!'],
             },
             writer: {
-                greeting: ['Technical writer đây! ✍️', 'Chào! Docs cần update gì?'],
-                working: ['Đang viết docs cho {task}...', 'API documentation {task} sắp xong!'],
-                idle: ['Tài liệu up-to-date! 📄', 'Wiki cần thêm gì không?'],
-                help: ['Tôi viết docs, guides, tutorials', 'README hay API docs?'],
-                opinion: ['Good docs = Good DX! 📖', 'Code without docs is technical debt!'],
+                greeting: ['Technical writer đây! ✍️ Viết lách kiếm cơm', 'Chào! Docs dự án cần update gì?'],
+                working: ['Đang viết tài liệu cho hợp đồng {task}...', 'API documentation {task} sắp hoàn tất!'],
+                idle: ['Không có dự án thì không có docs để viết! 📄', 'Chờ việc...'],
+                help: ['Tôi viết tài liệu bàn giao để lấy nghiệm thu', 'README hay API docs?'],
+                opinion: ['Tài liệu ngon nghẻ giúp khách hàng ưng ý (Tăng Rep) 📖', 'Không có tài liệu, bảo trì mệt nghỉ!'],
+                salary: ['Múa phím ra chữ, chữ thành tiền! Lương tôi đâu? 💰', 'Viết docs cực lắm sếp, thưởng thêm đi!'],
             },
         };
 
         // Predefined quick asks
         this.quickAsks = [
-            { text: 'Bạn đang làm gì?', key: 'working' },
-            { text: 'Giúp tôi!', key: 'help' },
-            { text: 'Ý kiến của bạn?', key: 'opinion' },
+            { text: 'Đang làm gì?', key: 'working' },
+            { text: 'Lương bổng?', key: 'salary' },
+            { text: 'Lời khuyên?', key: 'opinion' },
         ];
 
         this.createChatbox();
@@ -383,6 +394,8 @@ class AgentChatbox {
                 category = 'opinion';
             } else if (lower.includes('chào') || lower.includes('hello') || lower.includes('hi ')) {
                 category = 'greeting';
+            } else if (lower.includes('lương') || lower.includes('tiền') || lower.includes('trả') || lower.includes('salary')) {
+                category = 'salary';
             } else {
                 // Random contextual response
                 category = agent.status === 'working' ? 'working' : (Math.random() > 0.5 ? 'help' : 'opinion');

@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="description" content="Pixel AI Agent Manager - Quản lý AI Agent trong văn phòng pixel art tương tác">
+    <meta name="description" content="PixelAgent City — Quản lý studio AI, tuyển agent, nhận hợp đồng, kiếm tiền!">
     <meta name="theme-color" content="#0a0e1a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>🎮 Pixel AI Agent Manager</title>
+    <title>🎮 PixelAgent City — AI Office Tycoon</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
@@ -15,21 +15,141 @@
 <body>
     <!-- Scanline overlay for retro effect -->
     <div class="scanlines"></div>
-    
-    <!-- Header -->
-    <header class="header">
+
+    <!-- ========== START SCREEN ========== -->
+    <div class="start-screen" id="startScreen">
+        <div class="start-bg-particles" id="startParticles"></div>
+        <div class="start-content">
+            <div class="start-logo-container">
+                <div class="start-logo-pixel">
+                    <canvas id="startLogoCanvas" width="64" height="64"></canvas>
+                </div>
+                <h1 class="start-title">PIXEL<span class="start-title-accent">AGENT</span></h1>
+                <h2 class="start-subtitle">C I T Y</h2>
+                <div class="start-tagline">AI Office Tycoon</div>
+            </div>
+            <div class="start-menu">
+                <button class="start-btn start-btn-primary" id="btnNewGame">
+                    <span class="start-btn-icon">🎮</span>
+                    <span>NEW GAME</span>
+                </button>
+                <button class="start-btn start-btn-secondary" id="btnContinue" style="display:none">
+                    <span class="start-btn-icon">📂</span>
+                    <span>CONTINUE</span>
+                </button>
+                <button class="start-btn start-btn-info" id="btnHowToPlay">
+                    <span class="start-btn-icon">📖</span>
+                    <span>HOW TO PLAY</span>
+                </button>
+            </div>
+            <div class="start-version">v3.0 — Made with ❤️ & Pixels</div>
+        </div>
+    </div>
+
+    <!-- ========== HOW TO PLAY MODAL ========== -->
+    <div class="modal-overlay" id="modalHowToPlay">
+        <div class="modal pixel-border" style="max-width:540px">
+            <div class="modal-header">
+                <h2>📖 Cách Chơi</h2>
+                <button class="modal-close" id="closeHowToPlay">&times;</button>
+            </div>
+            <div class="modal-body" style="font-size:13px;line-height:1.8;color:var(--text-secondary)">
+                <div style="margin-bottom:16px">
+                    <span style="font-family:var(--font-pixel);font-size:9px;color:var(--accent-primary)">🎯 MỤC TIÊU</span><br>
+                    Xây dựng studio AI từ startup thành đế chế! Đạt Level 10 để chiến thắng.
+                </div>
+                <div style="margin-bottom:16px">
+                    <span style="font-family:var(--font-pixel);font-size:9px;color:var(--accent-success)">💰 KINH TẾ</span><br>
+                    • Tuyển Agent tốn tiền, mỗi ngày trả lương<br>
+                    • Nhận Contracts (hợp đồng) → Agent hoàn thành → Kiếm tiền<br>
+                    • Hết tiền = Game Over!
+                </div>
+                <div style="margin-bottom:16px">
+                    <span style="font-family:var(--font-pixel);font-size:9px;color:var(--accent-warning)">📋 CONTRACTS</span><br>
+                    • Click <strong>📋 Contracts</strong> để xem hợp đồng<br>
+                    • Mỗi contract có deadline, reward, và roles cần thiết<br>
+                    • Accept contract → Hệ thống tự tạo tasks cho agents
+                </div>
+                <div style="margin-bottom:16px">
+                    <span style="font-family:var(--font-pixel);font-size:9px;color:var(--accent-secondary)">⭐ REPUTATION</span><br>
+                    • Hoàn thành đúng hạn → Tăng rep → Contracts tốt hơn<br>
+                    • Thất bại → Giảm rep → Ít contracts
+                </div>
+                <div>
+                    <span style="font-family:var(--font-pixel);font-size:9px;color:var(--accent-tertiary)">🏢 LEVEL UP</span><br>
+                    • Hoàn thành contracts → +XP → Level up<br>
+                    • Unlock roles mới, contracts lớn hơn, furniture premium
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-pixel" id="closeHowToPlay2">Hiểu rồi! 🚀</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== DAY TRANSITION OVERLAY ========== -->
+    <div class="day-transition" id="dayTransition">
+        <div class="day-transition-content">
+            <div class="day-transition-icon" id="dayIcon">🌅</div>
+            <div class="day-transition-text">DAY <span id="dayTransNum">1</span></div>
+            <div class="day-transition-sub" id="dayTransSub">Good morning!</div>
+        </div>
+    </div>
+
+    <!-- ========== GAME OVER OVERLAY ========== -->
+    <div class="game-over-overlay" id="gameOverOverlay">
+        <div class="game-over-content">
+            <div class="game-over-icon">💀</div>
+            <h1 class="game-over-title">GAME OVER</h1>
+            <div class="game-over-reason">Công ty đã phá sản!</div>
+            <div class="game-over-stats" id="gameOverStats"></div>
+            <div class="game-over-actions">
+                <button class="start-btn start-btn-primary" id="btnRetry">🔄 CHƠI LẠI</button>
+                <button class="start-btn start-btn-info" id="btnBackToMenu">🏠 MENU</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== LEVEL UP OVERLAY ========== -->
+    <div class="level-up-overlay" id="levelUpOverlay">
+        <div class="level-up-content">
+            <div class="level-up-icon">🎉</div>
+            <h2 class="level-up-title">LEVEL UP!</h2>
+            <div class="level-up-level" id="levelUpLevel">Level 2</div>
+            <div class="level-up-name" id="levelUpName">Small Studio</div>
+            <div class="level-up-unlock" id="levelUpUnlock">🔓 Unlock: Reviewer, Designer</div>
+            <button class="btn-pixel" id="btnCloseLevelUp">Tuyệt vời! ✨</button>
+        </div>
+    </div>
+
+    <!-- ========== WIN SCREEN ========== -->
+    <div class="game-over-overlay" id="winOverlay" style="display:none">
+        <div class="game-over-content">
+            <div class="game-over-icon">🏆</div>
+            <h1 class="game-over-title" style="color:var(--accent-warning)">YOU WIN!</h1>
+            <div class="game-over-reason" style="color:var(--accent-success)">Đế chế AI của bạn đã thống trị!</div>
+            <div class="game-over-stats" id="winStats"></div>
+            <div class="game-over-actions">
+                <button class="start-btn start-btn-primary" id="btnPlayOn">🎮 CHƠI TIẾP</button>
+                <button class="start-btn start-btn-info" id="btnWinMenu">🏠 MENU</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== HEADER ========== -->
+    <header class="header" id="gameHeader" style="display:none">
         <div class="header-left">
             <div class="logo-icon">
                 <canvas id="logoCanvas" width="32" height="32"></canvas>
             </div>
-            <h1 class="logo-text">PIXEL<span class="logo-highlight">AGENTS</span></h1>
-            <div class="version-badge">v3.0</div>
+            <h1 class="logo-text">PIXEL<span class="logo-highlight">AGENT</span></h1>
+            <div class="version-badge">CITY</div>
         </div>
         <div class="header-center">
             <div class="status-bar">
                 <div class="status-item">
                     <span class="status-dot active"></span>
-                    <span class="status-label">Agents Online:</span>
+                    <span class="status-label">Agents:</span>
                     <span class="status-value" id="agentsOnline">0</span>
                 </div>
                 <div class="status-divider"></div>
@@ -47,8 +167,8 @@
             </div>
         </div>
         <div class="header-right">
-            <button class="btn-pixel" id="btnAddAgent" title="Thêm Agent mới">
-                <span>+ AGENT</span>
+            <button class="btn-pixel" id="btnAddAgent" title="Tuyển Agent mới">
+                <span>+ HIRE</span>
             </button>
             <button class="btn-pixel btn-secondary" id="btnSettings" title="Cài đặt">
                 <span>⚙️</span>
@@ -56,8 +176,47 @@
         </div>
     </header>
 
-    <!-- Main Content -->
-    <main class="main-content">
+    <!-- ========== GAME HUD BAR ========== -->
+    <div class="game-hud" id="gameHud" style="display:none">
+        <div class="hud-section hud-coins">
+            <span class="hud-icon">💰</span>
+            <span class="hud-value" id="hudCoins">500</span>
+            <span class="hud-label">Ⓒ</span>
+            <span class="hud-salary" id="hudSalary" title="Lương hàng ngày">-0/day</span>
+        </div>
+        <div class="hud-divider"></div>
+        <div class="hud-section hud-day">
+            <span class="hud-icon" id="hudTimeIcon">🌅</span>
+            <span class="hud-label">DAY</span>
+            <span class="hud-value" id="hudDay">1</span>
+            <div class="hud-day-bar"><div class="hud-day-fill" id="hudDayFill"></div></div>
+        </div>
+        <div class="hud-divider"></div>
+        <div class="hud-section hud-rep">
+            <span class="hud-icon">⭐</span>
+            <span class="hud-value" id="hudRep">3.0</span>
+        </div>
+        <div class="hud-divider"></div>
+        <div class="hud-section hud-level">
+            <span class="hud-icon">🏢</span>
+            <span class="hud-label">Lv.</span>
+            <span class="hud-value" id="hudLevel">1</span>
+            <div class="hud-xp-bar"><div class="hud-xp-fill" id="hudXpFill"></div></div>
+        </div>
+        <div class="hud-divider"></div>
+        <div class="hud-section hud-contracts-btn">
+            <button class="hud-btn" id="btnContracts" title="Xem hợp đồng">
+                📋 Contracts <span class="hud-badge" id="hudContractBadge">0</span>
+            </button>
+        </div>
+        <div class="hud-section hud-speed">
+            <button class="hud-speed-btn" id="btnSpeed" title="Tốc độ game">▶ 1x</button>
+            <button class="hud-speed-btn hud-pause-btn" id="btnPauseGame" title="Tạm dừng">⏸</button>
+        </div>
+    </div>
+
+    <!-- ========== MAIN CONTENT ========== -->
+    <main class="main-content" id="mainContent" style="display:none">
         <!-- Left Panel - Office View -->
         <section class="office-panel">
             <div class="panel-header">
@@ -70,8 +229,9 @@
             </div>
             <div class="office-viewport" id="officeViewport">
                 <canvas id="officeCanvas"></canvas>
-                <!-- Agent speech bubbles rendered here -->
                 <div class="speech-bubbles" id="speechBubbles"></div>
+                <!-- Night overlay -->
+                <div class="night-overlay" id="nightOverlay"></div>
             </div>
             <!-- Mini-map -->
             <div class="minimap" id="minimap">
@@ -86,9 +246,8 @@
                     <button class="toolbar-btn" data-tool="furniture" title="Đặt nội thất">Furniture</button>
                 </div>
                 <div class="toolbar-group">
-                    <button class="toolbar-btn toolbar-primary" id="btnAddAgentToolbar" title="Thêm Agent">+ Agent</button>
+                    <button class="toolbar-btn toolbar-primary" id="btnAddAgentToolbar" title="Tuyển Agent">+ Hire</button>
                     <button class="toolbar-btn toolbar-accent" data-tool="layout" title="Bố cục">Layout</button>
-                    <button class="toolbar-btn" data-tool="settings" title="Cài đặt">Settings</button>
                 </div>
             </div>
         </section>
@@ -115,38 +274,26 @@
             <div class="tab-content">
                 <!-- Agents Tab -->
                 <div class="tab-pane active" id="tab-agents">
-                    <div class="agent-list" id="agentList">
-                        <!-- Agent cards rendered by JS -->
-                    </div>
+                    <div class="agent-list" id="agentList"></div>
                 </div>
-
                 <!-- Tasks Tab -->
                 <div class="tab-pane" id="tab-tasks">
                     <div class="task-header">
                         <h3>Quản Lý Công Việc</h3>
-                        <button class="btn-pixel btn-small" id="btnAddTask">+ Task</button>
                     </div>
-                    <div class="task-list" id="taskList">
-                        <!-- Task items rendered by JS -->
-                    </div>
+                    <div class="task-list" id="taskList"></div>
                 </div>
-
                 <!-- Logs Tab -->
                 <div class="tab-pane" id="tab-logs">
                     <div class="log-header">
                         <h3>Activity Logs</h3>
                         <button class="btn-pixel btn-small" id="btnClearLogs">Clear</button>
                     </div>
-                    <div class="log-console" id="logConsole">
-                        <!-- Log entries rendered by JS -->
-                    </div>
+                    <div class="log-console" id="logConsole"></div>
                 </div>
-
                 <!-- Stats Tab -->
                 <div class="tab-pane" id="tab-stats">
-                    <div class="stats-grid" id="statsGrid">
-                        <!-- Stats cards rendered by JS -->
-                    </div>
+                    <div class="stats-grid" id="statsGrid"></div>
                     <div class="chart-container">
                         <h3>Hiệu Suất Agent</h3>
                         <canvas id="performanceChart" height="200"></canvas>
@@ -157,11 +304,11 @@
     </main>
 
     <!-- Bottom Status Bar -->
-    <footer class="footer-bar">
+    <footer class="footer-bar" id="footerBar" style="display:none">
         <div class="footer-left">
             <span class="pixel-clock" id="pixelClock">00:00:00</span>
             <span class="footer-divider">|</span>
-            <span class="footer-text">🎮 Pixel AI Agent Manager</span>
+            <span class="footer-text">🎮 PixelAgent City</span>
         </div>
         <div class="footer-right">
             <span class="footer-text" id="memoryUsage">Memory: 0 MB</span>
@@ -170,11 +317,31 @@
         </div>
     </footer>
 
-    <!-- Modal: Add Agent -->
+    <!-- ========== MODAL: Contract Board ========== -->
+    <div class="modal-overlay" id="modalContracts">
+        <div class="modal pixel-border" style="max-width:600px">
+            <div class="modal-header">
+                <h2>📋 Contract Board</h2>
+                <button class="modal-close" id="closeContracts">&times;</button>
+            </div>
+            <div class="modal-body" style="padding:12px">
+                <div style="margin-bottom:12px">
+                    <span style="font-family:var(--font-pixel);font-size:8px;color:var(--accent-warning)">📌 ACTIVE CONTRACTS</span>
+                </div>
+                <div id="activeContractsList" class="contract-list"></div>
+                <div style="margin:16px 0 12px;border-top:1px solid rgba(78,205,196,0.1);padding-top:12px">
+                    <span style="font-family:var(--font-pixel);font-size:8px;color:var(--accent-success)">📬 AVAILABLE CONTRACTS</span>
+                </div>
+                <div id="availableContractsList" class="contract-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== MODAL: Hire Agent ========== -->
     <div class="modal-overlay" id="modalAddAgent">
         <div class="modal pixel-border">
             <div class="modal-header">
-                <h2>🤖 Thêm Agent Mới</h2>
+                <h2>🤖 Tuyển Agent <span id="hireCost" class="hire-cost-badge"></span></h2>
                 <button class="modal-close" id="closeAddAgent">&times;</button>
             </div>
             <div class="modal-body">
@@ -183,14 +350,10 @@
                     <input type="text" class="pixel-input" id="agentName" placeholder="PixelBot-001">
                 </div>
                 <div class="form-group">
-                    <label class="pixel-label">Vai Trò</label>
+                    <label class="pixel-label">Vai Trò <span id="roleUnlockHint" class="unlock-hint"></span></label>
                     <select class="pixel-select" id="agentRole">
-                        <option value="coder">💻 Coder</option>
-                        <option value="reviewer">🔍 Reviewer</option>
-                        <option value="tester">🧪 Tester</option>
-                        <option value="designer">🎨 Designer</option>
-                        <option value="devops">🚀 DevOps</option>
-                        <option value="researcher">📚 Researcher</option>
+                        <option value="coder">💻 Coder — 100Ⓒ</option>
+                        <option value="tester">🧪 Tester — 120Ⓒ</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -215,60 +378,33 @@
                         <div class="color-option" data-color="#78e08f" style="background:#78e08f"></div>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label class="pixel-label">Thư Mục Làm Việc</label>
-                    <input type="text" class="pixel-input" id="agentWorkDir" placeholder="/projects/my-app">
-                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn-pixel btn-secondary" id="cancelAddAgent">Hủy</button>
-                <button class="btn-pixel" id="confirmAddAgent">✨ Tạo Agent</button>
+                <button class="btn-pixel" id="confirmAddAgent">💰 Tuyển Agent</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal: Add Task -->
-    <div class="modal-overlay" id="modalAddTask">
-        <div class="modal pixel-border">
-            <div class="modal-header">
-                <h2>📋 Thêm Công Việc</h2>
-                <button class="modal-close" id="closeAddTask">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label class="pixel-label">Tiêu Đề</label>
-                    <input type="text" class="pixel-input" id="taskTitle" placeholder="Implement feature X">
-                </div>
-                <div class="form-group">
-                    <label class="pixel-label">Mô Tả</label>
-                    <textarea class="pixel-input pixel-textarea" id="taskDesc" placeholder="Chi tiết công việc..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label class="pixel-label">Độ Ưu Tiên</label>
-                    <select class="pixel-select" id="taskPriority">
-                        <option value="low">🟢 Thấp</option>
-                        <option value="medium" selected>🟡 Trung Bình</option>
-                        <option value="high">🟠 Cao</option>
-                        <option value="critical">🔴 Khẩn Cấp</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="pixel-label">Giao Cho Agent</label>
-                    <select class="pixel-select" id="taskAssignee">
-                        <option value="">-- Chọn Agent --</option>
-                    </select>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-pixel btn-secondary" id="cancelAddTask">Hủy</button>
-                <button class="btn-pixel" id="confirmAddTask">✅ Tạo Task</button>
-            </div>
+    <!-- Footer Bar -->
+    <footer class="footer" id="footerBar" style="display:none">
+        <div class="footer-left">
+            <span class="footer-item">🎮 PixelAgent City v3.0</span>
+            <span class="footer-divider">|</span>
+            <span class="footer-item" id="pixelClock">00:00:00</span>
         </div>
-    </div>
+        <div class="footer-right">
+            <button class="icon-btn" id="btnClearLogs" title="Xóa logs">🗑</button>
+        </div>
+    </footer>
 
     <!-- Notification Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
 
+    <!-- Coin popup container -->
+    <div class="coin-popup-container" id="coinPopups"></div>
+
+    <script src="game.js"></script>
     <script src="pixel-engine.js"></script>
     <script src="agents.js"></script>
     <script src="layout-editor.js"></script>
@@ -281,13 +417,11 @@
         if (!panel) return;
         let startY = 0;
         panel.addEventListener('click', function(e) {
-            // Click on the pseudoelement drag handle area (top 20px)
             const rect = panel.getBoundingClientRect();
             if (e.clientY - rect.top < 20) {
                 panel.classList.toggle('panel-open');
             }
         });
-        // Swipe up to open, swipe down to close
         panel.addEventListener('touchstart', function(e) {
             startY = e.touches[0].clientY;
         }, { passive: true });

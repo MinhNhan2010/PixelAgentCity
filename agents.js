@@ -4,7 +4,8 @@
  */
 
 class AgentManager {
-    constructor() {
+    constructor(engine) {
+        this.engine = engine;
         this.agents = new Map();
         this.tasks = [];
         this.logs = [];
@@ -74,6 +75,7 @@ class AgentManager {
             mood: 80 + Math.floor(Math.random()*20),
             energy: 90 + Math.floor(Math.random()*10),
             skillLevel: Math.floor(Math.random()*3)+1,
+            level: 1,
             xp: 0,
             // Collaboration
             pairedWith: null,    // agent id for pair programming
@@ -82,6 +84,8 @@ class AgentManager {
             createdAt: new Date(), lastActive: new Date(),
         };
         this.agents.set(id, agent);
+        // Add sprite to engine if available
+        if (this.engine) this.engine.addAgentSprite(agent);
         return agent;
     }
 
@@ -117,9 +121,11 @@ class AgentManager {
             id: `task-${this.nextTaskId++}`,
             title: data.title || 'Untitled Task',
             description: data.description || '',
+            type: data.type || 'feature',
             priority: data.priority || 'medium',
             status: 'pending',
             assigneeId: data.assigneeId || null,
+            assignee: data.assigneeId || null,
             progress: 0,
             // Dependencies & review
             dependsOn: data.dependsOn || [],  // task ids that must complete first
@@ -144,7 +150,7 @@ class AgentManager {
         } else if (task.assigneeId) {
             this.assignTask(task.id, task.assigneeId);
         }
-        return task;
+        return task.id;
     }
 
     assignTask(taskId, agentId) {
@@ -154,6 +160,7 @@ class AgentManager {
             // Check if blocked
             if (task.status === 'blocked') return;
             task.assigneeId = agentId;
+            task.assignee = agentId;
             task.status = 'in-progress';
             agent.currentTask = task;
             agent.status = 'working';
@@ -232,7 +239,9 @@ class AgentManager {
     getTasksByStatus(s) { return this.tasks.filter(t=>t.status===s); }
 
     addLog(agentName, message, type='info') {
-        const entry = { time: new Date(), agent: agentName, message, type };
+        const now = new Date();
+        const ts = now.toLocaleTimeString('vi-VN', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+        const entry = { time: ts, agent: agentName, message, type };
         this.logs.unshift(entry);
         if (this.logs.length > 500) this.logs = this.logs.slice(0,500);
         return entry;
@@ -642,7 +651,10 @@ class AgentManager {
                     if (!a.pairedWith) a.pairedWith = null;
                     if (!a.mentoring) a.mentoring = null;
                     if (!a.reviewQueue) a.reviewQueue = [];
+                    if (!a.level) a.level = 1;
                     this.agents.set(id, a);
+                    // Re-add sprite to engine
+                    if (this.engine) this.engine.addAgentSprite(a);
                 });
             }
 
