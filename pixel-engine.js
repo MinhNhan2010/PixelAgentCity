@@ -13,7 +13,10 @@ class PixelEngine {
         this.MW = 32; this.MH = 24; // map tiles
         this.camera = { x: 0, y: 0 };
         this.drag = null;
-        this.time = 0;
+        // DeltaTime system
+        this.lastTime = 0;
+        this.deltaTime = 1;
+        this.elapsed = 0;
         this.map = [];
         this.furniture = [];
         this.deskSlots = [];
@@ -30,6 +33,7 @@ class PixelEngine {
         this.resize();
         window.addEventListener('resize', () => this.resize());
         const vp = document.getElementById('officeViewport');
+        // Mouse events
         vp.addEventListener('mousedown', e => { this.drag = { sx: e.clientX - this.camera.x, sy: e.clientY - this.camera.y }; this._clickPos = { x: e.clientX, y: e.clientY }; });
         vp.addEventListener('mousemove', e => {
             if (this.drag) { this.camera.x = e.clientX - this.drag.sx; this.camera.y = e.clientY - this.drag.sy; }
@@ -47,8 +51,68 @@ class PixelEngine {
         });
         vp.addEventListener('mouseleave', () => { this.drag = null; });
         vp.addEventListener('wheel', e => { e.preventDefault(); this.scale = Math.max(1, Math.min(5, this.scale + (e.deltaY > 0 ? -0.25 : 0.25))); });
+
+        // Touch events for mobile
+        this._touches = {};
+        this._lastPinchDist = 0;
+        vp.addEventListener('touchstart', e => {
+            e.preventDefault();
+            if (e.touches.length === 1) {
+                const t = e.touches[0];
+                const rect = vp.getBoundingClientRect();
+                this.drag = { sx: t.clientX - this.camera.x, sy: t.clientY - this.camera.y };
+                this._clickPos = { x: t.clientX, y: t.clientY };
+            } else if (e.touches.length === 2) {
+                this.drag = null;
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                this._lastPinchDist = Math.sqrt(dx*dx + dy*dy);
+            }
+        }, { passive: false });
+        vp.addEventListener('touchmove', e => {
+            e.preventDefault();
+            if (e.touches.length === 1 && this.drag) {
+                const t = e.touches[0];
+                this.camera.x = t.clientX - this.drag.sx;
+                this.camera.y = t.clientY - this.drag.sy;
+            } else if (e.touches.length === 2) {
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                if (this._lastPinchDist > 0) {
+                    const delta = (dist - this._lastPinchDist) * 0.01;
+                    this.scale = Math.max(1, Math.min(5, this.scale + delta));
+                }
+                this._lastPinchDist = dist;
+            }
+        }, { passive: false });
+        vp.addEventListener('touchend', e => {
+            if (e.changedTouches.length === 1 && this._clickPos) {
+                const t = e.changedTouches[0];
+                if (Math.abs(t.clientX - this._clickPos.x) < 10 && Math.abs(t.clientY - this._clickPos.y) < 10) {
+                    const rect = vp.getBoundingClientRect();
+                    const ox = t.clientX - rect.left;
+                    const oy = t.clientY - rect.top;
+                    const wx = (ox - this.camera.x) / this.scale;
+                    const wy = (oy - this.camera.y) / this.scale;
+                    this.hoveredAgent = null;
+                    this.agentSprites.forEach(sp => {
+                        if (wx > sp.x - 4 && wx < sp.x + 16 && wy > sp.y - 8 && wy < sp.y + 20) this.hoveredAgent = sp.id;
+                    });
+                    if (this.hoveredAgent) {
+                        this.selectedAgent = this.hoveredAgent;
+                        if (this.onAgentClick) this.onAgentClick(this.hoveredAgent);
+                    } else {
+                        this.selectedAgent = null;
+                    }
+                }
+            }
+            this.drag = null;
+            this._lastPinchDist = 0;
+        });
+
         this.buildMap();
-        this.render();
+        this.render(performance.now());
     }
 
     resize() { const vp = document.getElementById('officeViewport'); this.canvas.width = vp.clientWidth; this.canvas.height = vp.clientHeight; this.ctx.imageSmoothingEnabled = false; }
@@ -113,6 +177,27 @@ class PixelEngine {
             f.push({ t: 'desk', x: dx * T, y: dy * T, slotIdx: this.deskSlots.length });
             this.deskSlots.push({ tx: dx, ty: dy, x: (dx + 0.5) * T, y: (dy + 0.5) * T, occupied: false, agentId: null });
         });
+
+        // === INTERACTION POINTS ===
+        this.interactionPoints = [
+            { id: 'coffee1', type: 'coffee', tx: 22, ty: 2, emoji: '☕', label: 'Máy cà phê', effect: 'energy' },
+            { id: 'vending1', type: 'vending', tx: 18, ty: 2, emoji: '🥤', label: 'Máy bán nước', effect: 'energy' },
+            { id: 'vending2', type: 'vending', tx: 20, ty: 2, emoji: '🍫', label: 'Máy bán đồ ăn', effect: 'mood' },
+            { id: 'fridge1', type: 'fridge', tx: 28, ty: 2, emoji: '🍽️', label: 'Tủ lạnh', effect: 'energy' },
+            { id: 'sofa1', type: 'sofa', tx: 24, ty: 18, emoji: '😴', label: 'Sofa', effect: 'rest' },
+            { id: 'bookshelf1', type: 'bookshelf', tx: 2, ty: 11, emoji: '📖', label: 'Kệ sách', effect: 'xp' },
+            { id: 'bookshelf2', type: 'bookshelf', tx: 5, ty: 11, emoji: '📚', label: 'Kệ sách', effect: 'xp' },
+            { id: 'bookshelf3', type: 'bookshelf', tx: 8, ty: 11, emoji: '🧠', label: 'Kệ sách', effect: 'xp' },
+            { id: 'bookshelfL', type: 'bookshelf', tx: 28, ty: 14, emoji: '📖', label: 'Kệ sách lounge', effect: 'xp' },
+            { id: 'plant1', type: 'plant', tx: 6, ty: 2, emoji: '🌿', label: 'Cây xanh', effect: 'mood' },
+            { id: 'plant2', type: 'plant', tx: 13, ty: 2, emoji: '🌱', label: 'Cây xanh', effect: 'mood' },
+            { id: 'painting1', type: 'painting', tx: 9, ty: 2, emoji: '🎨', label: 'Tranh', effect: 'mood' },
+            { id: 'paintingL', type: 'painting', tx: 20, ty: 14, emoji: '🖼️', label: 'Tranh lounge', effect: 'mood' },
+            { id: 'counter1', type: 'counter', tx: 26, ty: 2, emoji: '🍳', label: 'Quầy bếp', effect: 'energy' },
+        ];
+
+        // Active interaction animations
+        this.interactionFx = []; // { x, y, emoji, life, maxLife }
     }
 
     // === DRAWING HELPERS ===
@@ -189,13 +274,10 @@ class PixelEngine {
             case 'shelf': this.drawShelf(x, y); break;
             case 'boxes': this.drawBoxes(x, y); break;
             case 'fridge': this.drawFridge(x, y); break;
-            case 'counter': this.drawCounter(x, y); break;
+            case 'counter': this.drawCounter(x, y, f.w || 3); break;
             case 'cactus': this.drawCactus(x, y); break;
             case 'lamp': this.drawLamp(x, y); break;
             case 'pictureframe': this.drawPictureFrame(x, y); break;
-            case 'counter': this.drawCounter(x, y, f.w || 3); break;
-            case 'fridge': this.drawFridge(x, y); break;
-            case 'boxes': this.drawBoxes(x, y); break;
         }
     }
 
@@ -219,7 +301,7 @@ class PixelEngine {
             const sp = this.agentSprites.get(slot.agentId);
             if (sp?.status === 'working' || sp?.status === 'thinking') {
                 for (let i = 0; i < 3; i++) {
-                    const lw = 3 + Math.sin(this.time * 0.04 + i) * 3;
+                    const lw = 3 + Math.sin(this.elapsed * 0.04 + i) * 3;
                     this.px(x + T * 0.65, y + T * 0.16 + i * 2.5, Math.max(2, lw), 1, ['#4ecdc4', '#78e08f', '#ffd93d'][i]);
                 }
             }
@@ -247,7 +329,7 @@ class PixelEngine {
     }
 
     drawPlant(x, y) {
-        const T = this.T, sw = Math.sin(this.time * 0.015 + x) * 0.7;
+        const T = this.T, sw = Math.sin(this.elapsed * 0.015 + x) * 0.7;
         this.px(x + 3, y + T - 6, 9, 6, '#8B5E3C');
         this.px(x + 4, y + T - 6, 7, 1, '#a0714a');
         this.px(x + 6, y + T * 0.3, 2, T * 0.35, '#1a5e1a');
@@ -311,7 +393,7 @@ class PixelEngine {
         this.px(x, y, T, T * 1.6, '#4a4a5a');
         this.px(x + 1, y + 1, T - 2, T * 0.6, '#333');
         this.px(x + 3, y + T * 0.5, T * 0.4, 3, '#e74c3c');
-        if (Math.sin(this.time * 0.06) > 0) this.px(x + 4, y - 2, 1, 3, 'rgba(200,200,200,0.3)');
+        if (Math.sin(this.elapsed * 0.06) > 0) this.px(x + 4, y - 2, 1, 3, 'rgba(200,200,200,0.3)');
         this.px(x + T * 0.5, y + T, 5, 5, '#f0f0f0');
         this.px(x + T * 0.35, y + T, 3, 1, '#8b6914');
     }
@@ -385,29 +467,7 @@ class PixelEngine {
         this.px(x, y, this.T*2, 2, '#8c5931');
     }
 
-    drawBoxes(x, y) {
-        const T = this.T;
-        this.px(x+2, y+T-6, T-4, 8, '#d69762');
-        this.px(x, y, T-2, T-4, '#c38755');
-        this.px(x+1, y+3, T-4, 1, '#a36d40');
-    }
-
-    drawFridge(x, y) {
-        const T = this.T;
-        this.px(x, y, T, T*2, '#d5dbdb');
-        this.px(x+1, y+1, T-2, T*0.6, '#ebedef');
-        this.px(x+1, y+T*0.6+2, T-2, T*1.4-3, '#ebedef');
-        this.px(x+T-4, y+T*0.3, 2, T*0.2, '#bdc3c7');
-        this.px(x+T-4, y+T, 2, T*0.4, '#bdc3c7');
-    }
-
-    drawCounter(x, y) {
-        const T = this.T;
-        this.px(x, y, T*3, T*1.5, '#ebedef');
-        this.px(x, y, T*3, T*0.4, '#bdc3c7');
-        this.px(x+T*0.5, y+2, T*0.8, T*0.3, '#7f8c8d');
-        this.px(x+T*2, y+T*0.5, T-2, T-2, '#d5dbdb');
-    }
+    // drawBoxes, drawFridge, drawCounter — defined below (improved versions)
 
     drawCactus(x, y) {
         const T = this.T;
@@ -422,7 +482,7 @@ class PixelEngine {
         this.px(x+T*0.4, y+T-2, 4, T+2, '#7f8c8d');
         this.px(x+T*0.3, y+T*2-2, 8, 2, '#95a5a6');
         this.px(x+2, y, T-4, T, '#f1c40f');
-        if (Math.sin(this.time*0.05)>0) {
+        if (Math.sin(this.elapsed*0.05)>0) {
             this.ctx.globalAlpha = 0.2;
             this.px(x-T, y+T, T*3, T*3, '#f1c40f');
             this.ctx.globalAlpha = 1;
@@ -439,7 +499,7 @@ class PixelEngine {
     drawClock(x, y) {
         this.px(x + 2, y + 2, 10, 10, '#2c3e50');
         this.px(x + 3, y + 3, 8, 8, '#ecf0f1');
-        const a = (this.time * 0.015) % (Math.PI * 2);
+        const a = (this.elapsed * 0.015) % (Math.PI * 2);
         this.px(x + 7 + Math.cos(a) * 2.5, y + 7 + Math.sin(a) * 2.5, 1, 1, '#e74c3c');
         this.px(x + 7, y + 5, 1, 2, '#2c3e50');
         this.px(x + 7, y + 7, 1, 1, '#2c3e50');
@@ -489,7 +549,7 @@ class PixelEngine {
         this.px(x, y + 7, T * 0.6, 6, col);
         this.px(x + T * 0.25, y + 7.5, 1, 4, this.dk(col, 20));
         // Arms typing
-        const armUp = (this.time % 10 < 5) && (sp.status === 'working');
+        const armUp = (Math.floor(this.elapsed) % 10 < 5) && (sp.status === 'working');
         this.px(x - 2, y + 8 + (armUp ? -0.5 : 0.5), 2, 4, this.dk(col, 15));
         this.px(x + T * 0.6, y + 8 + (armUp ? 0.5 : -0.5), 2, 4, this.dk(col, 15));
     }
@@ -497,13 +557,13 @@ class PixelEngine {
     drawCharWalking(sp) {
         const T = this.T, x = sp.x, y = sp.y;
         const col = sp.color, skin = '#e8bc8a';
-        const bob = sp.isWalking ? Math.abs(Math.sin(this.time * 0.2)) * 1.5 : 0;
+        const bob = sp.isWalking ? Math.abs(Math.sin(this.elapsed * 0.2)) * 1.5 : 0;
         const yy = y - bob;
         // Shadow
         this.ctx.globalAlpha = 0.2; this.px(x - 1, y + 16, 14, 3, '#000'); this.ctx.globalAlpha = 1;
         // Legs
         if (sp.isWalking) {
-            const ls = Math.sin(this.time * 0.2) * 3;
+            const ls = Math.sin(this.elapsed * 0.2) * 3;
             this.px(x + 2, yy + 13 + ls * 0.3, 3, 5 - ls * 0.2, '#2d3748');
             this.px(x + 7, yy + 13 - ls * 0.3, 3, 5 + ls * 0.2, '#2d3748');
         } else { this.px(x + 2, yy + 13, 3, 5, '#2d3748'); this.px(x + 7, yy + 13, 3, 5, '#2d3748'); }
@@ -512,7 +572,7 @@ class PixelEngine {
         this.px(x + 5, yy + 7.5, 1, 5, this.dk(col, 15));
         // Arms
         if (sp.isWalking) {
-            const as = Math.sin(this.time * 0.2) * 2;
+            const as = Math.sin(this.elapsed * 0.2) * 2;
             this.px(x - 1, yy + 8 + as, 2, 5, this.dk(col, 15));
             this.px(x + 11, yy + 8 - as, 2, 5, this.dk(col, 15));
         } else { this.px(x - 1, yy + 9, 2, 5, this.dk(col, 15)); this.px(x + 11, yy + 9, 2, 5, this.dk(col, 15)); }
@@ -522,7 +582,7 @@ class PixelEngine {
         this.px(x, yy - 1, 12, 4, sp.hairColor);
         this.px(x + 1, yy - 2, 10, 3, sp.hairColor);
         // Eyes
-        sp.blinkT--; if (sp.blinkT <= 0) { sp.blink = true; if (sp.blinkT <= -3) { sp.blink = false; sp.blinkT = 60 + Math.random() * 120; } }
+        sp.blinkT -= this.deltaTime; if (sp.blinkT <= 0) { sp.blink = true; if (sp.blinkT <= -3) { sp.blink = false; sp.blinkT = 60 + Math.random() * 120; } }
         if (!sp.blink) { this.px(x + 3, yy + 3, 2, 2, '#fff'); this.px(x + 7, yy + 3, 2, 2, '#fff'); this.px(x + 3.5, yy + 4, 1, 1, '#111'); this.px(x + 7.5, yy + 4, 1, 1, '#111'); }
         else { this.px(x + 3, yy + 4.5, 2, 1, '#333'); this.px(x + 7, yy + 4.5, 2, 1, '#333'); }
     }
@@ -533,9 +593,9 @@ class PixelEngine {
         // Status dot
         const cols = { idle: '#ffd93d', working: '#78e08f', thinking: '#6c5ce7', error: '#ff6b6b' };
         const sc = cols[sp.status] || '#ffd93d';
-        const fy = y - 7 + Math.sin(this.time * 0.06) * 1.5;
+        const fy = y - 7 + Math.sin(this.elapsed * 0.06) * 1.5;
         this.px(x + 3, fy, 5, 5, sc);
-        if (sp.status === 'working') { this.ctx.globalAlpha = 0.25 + Math.sin(this.time * 0.1) * 0.15; this.px(x + 1, fy - 2, 9, 9, sc); this.ctx.globalAlpha = 1; }
+        if (sp.status === 'working') { this.ctx.globalAlpha = 0.25 + Math.sin(this.elapsed * 0.1) * 0.15; this.px(x + 1, fy - 2, 9, 9, sc); this.ctx.globalAlpha = 1; }
         // Selection ring
         if (sp.id === this.selectedAgent || sp.id === this.hoveredAgent) {
             this.ctx.globalAlpha = sp.id === this.selectedAgent ? 0.4 : 0.2;
@@ -553,7 +613,7 @@ class PixelEngine {
         }
         // Speech bubble
         if (sp.speech && sp.speechT > 0) {
-            sp.speechT--;
+            sp.speechT -= this.deltaTime;
             const bx = x - 6, by = y - 22, bw = Math.min(sp.speech.length * 3.5 + 12, 80);
             this.px(bx, by, bw, 11, '#151d30');
             this.px(bx, by, bw, 1, '#4ecdc4');
@@ -569,18 +629,80 @@ class PixelEngine {
         }
     }
 
+    // === AGENT PATHFINDING (A*) ===
+    findPath(startX, startY, endX, endY) {
+        const heuristic = (x1, y1, x2, y2) => Math.abs(x1 - x2) + Math.abs(y1 - y2);
+        const open = [{ x: startX, y: startY, g: 0, f: heuristic(startX, startY, endX, endY), parent: null }];
+        const closed = new Set();
+        const getCost = (x, y) => {
+            if (x < 0 || y < 0 || x >= this.MW || y >= this.MH) return Infinity; // out of bounds
+            if (!this.map[y][x]) return Infinity; // wall/null map
+            return 1;
+        };
+        
+        // Safety bail-out for disconnected areas
+        let iterations = 0;
+        
+        while (open.length > 0 && iterations < 1000) {
+            iterations++;
+            open.sort((a, b) => a.f - b.f);
+            const current = open.shift();
+            const key = `${current.x},${current.y}`;
+            
+            if (current.x === endX && current.y === endY) {
+                const path = [];
+                let curr = current;
+                while (curr) { path.unshift({ x: curr.x, y: curr.y }); curr = curr.parent; }
+                return path;
+            }
+            
+            closed.add(key);
+            const dirs = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+            for (let [dx, dy] of dirs) {
+                const nx = current.x + dx, ny = current.y + dy;
+                const nKey = `${nx},${ny}`;
+                if (closed.has(nKey)) continue;
+                
+                const cost = getCost(nx, ny);
+                if (cost === Infinity) continue;
+                
+                const g = current.g + cost;
+                const existing = open.find(n => n.x === nx && n.y === ny);
+                if (!existing) {
+                    open.push({ x: nx, y: ny, g, f: g + heuristic(nx, ny, endX, endY), parent: current });
+                } else if (g < existing.g) {
+                    existing.g = g;
+                    existing.f = g + heuristic(nx, ny, endX, endY);
+                    existing.parent = current;
+                }
+            }
+        }
+        return []; // No path found or too complex
+    }
+
     // === AGENT API ===
     addAgentSprite(agent) {
         const slot = this.deskSlots.find(s => !s.occupied);
         if (slot) { slot.occupied = true; slot.agentId = agent.id; }
         const hairs = ['#3a2820', '#1a1a1a', '#8b4513', '#c0392b', '#2c3e50', '#d4a017'];
         const doorT = this.T;
+        
+        let startTx = 1, startTy = 10;
+        let pTargetX = slot ? (slot.tx + 0.5) * doorT : 5 * doorT;
+        let pTargetY = slot ? (slot.ty + 1) * doorT : 5 * doorT;
+        let targetTx = Math.floor(pTargetX / doorT);
+        let targetTy = Math.floor(pTargetY / doorT);
+        
+        let path = this.findPath(startTx, startTy, targetTx, targetTy);
+
         this.agentSprites.set(agent.id, {
             id: agent.id, name: agent.name, color: agent.color, role: agent.role, status: 'idle',
             desk: slot, hairColor: hairs[Math.floor(Math.random() * hairs.length)],
-            x: 1 * doorT, y: 10 * doorT,
-            targetX: slot ? (slot.tx + 0.5) * doorT : 5 * doorT,
-            targetY: slot ? (slot.ty + 1) * doorT : 5 * doorT,
+            x: startTx * doorT + doorT/2, y: startTy * doorT + doorT/2,
+            targetX: pTargetX,
+            targetY: pTargetY,
+            path: path,
+            pathIndex: 0,
             isWalking: true, blink: false, blinkT: 60 + Math.random() * 120,
             speech: null, speechT: 0,
         });
@@ -593,6 +715,77 @@ class PixelEngine {
     }
     updateAgentStatus(id, s) { const sp = this.agentSprites.get(id); if (sp) sp.status = s; }
     showSpeechBubble(id, msg, dur = 3000) { const sp = this.agentSprites.get(id); if (sp) { sp.speech = msg; sp.speechT = dur / 16; } }
+
+    // === SEND AGENT TO INTERACTION POINT ===
+    sendAgentTo(agentId, targetTx, targetTy, onArrive = null) {
+        const sp = this.agentSprites.get(agentId);
+        if (!sp || sp.isWalking) return false;
+
+        // Release desk if sitting
+        if (sp.desk) {
+            sp.desk.occupied = false;
+            sp.desk.agentId = null;
+        }
+
+        const startTx = Math.floor(sp.x / this.T);
+        const startTy = Math.floor(sp.y / this.T);
+        const path = this.findPath(startTx, startTy, targetTx, targetTy);
+
+        if (path.length === 0) return false;
+
+        sp.targetX = (targetTx + 0.5) * this.T;
+        sp.targetY = (targetTy + 0.5) * this.T;
+        sp.path = path;
+        sp.pathIndex = 0;
+        sp.isWalking = true;
+        sp.isRoaming = true;
+        sp.onArrive = onArrive;
+        sp.roamTarget = { tx: targetTx, ty: targetTy };
+        return true;
+    }
+
+    // Send agent back to their desk
+    sendAgentToDesk(agentId) {
+        const sp = this.agentSprites.get(agentId);
+        if (!sp) return;
+
+        // Find an available desk
+        let slot = this.deskSlots.find(s => s.agentId === agentId);
+        if (!slot) slot = this.deskSlots.find(s => !s.occupied);
+        if (!slot) return;
+
+        slot.occupied = true;
+        slot.agentId = agentId;
+        sp.desk = slot;
+
+        const startTx = Math.floor(sp.x / this.T);
+        const startTy = Math.floor(sp.y / this.T);
+        const path = this.findPath(startTx, startTy, slot.tx, slot.ty);
+
+        sp.targetX = slot.x;
+        sp.targetY = slot.y;
+        sp.path = path;
+        sp.pathIndex = 0;
+        sp.isWalking = true;
+        sp.isRoaming = false;
+        sp.onArrive = null;
+    }
+
+    // Spawn interaction FX
+    spawnInteractionFx(tx, ty, emoji) {
+        this.interactionFx.push({
+            x: (tx + 0.5) * this.T,
+            y: ty * this.T - 4,
+            emoji: emoji,
+            life: 60,
+            maxLife: 60,
+        });
+    }
+
+    getRandomInteraction() {
+        if (!this.interactionPoints?.length) return null;
+        return this.interactionPoints[Math.floor(Math.random() * this.interactionPoints.length)];
+    }
 
     // === MINIMAP ===
     drawMinimap() {
@@ -609,8 +802,14 @@ class PixelEngine {
     }
 
     // === RENDER LOOP ===
-    render() {
-        this.time++;
+    render(timestamp) {
+        // DeltaTime calculation (normalized to 60fps: 1.0 = 16.67ms)
+        if (!timestamp) timestamp = performance.now();
+        const rawDelta = timestamp - this.lastTime;
+        this.deltaTime = Math.min(rawDelta / 16.67, 3); // cap at 3x to prevent teleporting
+        this.lastTime = timestamp;
+        this.elapsed += this.deltaTime;
+
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.ctx.fillStyle = '#0d1117';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -618,19 +817,46 @@ class PixelEngine {
         this.drawFloors();
         this.drawWalls();
 
-        // Walk agents toward targets
+        // Walk agents toward targets (speed normalized with deltaTime)
+        const moveSpeed = 0.5 * this.deltaTime;
         this.agentSprites.forEach(sp => {
             if (sp.isWalking) {
-                const dx = sp.targetX - sp.x, dy = sp.targetY - sp.y, d = Math.sqrt(dx * dx + dy * dy);
-                if (d > 1) { sp.x += dx / d * 0.5; sp.y += dy / d * 0.5; }
-                else { sp.isWalking = false; sp.x = sp.targetX; sp.y = sp.targetY; }
+                let ptx = sp.targetX;
+                let pty = sp.targetY;
+                if (sp.path && sp.pathIndex < sp.path.length) {
+                    const node = sp.path[sp.pathIndex];
+                    ptx = (node.x + 0.5) * this.T;
+                    pty = (node.y + 0.5) * this.T;
+                }
+                
+                const dx = ptx - sp.x, dy = pty - sp.y, d = Math.sqrt(dx * dx + dy * dy);
+                if (d > 1) { 
+                    sp.x += dx / d * moveSpeed; 
+                    sp.y += dy / d * moveSpeed; 
+                } else { 
+                    sp.x = ptx; 
+                    sp.y = pty;
+                    if (sp.path && sp.pathIndex < sp.path.length) {
+                        sp.pathIndex++;
+                    } else {
+                        sp.isWalking = false; 
+                        sp.x = sp.targetX; 
+                        sp.y = sp.targetY;
+                        // Callback on arrival (for roaming / interaction)
+                        if (sp.onArrive) {
+                            const cb = sp.onArrive;
+                            sp.onArrive = null;
+                            cb(sp);
+                        }
+                    }
+                }
             }
         });
 
         // Collect renderables sorted by Y
         const items = [];
         this.furniture.forEach(f => items.push({ y: f.y + (f.t === 'desk' ? 20 : 16), type: 'f', data: f }));
-        this.agentSprites.forEach(sp => { if (sp.isWalking) items.push({ y: sp.y + 18, type: 'a', data: sp }); });
+        this.agentSprites.forEach(sp => { if (sp.isWalking || sp.isRoaming) items.push({ y: sp.y + 18, type: 'a', data: sp }); });
         items.sort((a, b) => a.y - b.y);
 
         items.forEach(it => {
@@ -640,7 +866,7 @@ class PixelEngine {
                     const slot = this.deskSlots[f.slotIdx];
                     if (slot?.occupied) {
                         const sp = this.agentSprites.get(slot.agentId);
-                        if (sp && !sp.isWalking) this.drawCharSitting(sp, f.x, f.y);
+                        if (sp && !sp.isWalking && !sp.isRoaming) this.drawCharSitting(sp, f.x, f.y);
                     }
                 }
                 this.drawFurn(f);
@@ -649,12 +875,32 @@ class PixelEngine {
             }
         });
 
+        // Draw interaction FX particles
+        this.interactionFx = this.interactionFx.filter(fx => {
+            fx.life -= this.deltaTime;
+            if (fx.life <= 0) return false;
+            const alpha = fx.life / fx.maxLife;
+            const rise = (1 - fx.life / fx.maxLife) * 20;
+            this.ctx.globalAlpha = alpha;
+            this.ctx.font = `${12 + (1 - alpha) * 6}px serif`;
+            this.ctx.fillText(fx.emoji, fx.x * this.scale + this.camera.x, (fx.y - rise) * this.scale + this.camera.y);
+            this.ctx.globalAlpha = 1;
+            return true;
+        });
+
+        // Draw standing roaming agents (at interaction points, not walking)
+        this.agentSprites.forEach(sp => {
+            if (sp.isRoaming && !sp.isWalking) {
+                this.drawCharWalking(sp);
+            }
+        });
+
         // Overlays
         this.agentSprites.forEach(sp => this.drawOverlays(sp));
         this.drawMinimap();
         
         if (this._postRender) this._postRender();
-        requestAnimationFrame(() => this.render());
+        requestAnimationFrame((t) => this.render(t));
     }
 }
 

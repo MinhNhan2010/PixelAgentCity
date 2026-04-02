@@ -2,8 +2,11 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="description" content="Pixel AI Agent Manager - Quản lý AI Agent trong văn phòng pixel art tương tác">
+    <meta name="theme-color" content="#0a0e1a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>🎮 Pixel AI Agent Manager</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -269,6 +272,31 @@
     <script src="pixel-engine.js"></script>
     <script src="agents.js"></script>
     <script src="layout-editor.js"></script>
+    <script src="chatbox.js"></script>
     <script src="app.js"></script>
+    <script>
+    // Mobile bottom-sheet panel toggle
+    (function() {
+        const panel = document.querySelector('.management-panel');
+        if (!panel) return;
+        let startY = 0;
+        panel.addEventListener('click', function(e) {
+            // Click on the pseudoelement drag handle area (top 20px)
+            const rect = panel.getBoundingClientRect();
+            if (e.clientY - rect.top < 20) {
+                panel.classList.toggle('panel-open');
+            }
+        });
+        // Swipe up to open, swipe down to close
+        panel.addEventListener('touchstart', function(e) {
+            startY = e.touches[0].clientY;
+        }, { passive: true });
+        panel.addEventListener('touchend', function(e) {
+            const dy = e.changedTouches[0].clientY - startY;
+            if (dy < -40) panel.classList.add('panel-open');
+            else if (dy > 40) panel.classList.remove('panel-open');
+        }, { passive: true });
+    })();
+    </script>
 </body>
 </html>

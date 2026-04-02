@@ -6,6 +6,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const engine = new PixelEngine('officeCanvas', 'minimapCanvas');
     const manager = new AgentManager();
     const layoutEditor = new LayoutEditor(engine);
+    const chatbox = new AgentChatbox(manager, engine);
+
+    // Connect engine reference for free roaming
+    manager.engine = engine;
 
     // Hook ghost preview into engine render
     const origRender = engine.render.bind(engine);
@@ -35,6 +39,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Canvas click -> select agent in sidebar
     engine.onAgentClick = (agentId) => {
+        // Open chatbox with clicked agent
+        chatbox.openWithAgent(agentId);
+
+        // Also switch sidebar to agents tab
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
         document.querySelector('[data-tab="agents"]').classList.add('active');
@@ -179,7 +187,11 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `).join('');
 
+        // Make agent cards draggable
         requestAnimationFrame(()=>{
+            document.querySelectorAll('.agent-card').forEach(card => {
+                card.setAttribute('draggable', 'true');
+            });
             document.querySelectorAll('.agent-avatar').forEach(c=>drawAgentAvatar(c,c.dataset.agentColor,c.dataset.agentRole));
         });
     }
@@ -191,15 +203,21 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         const pEmoji = {low:'🟢',medium:'🟡',high:'🟠',critical:'🔴'};
+        const statusLabels = {pending:'pending','in-progress':'in-progress',completed:'completed',blocked:'🔒 blocked',review:'📝 review'};
         DOM.taskList.innerHTML = tasks.map(t=>{
             const assignee = t.assigneeId ? manager.getAgent(t.assigneeId) : null;
+            const statusClass = t.status === 'blocked' ? 'pending' : t.status === 'review' ? 'in-progress' : t.status;
+            const depInfo = t.dependsOn?.length ? `<div style="font-size:9px;color:var(--text-muted);margin-top:4px">🔗 Phụ thuộc: ${t.dependsOn.length} task</div>` : '';
+            const reviewInfo = t.reviewStatus === 'rejected' ? '<div style="font-size:9px;color:var(--accent-tertiary);margin-top:4px">❌ Bị reject — đang sửa lại</div>' : 
+                              t.reviewStatus === 'pending' ? '<div style="font-size:9px;color:var(--accent-info);margin-top:4px">📝 Đang chờ review</div>' : '';
             return `<div class="task-item">
                 <div class="task-item-header"><span class="task-title">${t.title}</span><span class="task-priority">${pEmoji[t.priority]}</span></div>
                 ${t.description?`<div class="task-description">${t.description}</div>`:''}
                 <div class="task-meta">
                     <span class="task-assignee">${assignee?`👾 ${assignee.name}`:'— Chưa giao'}</span>
-                    <span class="task-status-tag ${t.status}">${t.status}</span>
+                    <span class="task-status-tag ${statusClass}">${statusLabels[t.status] || t.status}</span>
                 </div>
+                ${depInfo}${reviewInfo}
                 ${t.status==='in-progress'?`<div class="agent-progress" style="margin-top:8px"><div class="progress-bar"><div class="progress-fill" style="width:${t.progress}%"></div></div><div class="progress-text">${Math.floor(t.progress)}%</div></div>`:''}
             </div>`;
         }).join('');
@@ -217,8 +235,8 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="stat-card"><div class="stat-value">${fmtNum(s.totalLinesWritten)}</div><div class="stat-label">Lines Written</div></div>
             <div class="stat-card"><div class="stat-value">${s.totalCommits}</div><div class="stat-label">Commits</div></div>
             <div class="stat-card"><div class="stat-value">${s.totalErrors}</div><div class="stat-label">Errors</div></div>
-            <div class="stat-card"><div class="stat-value">${s.totalFilesModified}</div><div class="stat-label">Files</div></div>
-            <div class="stat-card"><div class="stat-value">${s.agentsOnline}</div><div class="stat-label">Online</div></div>
+            <div class="stat-card"><div class="stat-value">${s.blockedTasks || 0}</div><div class="stat-label">🔒 Blocked</div></div>
+            <div class="stat-card"><div class="stat-value">${s.reviewTasks || 0}</div><div class="stat-label">📝 Review</div></div>
         `;
         drawPerformanceChart();
     }
@@ -238,12 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
             refreshUI();
         },
         messageAgent(id) {
-            const a = manager.getAgent(id); if(!a) return;
-            const msgs = ['Đang xử lý! 🔥','Sắp xong! 💪','Cần thêm thời gian 🤔','OK! 👍','Debugging... 🐛','Coffee break ☕'];
-            const m = msgs[Math.floor(Math.random()*msgs.length)];
-            engine.showSpeechBubble(id,m,4000);
-            manager.addLog(a.name,`💬 "${m}"`);
-            refreshLogs();
+            chatbox.openWithAgent(id);
         },
         focusAgent(id) {
             const sp = engine.agentSprites.get(id);
@@ -337,6 +350,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ======= INIT =======
+    function restoreFromStorage() {
+        const loaded = manager.loadFromStorage();
+        if (!loaded) return false;
+
+        // Re-create engine sprites for all loaded agents
+        const agents = manager.getAllAgents();
+        if (agents.length === 0) return false;
+
+        agents.forEach((a, i) => {
+            setTimeout(() => {
+                engine.addAgentSprite(a);
+                engine.updateAgentStatus(a.id, a.status);
+                refreshUI();
+            }, i * 200);
+        });
+
+        manager.addLog('System', '📂 Đã khôi phục dữ liệu!', 'success');
+        return true;
+    }
+
     function createDefaults() {
         const defs = [
             {name:'ClaudeBot-001',role:'coder',model:'claude-opus',color:'#4ecdc4',workDir:'/projects/frontend'},
@@ -440,8 +473,29 @@ document.addEventListener('DOMContentLoaded', () => {
     const toolbarAddBtn = document.getElementById('btnAddAgentToolbar');
     if (toolbarAddBtn) toolbarAddBtn.addEventListener('click', () => { document.getElementById('modalAddAgent').classList.add('active'); });
 
-    createDefaults();
+    // Settings button — reset data
+    document.getElementById('btnSettings').addEventListener('click', () => {
+        if (confirm('🗑️ Xóa toàn bộ dữ liệu đã lưu và reset về mặc định?')) {
+            manager.clearStorage();
+            localStorage.removeItem('pixelAgentLayout');
+            showToast('🔄 Đã xóa dữ liệu! Đang reload...', 'warning');
+            setTimeout(() => location.reload(), 1000);
+        }
+    });
+
+    // Try to restore saved data; if none, create defaults
+    const restored = restoreFromStorage();
+    if (restored) {
+        showToast('📂 Đã khôi phục dữ liệu từ phiên trước!', 'success');
+    } else {
+        createDefaults();
+    }
     manager.startSimulation();
+
+    // Save on page unload
+    window.addEventListener('beforeunload', () => {
+        manager.saveToStorage();
+    });
 
     setInterval(()=>{DOM.pixelClock.textContent=new Date().toLocaleTimeString('vi-VN');},1000);
     setInterval(()=>{

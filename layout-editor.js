@@ -14,6 +14,7 @@ class LayoutEditor {
         this.floorType = 'wood';
         this.undoStack = [];
         this.redoStack = [];
+        this._ghostShake = 0;
         this.panel = null;
         this.furnitureCatalog = this.buildCatalog();
         this.createPanel();
@@ -171,7 +172,9 @@ class LayoutEditor {
 
         // Canvas interaction for editor
         const vp = document.getElementById('officeViewport');
-        vp.addEventListener('click', (e) => {
+        let isPainting = false;
+
+        vp.addEventListener('mousedown', (e) => {
             if (!this.active || !this.currentTool) return;
             const T = this.engine.T;
             const wx = (e.offsetX - this.engine.camera.x) / this.engine.scale;
@@ -180,6 +183,9 @@ class LayoutEditor {
             const ty = Math.floor(wy / T);
 
             if (this.currentTool === 'floor') {
+                // If it's a right click, we may cancel painting, but we'll assume left click or general mousedown is fine
+                if (e.button !== 0) return; 
+                isPainting = true;
                 this.paintFloor(tx, ty);
             } else if (this.currentTool === 'furniture' && this.selectedFurnitureType) {
                 this.placeFurniture(this.selectedFurnitureType, tx, ty);
@@ -190,12 +196,22 @@ class LayoutEditor {
             }
         });
 
-        // Mouse move for ghost preview
         vp.addEventListener('mousemove', (e) => {
             if (!this.active) return;
             const wx = (e.offsetX - this.engine.camera.x) / this.engine.scale;
             const wy = (e.offsetY - this.engine.camera.y) / this.engine.scale;
             this.ghostPos = { x: wx, y: wy };
+            
+            if (isPainting && this.currentTool === 'floor') {
+                const T = this.engine.T;
+                const tx = Math.floor(wx / T);
+                const ty = Math.floor(wy / T);
+                this.paintFloor(tx, ty);
+            }
+        });
+
+        vp.addEventListener('mouseup', () => {
+            isPainting = false;
         });
     }
 
@@ -217,17 +233,68 @@ class LayoutEditor {
     paintFloor(tx, ty) {
         if (tx < 0 || ty < 0 || tx >= this.engine.MW || ty >= this.engine.MH) return;
         const old = this.engine.map[ty][tx];
-        if (this.floorType === 'erase') {
-            this.engine.map[ty][tx] = null;
-        } else {
-            this.engine.map[ty][tx] = this.floorType;
-        }
+        const newFl = this.floorType === 'erase' ? null : this.floorType;
+        if (old === newFl) return;
+        
+        this.engine.map[ty][tx] = newFl;
         this.pushUndo({ type: 'floor', tx, ty, old, new: this.engine.map[ty][tx] });
         this.setStatus(`Sàn tại (${tx}, ${ty})`);
     }
 
+    // === COLLISION DETECTION ===
+    checkCollision(tx, ty, type, excludeIndex = -1) {
+        const item = this.findCatalogItem(type);
+        const tw = Math.ceil(item?.w || 1);
+        const th = Math.ceil(item?.h || 1);
+        const T = this.engine.T;
+
+        // 1. Check all tiles are valid floor
+        for (let dy = 0; dy < th; dy++) {
+            for (let dx = 0; dx < tw; dx++) {
+                const checkX = tx + dx;
+                const checkY = ty + dy;
+                if (checkX < 0 || checkY < 0 || checkX >= this.engine.MW || checkY >= this.engine.MH) return 'out';
+                if (!this.engine.map[checkY]?.[checkX]) return 'nofloor';
+            }
+        }
+
+        // 2. AABB overlap check with existing furniture
+        const newRect = { x: tx * T, y: ty * T, w: tw * T, h: th * T };
+        for (let i = 0; i < this.engine.furniture.length; i++) {
+            if (i === excludeIndex) continue;
+            const f = this.engine.furniture[i];
+            const fi = this.findCatalogItem(f.t);
+            const fw = (fi?.w || 1) * T;
+            const fh = (fi?.h || 1) * T;
+            // AABB intersection test
+            if (newRect.x < f.x + fw && newRect.x + newRect.w > f.x &&
+                newRect.y < f.y + fh && newRect.y + newRect.h > f.y) {
+                return 'overlap';
+            }
+        }
+
+        return 'ok';
+    }
+
     // === FURNITURE PLACEMENT ===
     placeFurniture(type, tx, ty) {
+        const collision = this.checkCollision(tx, ty, type);
+        if (collision === 'out') {
+            this.setStatus('⚠️ Ngoài phạm vi bản đồ!');
+            this._shakeGhost();
+            return;
+        }
+        if (collision === 'nofloor') {
+            this.setStatus('⚠️ Không thể đặt ngoài sàn nhà!');
+            this._shakeGhost();
+            return;
+        }
+        if (collision === 'overlap') {
+            this.setStatus('⚠️ Bị chồng với đồ vật khác!');
+            this._shakeGhost();
+            return;
+        }
+        
         const T = this.engine.T;
         const item = this.findCatalogItem(type);
         const furn = { t: type, x: tx * T, y: ty * T };
@@ -244,7 +311,11 @@ class LayoutEditor {
 
         this.engine.furniture.push(furn);
         this.pushUndo({ type: 'place', index: this.engine.furniture.length - 1, furn });
-        this.setStatus(`Đã đặt ${item?.name || type} tại (${tx}, ${ty})`);
+        this.setStatus(`✅ Đã đặt ${item?.name || type} tại (${tx}, ${ty})`);
+    }
+
+    _shakeGhost() {
+        this._ghostShake = 8; // shake frames
     }
 
     // === ERASE ===
@@ -283,6 +354,14 @@ class LayoutEditor {
                     const my = (e2.offsetY - this.engine.camera.y) / this.engine.scale;
                     const ntx = Math.floor(mx / T);
                     const nty = Math.floor(my / T);
+                    
+                    if (ntx < 0 || nty < 0 || ntx >= this.engine.MW || nty >= this.engine.MH || !this.engine.map[nty][ntx]) {
+                        this.setStatus('⚠️ Vị trí không hợp lệ!');
+                        this._moveMode = false;
+                        vp.removeEventListener('click', moveHandler);
+                        return;
+                    }
+                    
                     const oldX = f.x, oldY = f.y;
                     f.x = ntx * T;
                     f.y = nty * T;
@@ -308,6 +387,7 @@ class LayoutEditor {
     // === UNDO / REDO ===
     pushUndo(action) {
         this.undoStack.push(action);
+        if (this.undoStack.length > 100) this.undoStack.shift(); // cap at 100
         this.redoStack = [];
     }
 
@@ -403,27 +483,46 @@ class LayoutEditor {
         const item = this.findCatalogItem(this.selectedFurnitureType);
         if (!item) return;
         const pw = (item.w || 1) * T, ph = (item.h || 1) * T;
-        ctx.globalAlpha = 0.4;
-        ctx.fillStyle = '#4ecdc4';
-        ctx.fillRect(
-            tx * T * scale + camera.x,
-            ty * T * scale + camera.y,
-            pw * scale,
-            ph * scale
-        );
-        ctx.strokeStyle = '#4ecdc4';
+
+        // Check collision for color feedback
+        const collision = this.checkCollision(tx, ty, this.selectedFurnitureType);
+        const isValid = collision === 'ok';
+        const color = isValid ? '#4ecdc4' : '#ff6b6b';
+
+        // Shake offset
+        let shakeX = 0;
+        if (this._ghostShake > 0) {
+            shakeX = Math.sin(this._ghostShake * 2) * 3 * scale;
+            this._ghostShake--;
+        }
+
+        const gx = tx * T * scale + camera.x + shakeX;
+        const gy = ty * T * scale + camera.y;
+
+        ctx.globalAlpha = isValid ? 0.4 : 0.35;
+        ctx.fillStyle = color;
+        ctx.fillRect(gx, gy, pw * scale, ph * scale);
+        ctx.strokeStyle = color;
         ctx.lineWidth = 2;
-        ctx.strokeRect(
-            tx * T * scale + camera.x,
-            ty * T * scale + camera.y,
-            pw * scale,
-            ph * scale
-        );
+        ctx.strokeRect(gx, gy, pw * scale, ph * scale);
+        
+        // Invalid X marker
+        if (!isValid) {
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(gx + 4, gy + 4);
+            ctx.lineTo(gx + pw * scale - 4, gy + ph * scale - 4);
+            ctx.moveTo(gx + pw * scale - 4, gy + 4);
+            ctx.lineTo(gx + 4, gy + ph * scale - 4);
+            ctx.stroke();
+        }
+
         ctx.globalAlpha = 1;
-        // Item name
+        // Item name + status
         ctx.fillStyle = '#e8eaf6';
         ctx.font = '8px "Press Start 2P"';
-        ctx.fillText(item.name, tx * T * scale + camera.x + 4, ty * T * scale + camera.y - 4);
+        const label = isValid ? item.name : `❌ ${item.name}`;
+        ctx.fillText(label, gx + 4, ty * T * scale + camera.y - 4);
     }
 }
 
