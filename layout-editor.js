@@ -16,6 +16,11 @@ class LayoutEditor {
         this.redoStack = [];
         this._ghostShake = 0;
         this.panel = null;
+        this.storageKey = 'pixelAgentLayout';
+        this.autoSaveDelay = 1200;
+        this.autoSaveTimer = null;
+        this.isDirty = false;
+        this.lastSavedAt = null;
         this.furnitureCatalog = this.buildCatalog();
         this.createPanel();
         this.bindEvents();
@@ -63,6 +68,31 @@ class LayoutEditor {
         };
     }
 
+    getFurnitureBonusText(type) {
+        const bonusMap = {
+            coffee: 'Energy regen +',
+            vending: 'Energy regen +',
+            fridge: 'Energy regen +',
+            counter: 'Energy regen +',
+            bookshelf: 'XP gain +',
+            shelf: 'XP gain +',
+            plant: 'Stress reduction',
+            cactus: 'Stress reduction',
+            painting: 'Mood boost',
+            lamp: 'Mood boost',
+            pictureframe: 'Mood boost',
+            sofa: 'Rest recovery +',
+            armchair: 'Rest recovery +',
+            bed_single: 'Rest recovery +',
+            bed_double: 'Rest recovery +',
+            rug: 'Comfort bonus',
+            pillow: 'Comfort bonus',
+            mtable: 'Pair + Mentor boost',
+            clock: 'Deadline hint',
+        };
+        return bonusMap[type] || 'Style only';
+    }
+
     createPanel() {
         this.panel = document.createElement('div');
         this.panel.id = 'layoutEditorPanel';
@@ -102,6 +132,56 @@ class LayoutEditor {
         `;
         document.body.appendChild(this.panel);
         this.renderCatalog();
+
+        const header = this.panel.querySelector('.le-header');
+        const title = header?.querySelector('h3');
+        if (header && title) {
+            const copy = document.createElement('div');
+            copy.className = 'le-header-copy';
+            const indicator = document.createElement('span');
+            indicator.id = 'leSaveIndicator';
+            indicator.className = 'le-save-indicator saved';
+            indicator.textContent = 'SYNCED';
+            header.insertBefore(copy, title);
+            copy.appendChild(title);
+            copy.appendChild(indicator);
+        }
+
+        const status = document.getElementById('leStatus');
+        if (status) {
+            status.textContent = 'Layout save se tu dong cap nhat khi ban thay doi bo cuc.';
+        }
+
+        const saveBtn = document.getElementById('leSave');
+        if (saveBtn) {
+            saveBtn.textContent = 'Save';
+            saveBtn.title = 'Luu vao save game';
+        }
+
+        const loadBtn = document.getElementById('leLoad');
+        if (loadBtn) {
+            loadBtn.textContent = 'Load';
+            loadBtn.title = 'Tai layout da luu';
+        }
+
+        const actions = this.panel.querySelector('.le-actions');
+        if (actions && !document.getElementById('leExport')) {
+            const exportBtn = document.createElement('button');
+            exportBtn.className = 'le-action-btn le-export';
+            exportBtn.id = 'leExport';
+            exportBtn.title = 'Xuat file JSON';
+            exportBtn.textContent = 'Export';
+            actions.appendChild(exportBtn);
+
+            const importBtn = document.createElement('button');
+            importBtn.className = 'le-action-btn le-import';
+            importBtn.id = 'leImport';
+            importBtn.title = 'Nhap file JSON';
+            importBtn.textContent = 'Import';
+            actions.appendChild(importBtn);
+        }
+
+        this.updateSaveIndicator();
     }
 
     renderCatalog() {
@@ -115,6 +195,7 @@ class LayoutEditor {
                 html += `<button class="le-item-btn" data-furn-id="${item.id}" title="${item.name}">
                     <span class="le-item-icon">${item.icon}</span>
                     <span class="le-item-name">${item.name}</span>
+                    <span class="le-item-bonus">${this.getFurnitureBonusText(item.id)}</span>
                 </button>`;
             });
             html += `</div></div>`;
@@ -158,7 +239,7 @@ class LayoutEditor {
                 // Also highlight the "place" tool
                 this.panel.querySelectorAll('.le-tool-btn').forEach(b => b.classList.remove('active'));
                 this.panel.querySelector('[data-letool="furniture"]').classList.add('active');
-                this.setStatus(`Đặt: ${btn.title}`);
+                this.setStatus(`Đặt: ${btn.title} • ${this.getFurnitureBonusText(btn.dataset.furnId)}`);
             });
         });
 
@@ -169,6 +250,8 @@ class LayoutEditor {
         // Save/Load
         document.getElementById('leSave').addEventListener('click', () => this.saveLayout());
         document.getElementById('leLoad').addEventListener('click', () => this.loadLayout());
+        document.getElementById('leExport')?.addEventListener('click', () => this.exportLayout());
+        document.getElementById('leImport')?.addEventListener('click', () => this.importLayout());
 
         // Canvas interaction for editor
         const vp = document.getElementById('officeViewport');
@@ -229,8 +312,84 @@ class LayoutEditor {
         document.getElementById('leStatus').textContent = msg;
     }
 
+    updateSaveIndicator(state = this.isDirty ? 'dirty' : 'saved') {
+        const el = document.getElementById('leSaveIndicator');
+        if (!el) return;
+        el.classList.remove('saved', 'dirty', 'saving');
+        el.classList.add(state);
+        if (state === 'dirty') {
+            el.textContent = 'UNSAVED';
+        } else if (state === 'saving') {
+            el.textContent = 'SAVING';
+        } else {
+            el.textContent = this.lastSavedAt ? `SYNCED ${this.lastSavedAt}` : 'SYNCED';
+        }
+    }
+
+    captureLayoutData() {
+        return {
+            savedAt: new Date().toISOString(),
+            map: this.engine.map.map(row => [...row]),
+            furniture: this.engine.furniture.map(f => ({ ...f })),
+            deskSlots: this.engine.deskSlots.map(s => ({ ...s })),
+        };
+    }
+
+    markDirty(reason = 'Layout da thay doi') {
+        this.isDirty = true;
+        this.updateSaveIndicator('dirty');
+        this.scheduleAutoSave();
+        this.setStatus(`${reason} • Auto-save pending`);
+    }
+
+    scheduleAutoSave() {
+        clearTimeout(this.autoSaveTimer);
+        this.autoSaveTimer = setTimeout(() => {
+            this.persistLayout('auto');
+        }, this.autoSaveDelay);
+    }
+
+    persistLayout(mode = 'manual') {
+        try {
+            this.updateSaveIndicator('saving');
+            const json = JSON.stringify(this.captureLayoutData());
+            localStorage.setItem(this.storageKey, json);
+            this.autoSaveTimer = null;
+            this.isDirty = false;
+            this.lastSavedAt = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+            this.updateSaveIndicator('saved');
+            if (mode === 'auto') {
+                this.setStatus('Auto-saved layout vao save game.');
+            } else {
+                this.setStatus('Layout da duoc luu vao save game.');
+            }
+            return true;
+        } catch (error) {
+            console.warn('Failed to save layout:', error);
+            this.updateSaveIndicator('dirty');
+            this.setStatus('Khong the luu layout.');
+            return false;
+        }
+    }
+
+    flushAutoSave() {
+        if (!this.isDirty) return false;
+        clearTimeout(this.autoSaveTimer);
+        this.autoSaveTimer = null;
+        return this.persistLayout('auto');
+    }
+
+    notifyOfficeChanged(options = {}) {
+        if (options.markDirty !== false) {
+            this.markDirty(options.reason);
+        }
+        if (typeof window.refreshHUD === 'function') {
+            window.refreshHUD();
+        }
+    }
+
     // === FLOOR PAINTING ===
-    paintFloor(tx, ty) {
+    _legacyPaintFloor(tx, ty) {
         if (tx < 0 || ty < 0 || tx >= this.engine.MW || ty >= this.engine.MH) return;
         const old = this.engine.map[ty][tx];
         const newFl = this.floorType === 'erase' ? null : this.floorType;
@@ -312,6 +471,7 @@ class LayoutEditor {
         this.engine.furniture.push(furn);
         this.pushUndo({ type: 'place', index: this.engine.furniture.length - 1, furn });
         this.setStatus(`✅ Đã đặt ${item?.name || type} tại (${tx}, ${ty})`);
+        this.notifyOfficeChanged();
     }
 
     _shakeGhost() {
@@ -329,6 +489,7 @@ class LayoutEditor {
                 const removed = this.engine.furniture.splice(i, 1)[0];
                 this.pushUndo({ type: 'remove', index: i, furn: removed });
                 this.setStatus(`Đã xóa ${item?.name || f.t}`);
+                this.notifyOfficeChanged();
                 return;
             }
         }
@@ -336,7 +497,7 @@ class LayoutEditor {
     }
 
     // === SELECT / MOVE ===
-    selectFurnitureAt(wx, wy) {
+    _legacySelectFurnitureAt(wx, wy) {
         const T = this.engine.T;
         for (let i = this.engine.furniture.length - 1; i >= 0; i--) {
             const f = this.engine.furniture[i];
@@ -406,6 +567,7 @@ class LayoutEditor {
             this.engine.furniture[action.index].y = action.oldY;
         }
         this.setStatus('↩ Đã hoàn tác');
+        this.notifyOfficeChanged();
     }
 
     redo() {
@@ -423,10 +585,11 @@ class LayoutEditor {
             this.engine.furniture[action.index].y = action.newY;
         }
         this.setStatus('↪ Đã làm lại');
+        this.notifyOfficeChanged();
     }
 
     // === SAVE / LOAD ===
-    saveLayout() {
+    _legacySaveLayout() {
         const data = {
             map: this.engine.map,
             furniture: this.engine.furniture.map(f => ({ ...f })),
@@ -443,7 +606,7 @@ class LayoutEditor {
         this.setStatus('💾 Đã lưu layout!');
     }
 
-    loadLayout() {
+    _legacyLoadLayout() {
         // Try localStorage first
         const saved = localStorage.getItem('pixelAgentLayout');
         if (saved) {
@@ -468,10 +631,140 @@ class LayoutEditor {
         input.click();
     }
 
-    _applyLayout(data) {
+    _legacyApplyLayout(data) {
         if (data.map) this.engine.map = data.map;
         if (data.furniture) this.engine.furniture = data.furniture;
         if (data.deskSlots) this.engine.deskSlots = data.deskSlots;
+        this.notifyOfficeChanged();
+    }
+
+    saveLayout() {
+        return this.persistLayout('manual');
+    }
+
+    loadLayout() {
+        if (!this.loadSavedLayout()) {
+            this.importLayout();
+        }
+    }
+
+    loadSavedLayout(silent = false) {
+        try {
+            const saved = localStorage.getItem(this.storageKey);
+            if (!saved) {
+                if (!silent) this.setStatus('Chua co layout da luu.');
+                return false;
+            }
+            const data = JSON.parse(saved);
+            this._applyLayout(data, { markDirty: false });
+            this.isDirty = false;
+            this.lastSavedAt = new Date(data.savedAt || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+            this.updateSaveIndicator('saved');
+            if (!silent) this.setStatus('Da tai layout tu save game.');
+            return true;
+        } catch (error) {
+            console.warn('Failed to load layout:', error);
+            if (!silent) this.setStatus('Khong the tai layout da luu.');
+            return false;
+        }
+    }
+
+    exportLayout() {
+        const json = JSON.stringify(this.captureLayoutData(), null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `pixel-agent-layout-${Date.now()}.json`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        this.setStatus('Da xuat layout ra file JSON.');
+    }
+
+    importLayout() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                try {
+                    this._applyLayout(JSON.parse(ev.target.result), { markDirty: true });
+                    this.setStatus(`Da nhap layout tu file ${file.name}. Auto-save pending.`);
+                } catch (error) {
+                    console.warn('Failed to import layout:', error);
+                    this.setStatus('File layout khong hop le.');
+                }
+            };
+            reader.readAsText(file);
+        });
+        input.click();
+    }
+
+    _applyLayout(data, options = {}) {
+        if (data.map) this.engine.map = data.map.map(row => [...row]);
+        if (data.furniture) this.engine.furniture = data.furniture.map(item => ({ ...item }));
+        if (data.deskSlots) this.engine.deskSlots = data.deskSlots.map(slot => ({ ...slot }));
+        this.notifyOfficeChanged({ markDirty: options.markDirty !== false, reason: 'Layout da thay doi' });
+        if (options.markDirty === false) {
+            this.isDirty = false;
+            this.updateSaveIndicator('saved');
+        }
+    }
+
+    paintFloor(tx, ty) {
+        if (tx < 0 || ty < 0 || tx >= this.engine.MW || ty >= this.engine.MH) return;
+        const old = this.engine.map[ty][tx];
+        const nextFloor = this.floorType === 'erase' ? null : this.floorType;
+        if (old === nextFloor) return;
+
+        this.engine.map[ty][tx] = nextFloor;
+        this.pushUndo({ type: 'floor', tx, ty, old, new: this.engine.map[ty][tx] });
+        this.notifyOfficeChanged({ reason: 'Floor da thay doi' });
+        this.setStatus(`Floor updated at (${tx}, ${ty})`);
+    }
+
+    selectFurnitureAt(wx, wy) {
+        const T = this.engine.T;
+        for (let i = this.engine.furniture.length - 1; i >= 0; i--) {
+            const f = this.engine.furniture[i];
+            const item = this.findCatalogItem(f.t);
+            const fw = (item?.w || 1) * T;
+            const fh = (item?.h || 1) * T;
+            if (wx >= f.x && wx <= f.x + fw && wy >= f.y && wy <= f.y + fh) {
+                this.selectedPlaced = i;
+                this.setStatus(`Selected ${item?.name || f.t}. Click a new tile to move it.`);
+                this._moveMode = true;
+                const vp = document.getElementById('officeViewport');
+                const moveHandler = (e2) => {
+                    if (!this._moveMode) return;
+                    const mx = (e2.offsetX - this.engine.camera.x) / this.engine.scale;
+                    const my = (e2.offsetY - this.engine.camera.y) / this.engine.scale;
+                    const ntx = Math.floor(mx / T);
+                    const nty = Math.floor(my / T);
+
+                    if (ntx < 0 || nty < 0 || ntx >= this.engine.MW || nty >= this.engine.MH || !this.engine.map[nty][ntx]) {
+                        this.setStatus('Vi tri moi khong hop le.');
+                        this._moveMode = false;
+                        vp.removeEventListener('click', moveHandler);
+                        return;
+                    }
+
+                    const oldX = f.x;
+                    const oldY = f.y;
+                    f.x = ntx * T;
+                    f.y = nty * T;
+                    this.pushUndo({ type: 'move', index: i, oldX, oldY, newX: f.x, newY: f.y });
+                    this.notifyOfficeChanged({ reason: 'Furniture da duoc di chuyen' });
+                    this.setStatus(`Furniture moved to (${ntx}, ${nty})`);
+                    this._moveMode = false;
+                    vp.removeEventListener('click', moveHandler);
+                };
+                setTimeout(() => vp.addEventListener('click', moveHandler, { once: true }), 100);
+                return;
+            }
+        }
     }
 
     // === GHOST RENDER (called from engine render loop) ===

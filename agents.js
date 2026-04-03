@@ -22,6 +22,7 @@ class AgentManager {
         this.performanceHistory = [];
         this.simulationInterval = null;
         this.eventCooldown = 0;
+        this.officeBonuses = this.getDefaultOfficeBonuses();
 
         // Role-specific configurations
         this.roleConfigs = {
@@ -57,6 +58,26 @@ class AgentManager {
             { id: 'idea',       weight: 15, emoji: '💡', title: 'Ý tưởng mới!',             message: 'Có ý tưởng tuyệt vời cho feature mới!', effect: 'create_task' },
             { id: 'review',     weight: 20, emoji: '📝', title: 'Code Review Request',       message: 'Cần review code trước khi merge.', effect: 'review_flow' },
         ];
+    }
+
+    getDefaultOfficeBonuses() {
+        return {
+            idleEnergyRegen: 0,
+            workEnergyDrainMul: 1,
+            interactionEnergyMul: 1,
+            xpGainMul: 1,
+            negativeMoodMul: 1,
+            interactionMoodMul: 1,
+            pairChanceAdd: 0,
+            mentorChanceAdd: 0,
+            deadlineHintDays: 0,
+            summary: [],
+            compact: 'NONE',
+        };
+    }
+
+    setOfficeBonuses(bonuses) {
+        this.officeBonuses = { ...this.getDefaultOfficeBonuses(), ...(bonuses || {}) };
     }
 
     createAgent(data) {
@@ -150,6 +171,7 @@ class AgentManager {
         } else if (task.assigneeId) {
             this.assignTask(task.id, task.assigneeId);
         }
+        this.autoAssignPendingTasks();
         return task.id;
     }
 
@@ -168,8 +190,23 @@ class AgentManager {
         }
     }
 
+    autoAssignPendingTasks() {
+        const idleAgents = this.getAllAgents().filter(agent =>
+            agent.status === 'idle' && !agent.currentTask && !agent._isRoaming
+        );
+        const pendingTasks = this.tasks.filter(task => task.status === 'pending' && !task.assigneeId);
+
+        idleAgents.forEach(agent => {
+            const nextTask = pendingTasks.shift();
+            if (!nextTask) return;
+            this.assignTask(nextTask.id, agent.id);
+            this.addLog(agent.name, `📋 Bắt đầu: ${nextTask.title}`, 'info');
+        });
+    }
+
     completeTask(taskId) {
         const task = this.tasks.find(t=>t.id===taskId);
+        const office = this.officeBonuses || this.getDefaultOfficeBonuses();
         if (!task) return;
 
         // Check if needs code review
@@ -204,7 +241,7 @@ class AgentManager {
                 agent.tasksCompleted++;
                 agent.commits++;
                 const config = this.roleConfigs[agent.role];
-                agent.xp += Math.floor((10 + Math.random()*15) * (config?.xpMul || 1));
+                agent.xp += Math.floor((10 + Math.random()*15) * (config?.xpMul || 1) * office.xpGainMul);
                 // Level up check
                 if (agent.xp >= agent.skillLevel * 50) {
                     agent.skillLevel = Math.min(5, agent.skillLevel+1);
@@ -233,6 +270,8 @@ class AgentManager {
                 }
             }
         });
+
+        this.autoAssignPendingTasks();
     }
 
     getAllTasks() { return this.tasks; }
@@ -253,6 +292,7 @@ class AgentManager {
     // === SMART SIMULATION ===
     simulateTick() {
         this.stats.uptime++;
+        const office = this.officeBonuses || this.getDefaultOfficeBonuses();
 
         // Performance history every 60 ticks
         if (this.stats.uptime % 60 === 0) {
@@ -280,9 +320,9 @@ class AgentManager {
 
             // Energy management
             if (agent.status === 'working' || agent.status === 'thinking') {
-                agent.energy = Math.max(10, agent.energy - config.energyDrain);
+                agent.energy = Math.max(10, agent.energy - config.energyDrain * office.workEnergyDrainMul);
             } else {
-                agent.energy = Math.min(100, agent.energy + 0.1);
+                agent.energy = Math.min(100, agent.energy + 0.1 + office.idleEnergyRegen);
             }
 
             // Process review queue (for reviewers)
@@ -358,7 +398,7 @@ class AgentManager {
                     if (behaviorType === 'testing' && Math.random() < (agent.role === 'tester' ? 0.2 : 0.08)) {
                         this.addLog(agent.name, '⚠️ Test failed! Fixing...', 'warning');
                         this.stats.totalErrors++;
-                        agent.mood = Math.max(30, agent.mood - 3);
+                        agent.mood = Math.max(30, agent.mood - Math.max(1, Math.round(3 * office.negativeMoodMul)));
                     }
                     // Security finds vulnerabilities
                     if (agent.role === 'security' && behaviorType === 'testing' && Math.random() < 0.15) {
@@ -378,7 +418,10 @@ class AgentManager {
 
                 // Mood fluctuation (designers more mood-sensitive)
                 if (Math.random() < 0.02) {
-                    const moodDelta = agent.role === 'designer' ? (Math.random()>0.5?3:-2) : (Math.random()>0.5?2:-1);
+                    let moodDelta = agent.role === 'designer' ? (Math.random()>0.5?3:-2) : (Math.random()>0.5?2:-1);
+                    if (moodDelta < 0) {
+                        moodDelta = -Math.max(1, Math.round(Math.abs(moodDelta) * office.negativeMoodMul));
+                    }
                     agent.mood = Math.max(30, Math.min(100, agent.mood + moodDelta));
                 }
 
@@ -392,14 +435,6 @@ class AgentManager {
                     this.completeTask(agent.currentTask.id);
                     this.addLog(agent.name, `✅ Hoàn thành: ${taskTitle}`, 'success');
                     
-                    // Auto-pick next task
-                    const next = this.tasks.find(t => t.status === 'pending' && !t.assigneeId);
-                    if (next) {
-                        setTimeout(() => {
-                            this.assignTask(next.id, agent.id);
-                            this.addLog(agent.name, `📋 Bắt đầu: ${next.title}`, 'info');
-                        }, 1500);
-                    }
                 }
             } else if (agent.status === 'idle') {
                 // Idle agent behaviors — random chatter
@@ -437,17 +472,17 @@ class AgentManager {
                             // Apply effect
                             switch (point.effect) {
                                 case 'energy':
-                                    agent.energy = Math.min(100, agent.energy + 10 + Math.floor(Math.random() * 8));
+                                    agent.energy = Math.min(100, agent.energy + Math.max(1, Math.round((10 + Math.floor(Math.random() * 8)) * office.interactionEnergyMul)));
                                     break;
                                 case 'mood':
-                                    agent.mood = Math.min(100, agent.mood + 5 + Math.floor(Math.random() * 5));
+                                    agent.mood = Math.min(100, agent.mood + Math.max(1, Math.round((5 + Math.floor(Math.random() * 5)) * office.interactionMoodMul)));
                                     break;
                                 case 'xp':
-                                    agent.xp += 2 + Math.floor(Math.random() * 3);
+                                    agent.xp += Math.max(1, Math.round((2 + Math.floor(Math.random() * 3)) * office.xpGainMul));
                                     break;
                                 case 'rest':
-                                    agent.energy = Math.min(100, agent.energy + 15);
-                                    agent.mood = Math.min(100, agent.mood + 8);
+                                    agent.energy = Math.min(100, agent.energy + Math.max(1, Math.round(15 * office.interactionEnergyMul)));
+                                    agent.mood = Math.min(100, agent.mood + Math.max(1, Math.round(8 * office.interactionMoodMul)));
                                     break;
                             }
 
@@ -469,7 +504,7 @@ class AgentManager {
                 }
 
                 // Try to mentor nearby idle agents
-                if (agent.skillLevel >= 3 && !agent.mentoring && Math.random() < 0.003) {
+                if (agent.skillLevel >= 3 && !agent.mentoring && Math.random() < (0.003 + office.mentorChanceAdd)) {
                     const mentee = this.getAllAgents().find(a => 
                         a.id !== agent.id && a.skillLevel < agent.skillLevel && !a.mentoring && a.status === 'idle'
                     );
@@ -482,7 +517,7 @@ class AgentManager {
                 }
 
                 // Auto-pair programming
-                if (!agent.pairedWith && Math.random() < 0.002) {
+                if (!agent.pairedWith && Math.random() < (0.002 + office.pairChanceAdd)) {
                     const partner = this.getAllAgents().find(a =>
                         a.id !== agent.id && a.role === agent.role && !a.pairedWith && a.status === 'working'
                     );

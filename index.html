@@ -204,6 +204,12 @@
             <div class="hud-xp-bar"><div class="hud-xp-fill" id="hudXpFill"></div></div>
         </div>
         <div class="hud-divider"></div>
+        <div class="hud-section hud-office-bonus" id="hudOfficeBonusWrap" title="Office bonus">
+            <span class="hud-icon">🪴</span>
+            <span class="hud-label">BUFF</span>
+            <span class="hud-value hud-bonus-text" id="hudOfficeBonus">NONE</span>
+        </div>
+        <div class="hud-divider"></div>
         <div class="hud-section hud-contracts-btn">
             <button class="hud-btn" id="btnContracts" title="Xem hợp đồng">
                 📋 Contracts <span class="hud-badge" id="hudContractBadge">0</span>
@@ -387,14 +393,14 @@
     </div>
 
     <!-- Footer Bar -->
-    <footer class="footer" id="footerBar" style="display:none">
+    <footer class="footer" id="footerBarLegacy" style="display:none">
         <div class="footer-left">
             <span class="footer-item">🎮 PixelAgent City v3.0</span>
             <span class="footer-divider">|</span>
-            <span class="footer-item" id="pixelClock">00:00:00</span>
+            <span class="footer-item" id="pixelClockLegacy">00:00:00</span>
         </div>
         <div class="footer-right">
-            <button class="icon-btn" id="btnClearLogs" title="Xóa logs">🗑</button>
+            <button class="icon-btn" id="btnClearLogsFooter" title="Clear logs">&#x1F5D1;</button>
         </div>
     </footer>
 

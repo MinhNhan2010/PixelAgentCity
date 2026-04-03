@@ -174,6 +174,8 @@ class GameState {
             clock: 15, pictureframe: 8, bed_single: 90, bed_double: 130,
             rug: 35, pillow: 8,
         };
+
+        this.officeBonuses = this.getOfficeBonuses([]);
     }
 
     // ============ ECONOMY ============
@@ -277,6 +279,57 @@ class GameState {
     _currentSalary = 0;
     updateSalaryCache(agents) {
         this._currentSalary = this.getDailySalary(agents);
+    }
+
+    getOfficeBonuses(furniture = []) {
+        const counts = {};
+        furniture.forEach(item => {
+            const key = item?.t;
+            if (!key) return;
+            counts[key] = (counts[key] || 0) + 1;
+        });
+
+        const foodCount = (counts.coffee || 0) + (counts.vending || 0) + (counts.fridge || 0) + (counts.counter || 0);
+        const shelfCount = (counts.bookshelf || 0) + (counts.shelf || 0);
+        const greeneryCount = (counts.plant || 0) + (counts.cactus || 0);
+        const decorCount = (counts.painting || 0) + (counts.lamp || 0) + (counts.pictureframe || 0);
+        const loungeCount = (counts.sofa || 0) + (counts.armchair || 0) + (counts.bed_single || 0) + (counts.bed_double || 0) + (counts.rug || 0) + (counts.pillow || 0);
+        const meetingCount = counts.mtable || 0;
+
+        const bonuses = {
+            counts,
+            idleEnergyRegen: Math.min(0.2, foodCount * 0.03),
+            workEnergyDrainMul: Math.max(0.82, 1 - foodCount * 0.025),
+            interactionEnergyMul: 1 + Math.min(0.45, foodCount * 0.05 + loungeCount * 0.08),
+            xpGainMul: 1 + Math.min(0.24, shelfCount * 0.06),
+            negativeMoodMul: Math.max(0.72, 1 - greeneryCount * 0.05 - decorCount * 0.025),
+            interactionMoodMul: 1 + Math.min(0.35, greeneryCount * 0.06 + decorCount * 0.04 + loungeCount * 0.03),
+            pairChanceAdd: Math.min(0.004, meetingCount * 0.0015),
+            mentorChanceAdd: Math.min(0.004, meetingCount * 0.001 + shelfCount * 0.0007),
+            deadlineHintDays: counts.clock ? 1 : 0,
+            summary: [],
+            compact: 'NONE',
+        };
+
+        if (bonuses.idleEnergyRegen > 0 || bonuses.workEnergyDrainMul < 1) {
+            bonuses.summary.push(`Energy +${Math.round((bonuses.interactionEnergyMul - 1) * 100)}%`);
+        }
+        if (bonuses.xpGainMul > 1) {
+            bonuses.summary.push(`XP +${Math.round((bonuses.xpGainMul - 1) * 100)}%`);
+        }
+        if (bonuses.negativeMoodMul < 1) {
+            bonuses.summary.push(`Stress -${Math.round((1 - bonuses.negativeMoodMul) * 100)}%`);
+        }
+        if (bonuses.pairChanceAdd > 0 || bonuses.mentorChanceAdd > 0) {
+            bonuses.summary.push(`Teamwork +${Math.round((bonuses.pairChanceAdd + bonuses.mentorChanceAdd) * 10000)}%`);
+        }
+        if (bonuses.deadlineHintDays > 0) {
+            bonuses.summary.push(`Clock +${bonuses.deadlineHintDays}d`);
+        }
+
+        bonuses.compact = bonuses.summary.slice(0, 2).join(' / ') || 'NONE';
+        this.officeBonuses = bonuses;
+        return bonuses;
     }
 
     // ============ CONTRACTS ============

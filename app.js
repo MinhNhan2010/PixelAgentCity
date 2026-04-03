@@ -149,9 +149,9 @@
         // AgentManager takes engine reference
         manager = new AgentManager(engine);
 
-        // LayoutEditor takes (engine, minimapCanvas element)
-        const minimapCanvas = document.getElementById('minimapCanvas');
-        editor = new LayoutEditor(engine, minimapCanvas);
+        // LayoutEditor takes engine reference
+        editor = new LayoutEditor(engine);
+        editor.loadSavedLayout(true);
 
         // Chatbox
         chatbox = new AgentChatbox(manager, engine);
@@ -222,11 +222,16 @@
         // Auto-save every 30s
         setInterval(() => {
             if (game.started && !game.isGameOver) {
+                editor?.flushAutoSave?.();
                 game.updateSalaryCache(Array.from(manager.agents.values()));
                 game.saveGame(manager);
                 manager.saveToStorage();
             }
         }, 30000);
+
+        window.addEventListener('beforeunload', () => {
+            editor?.flushAutoSave?.();
+        });
 
         // Initial data
         setTimeout(() => {
@@ -291,10 +296,16 @@
         // Hook completeTask to report to game
         const origComplete = manager.completeTask.bind(manager);
         manager.completeTask = function(taskId) {
+            const taskBefore = this.tasks.find(t => t.id === taskId);
+            const previousStatus = taskBefore?.status;
             origComplete(taskId);
+            const taskAfter = this.tasks.find(t => t.id === taskId);
             if (game) {
-                game.onTaskCompleted(taskId);
-                game.sfx.taskComplete();
+                const justCompleted = previousStatus !== 'completed' && taskAfter?.status === 'completed';
+                if (justCompleted) {
+                    game.onTaskCompleted(taskId);
+                    game.sfx.taskComplete();
+                }
             }
         };
     }
@@ -302,6 +313,8 @@
     // ============ HUD ============
     function refreshHUD() {
         const agents = Array.from(manager.agents.values());
+        const officeBonuses = game.getOfficeBonuses(engine?.furniture || []);
+        manager.setOfficeBonuses(officeBonuses);
         game.updateSalaryCache(agents);
         setText('hudCoins', game.formatCoins(game.coins));
         setText('hudDay', game.day);
@@ -312,6 +325,13 @@
         setText('agentsOnline', agents.length);
         setText('activeTasks', manager.tasks.filter(t => t.status !== 'completed').length);
         setText('cpuUsage', Math.min(99, agents.length * 8 + Math.floor(Math.random() * 10)) + '%');
+        setText('hudOfficeBonus', officeBonuses.compact);
+        const officeEl = document.getElementById('hudOfficeBonusWrap');
+        if (officeEl) {
+            officeEl.title = officeBonuses.summary.length
+                ? officeBonuses.summary.join(' | ')
+                : 'No active office bonus';
+        }
         const xpFill = document.getElementById('hudXpFill');
         if (xpFill) xpFill.style.width = game.getXPProgress() + '%';
     }
@@ -320,6 +340,8 @@
         const el = document.getElementById(id);
         if (el) el.textContent = val;
     }
+
+    window.refreshHUD = refreshHUD;
 
     // ============ COIN POPUP ============
     function showCoinPopup(amount) {
@@ -575,7 +597,9 @@
         document.getElementById('btnSettings').onclick = () => {
             if (confirm('⚠️ Reset toàn bộ game data?')) { localStorage.clear(); location.reload(); }
         };
-        document.getElementById('btnClearLogs')?.addEventListener('click', () => { manager.logs = []; refreshLogs(); });
+        const clearLogs = () => { manager.logs = []; refreshLogs(); };
+        document.getElementById('btnClearLogs')?.addEventListener('click', clearLogs);
+        document.getElementById('btnClearLogsFooter')?.addEventListener('click', clearLogs);
         document.getElementById('btnFullscreen')?.addEventListener('click', () => {
             const vp = document.getElementById('officeViewport');
             if (document.fullscreenElement) document.exitFullscreen();
