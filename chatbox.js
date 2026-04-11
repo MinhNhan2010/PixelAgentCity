@@ -20,22 +20,22 @@ class AgentChatbox {
 
         this.quickAskCatalog = {
             base: [
-                { text: 'Tinh hinh?', key: 'working', icon: 'STAT' },
-                { text: 'Thuong bao nhieu?', key: 'salary', icon: 'PAY' },
-                { text: 'Cho loi khuyen', key: 'opinion', icon: 'TIP' },
+                { text: 'Tình hình?', key: 'working', icon: 'STAT' },
+                { text: 'Thưởng bao nhiêu?', key: 'salary', icon: 'PAY' },
+                { text: 'Cho lời khuyên', key: 'opinion', icon: 'TIP' },
             ],
             byRole: {
-                coder: [{ text: 'Code den dau?', key: 'working', icon: 'CODE' }],
-                tester: [{ text: 'Co bug nao?', key: 'help', icon: 'QA' }],
-                reviewer: [{ text: 'Review gap duoc khong?', key: 'help', icon: 'PR' }],
-                designer: [{ text: 'UI nen doi gi?', key: 'opinion', icon: 'UI' }],
-                devops: [{ text: 'Deploy on khong?', key: 'working', icon: 'OPS' }],
-                researcher: [{ text: 'Huong nao ngon?', key: 'opinion', icon: 'RND' }],
-                analyst: [{ text: 'So lieu noi gi?', key: 'opinion', icon: 'DATA' }],
-                security: [{ text: 'Rui ro o dau?', key: 'help', icon: 'SEC' }],
-                backend: [{ text: 'API on chua?', key: 'working', icon: 'API' }],
-                mobile: [{ text: 'Ban mobile sao roi?', key: 'working', icon: 'APP' }],
-                writer: [{ text: 'Content da on?', key: 'working', icon: 'DOC' }],
+                coder: [{ text: 'Code đến đâu?', key: 'working', icon: 'CODE' }],
+                tester: [{ text: 'Có bug nào?', key: 'help', icon: 'QA' }],
+                reviewer: [{ text: 'Review gấp được không?', key: 'help', icon: 'PR' }],
+                designer: [{ text: 'UI nên đổi gì?', key: 'opinion', icon: 'UI' }],
+                devops: [{ text: 'Deploy ổn không?', key: 'working', icon: 'OPS' }],
+                researcher: [{ text: 'Hướng nào ngon?', key: 'opinion', icon: 'RND' }],
+                analyst: [{ text: 'Số liệu nói gì?', key: 'opinion', icon: 'DATA' }],
+                security: [{ text: 'Rủi ro ở đâu?', key: 'help', icon: 'SEC' }],
+                backend: [{ text: 'API ổn chưa?', key: 'working', icon: 'API' }],
+                mobile: [{ text: 'Bản mobile sao rồi?', key: 'working', icon: 'APP' }],
+                writer: [{ text: 'Content đã ổn?', key: 'working', icon: 'DOC' }],
             },
         };
 
@@ -56,60 +56,60 @@ class AgentChatbox {
 
         this.roleResponses = {
             coder: {
-                greeting: ['Chao sep, toi san sang code.', 'Co feature nao can xu ly khong?'],
-                working: ['Toi dang xu ly "{task}".', 'Dang code day, sap xong roi.'],
-                idle: ['Toi dang ranh, nhan them contract di.', 'Cho viec moi de kiem them coin.'],
-                help: ['Toi co the lam feature, bugfix va prototype.', 'Can toi support phan code nao?'],
-                opinion: ['Nen uu tien viec co reward cao va deadline an toan.', 'Clean code giup team ve dich on dinh hon.'],
-                salary: ['Luong coder van chua that su wow dau sep.', 'Them bonus nho la toc do code tang ngay.'],
+                greeting: ['Chào sếp, tôi sẵn sàng code.', 'Có feature nào cần xử lý không?'],
+                working: ['Tôi đang xử lý "{task}".', 'Đang code đây, sắp xong rồi.'],
+                idle: ['Tôi đang rảnh, nhận thêm contract đi.', 'Chờ việc mới để kiếm thêm coin.'],
+                help: ['Tôi có thể làm feature, bugfix và prototype.', 'Cần tôi support phần code nào?'],
+                opinion: ['Nên ưu tiên việc có reward cao và deadline an toàn.', 'Clean code giúp team về đích ổn định hơn.'],
+                salary: ['Lương coder vẫn chưa thật sự wow đâu sếp.', 'Thêm bonus nhỏ là tốc độ code tăng ngay.'],
             },
             tester: {
-                greeting: ['QA da co mat.', 'Gui task cho toi, toi se test ky.'],
-                working: ['Dang test "{task}".', 'Toi dang bat bug cho task nay.'],
-                idle: ['He thong dang em, co the nhan them viec.', 'Chua co bug moi, tam on.'],
-                help: ['Toi rat hop voi bugfix va review output.', 'Can test nhanh hay test ky?'],
-                opinion: ['Dung de fail contract vi thieu test.', 'Test som se re hon fix muon.'],
-                salary: ['Luong tester hoi mong manh nha.', 'Bug tim duoc nhieu ma thuong thi it.'],
+                greeting: ['QA đã có mặt.', 'Gửi task cho tôi, tôi sẽ test kỹ.'],
+                working: ['Đang test "{task}".', 'Tôi đang bắt bug cho task này.'],
+                idle: ['Hệ thống đang êm, có thể nhận thêm việc.', 'Chưa có bug mới, tạm ổn.'],
+                help: ['Tôi rất hợp với bugfix và review output.', 'Cần test nhanh hay test kỹ?'],
+                opinion: ['Đừng để fail contract vì thiếu test.', 'Test sớm sẽ rẻ hơn fix muộn.'],
+                salary: ['Lương tester hơi mỏng manh nha.', 'Bug tìm được nhiều mà thưởng thì ít.'],
             },
             reviewer: {
-                greeting: ['Reviewer da online.', 'Cho toi xem PR nao.'],
-                working: ['Dang review "{task}".', 'Toi dang kiem tra chat luong dau ra.'],
-                idle: ['Toi dang ranh, co the review ngay.', 'Cho viec can feedback.'],
-                help: ['Toi giup review, chot chat luong va giam rui ro.', 'Can feedback nhanh hay feedback ky?'],
-                opinion: ['Code ro rang giup contract xong nhanh hon.', 'Tot nhat la dung de task sang review qua muon.'],
-                salary: ['Soi bug ca ngay ma luong van the nay.', 'Reviewer cung xung dang bonus do sep.'],
+                greeting: ['Reviewer đã online.', 'Cho tôi xem PR nào.'],
+                working: ['Đang review "{task}".', 'Tôi đang kiểm tra chất lượng đầu ra.'],
+                idle: ['Tôi đang rảnh, có thể review ngay.', 'Chờ việc cần feedback.'],
+                help: ['Tôi giúp review, chốt chất lượng và giảm rủi ro.', 'Cần feedback nhanh hay feedback kỹ?'],
+                opinion: ['Code rõ ràng giúp contract xong nhanh hơn.', 'Tốt nhất là đừng để task sang review quá muộn.'],
+                salary: ['Soi bug cả ngày mà lương vẫn thế này.', 'Reviewer cũng xứng đáng bonus đó sếp.'],
             },
             designer: {
-                greeting: ['Designer vao vi tri.', 'Can UI hay visual moi khong?'],
-                working: ['Dang polish "{task}".', 'Toi dang chinh giao dien cho task nay.'],
-                idle: ['Van phong dep len mot chut la mood team tot hon.', 'Can mockup moi khong?'],
-                help: ['Toi hop voi UI, UX va visual polish.', 'Muon dep, ro, hay nhanh?'],
-                opinion: ['Layout dep se lam san pham thuyet phuc hon.', 'Dung bo qua trai nghiem nguoi dung.'],
-                salary: ['Design dep thi thuong cung nen dep.', 'Cho them budget visual nha sep.'],
+                greeting: ['Designer vào vị trí.', 'Cần UI hay visual mới không?'],
+                working: ['Đang polish "{task}".', 'Tôi đang chỉnh giao diện cho task này.'],
+                idle: ['Văn phòng đẹp lên một chút là mood team tốt hơn.', 'Cần mockup mới không?'],
+                help: ['Tôi hợp với UI, UX và visual polish.', 'Muốn đẹp, rõ, hay nhanh?'],
+                opinion: ['Layout đẹp sẽ làm sản phẩm thuyết phục hơn.', 'Đừng bỏ qua trải nghiệm người dùng.'],
+                salary: ['Design đẹp thì thưởng cũng nên đẹp.', 'Cho thêm budget visual nha sếp.'],
             },
             devops: {
-                greeting: ['DevOps da vao kenh.', 'Can toi giu he thong on dinh khong?'],
-                working: ['Dang xu ly "{task}".', 'Toi dang lo infra va deploy flow.'],
-                idle: ['Server dang yen, tam thoi on.', 'Ranh mot chut, co the support task gap.'],
-                help: ['Toi manh ve deploy, pipeline va van hanh.', 'Can scale, fix hay toi uu?'],
-                opinion: ['Ha tang on dinh giup team ve dich deu hon.', 'Dung tiet tien nham cho incident.'],
-                salary: ['Infra chay duoc la nho toi day.', 'Luong DevOps can co chut uu ai.'],
+                greeting: ['DevOps đã vào kênh.', 'Cần tôi giữ hệ thống ổn định không?'],
+                working: ['Đang xử lý "{task}".', 'Tôi đang lo infra và deploy flow.'],
+                idle: ['Server đang yên, tạm thời ổn.', 'Rảnh một chút, có thể support task gấp.'],
+                help: ['Tôi mạnh về deploy, pipeline và vận hành.', 'Cần scale, fix hay tối ưu?'],
+                opinion: ['Hạ tầng ổn định giúp team về đích đều hơn.', 'Đừng tiết tiền nhầm cho incident.'],
+                salary: ['Infra chạy được là nhờ tôi đấy.', 'Lương DevOps cần có chút ưu ái.'],
             },
             researcher: {
-                greeting: ['Research mode bat dau.', 'Co chu de nao can toi dao sau khong?'],
-                working: ['Dang nghien cuu "{task}".', 'Toi dang phan tich huong tiep can.'],
-                idle: ['Toi co the nghien cuu de mo khoa task kho.', 'Dang cho de tai thu vi hon.'],
-                help: ['Toi hop voi task can tim huong va tong hop thong tin.', 'Can survey nhanh hay dao sau?'],
-                opinion: ['Du lieu tot quan trong hon du lieu nhieu.', 'Nen dau tu dung luc cho task kho.'],
-                salary: ['R&D ma duoc dau tu them thi ngon.', 'Cho toi chut budget de mo rong y tuong.'],
+                greeting: ['Research mode bắt đầu.', 'Có chủ đề nào cần tôi đào sâu không?'],
+                working: ['Đang nghiên cứu "{task}".', 'Tôi đang phân tích hướng tiếp cận.'],
+                idle: ['Tôi có thể nghiên cứu để mở khóa task khó.', 'Đang chờ đề tài thú vị hơn.'],
+                help: ['Tôi hợp với task cần tìm hướng và tổng hợp thông tin.', 'Cần survey nhanh hay đào sâu?'],
+                opinion: ['Dữ liệu tốt quan trọng hơn dữ liệu nhiều.', 'Nên đầu tư đúng lúc cho task khó.'],
+                salary: ['R&D mà được đầu tư thêm thì ngon.', 'Cho tôi chút budget để mở rộng ý tưởng.'],
             },
             default: {
-                greeting: ['Chao sep, toi da san sang.', 'Toi online roi day.'],
-                working: ['Dang xu ly "{task}".', 'Toi dang tap trung vao task hien tai.'],
-                idle: ['Toi dang ranh.', 'Cho task tiep theo.'],
-                help: ['Toi se ho tro trong kha nang cua minh.', 'Can toi lam phan nao?'],
-                opinion: ['Nen giu mood va energy on dinh cho team.', 'Chon contract phu hop se an toan hon.'],
-                salary: ['Luong hien tai van on, nhung bonus thi tot hon.', 'Co thuong them thi tinh than tang ngay.'],
+                greeting: ['Chào sếp, tôi đã sẵn sàng.', 'Tôi online rồi đây.'],
+                working: ['Đang xử lý "{task}".', 'Tôi đang tập trung vào task hiện tại.'],
+                idle: ['Tôi đang rảnh.', 'Chờ task tiếp theo.'],
+                help: ['Tôi sẽ hỗ trợ trong khả năng của mình.', 'Cần tôi làm phần nào?'],
+                opinion: ['Nên giữ mood và energy ổn định cho team.', 'Chọn contract phù hợp sẽ an toàn hơn.'],
+                salary: ['Lương hiện tại vẫn ổn, nhưng bonus thì tốt hơn.', 'Có thưởng thêm thì tinh thần tăng ngay.'],
             },
         };
 
@@ -137,7 +137,7 @@ class AgentChatbox {
                             <span class="chatbox-name" id="chatboxName">Agent Channel</span>
                             <span class="chatbox-chip" id="chatboxRole">standby</span>
                         </div>
-                        <span class="chatbox-status" id="chatboxStatus">Keo agent vao day de mo kenh lien lac</span>
+                        <span class="chatbox-status" id="chatboxStatus">Kéo agent vào đây để mở kênh liên lạc</span>
                     </div>
                 </div>
                 <div class="chatbox-header-right">
@@ -175,8 +175,8 @@ class AgentChatbox {
                                 <div class="dropzone-orb">
                                     <div class="dropzone-icon">AI</div>
                                 </div>
-                                <div class="dropzone-text">Keo tha agent vao day<br>de bat dau tro chuyen</div>
-                                <div class="dropzone-hint">Hoac click truc tiep vao agent tren ban do</div>
+                                <div class="dropzone-text">Kéo thả agent vào đây<br>để bắt đầu trò chuyện</div>
+                                <div class="dropzone-hint">Hoặc click trực tiếp vào agent trên bản đồ</div>
                                 <div class="dropzone-actions">
                                     <span class="dropzone-tag">PIXEL LINK</span>
                                     <span class="dropzone-tag">QUICK ASK</span>
@@ -208,7 +208,7 @@ class AgentChatbox {
                 <div class="chatbox-input-row">
                     <div class="chatbox-input-shell">
                         <span class="chatbox-input-icon">TX</span>
-                        <input type="text" class="chatbox-input" id="chatboxInput" placeholder="Gui tin nhan..." autocomplete="off">
+                        <input type="text" class="chatbox-input" id="chatboxInput" placeholder="Gửi tin nhắn..." autocomplete="off">
                     </div>
                     <button class="chatbox-send" id="chatboxSend" title="Gui">&#9654;</button>
                 </div>
@@ -430,7 +430,7 @@ class AgentChatbox {
         if (!agent) {
             return {
                 name: 'Agent Channel',
-                status: 'Keo agent vao day de mo kenh lien lac',
+                status: 'Kéo agent vào đây để mở kênh liên lạc',
                 role: 'standby',
                 avatar: 'AI',
                 roleClass: this.getRoleClass('default'),
@@ -442,10 +442,10 @@ class AgentChatbox {
         }
 
         const status =
-            agent.status === 'working' ? 'Dang lam viec' :
-            agent.status === 'thinking' ? 'Dang suy nghi' :
-            agent.status === 'review' ? 'Dang review' :
-            'Dang ranh';
+            agent.status === 'working' ? 'Đang làm việc' :
+            agent.status === 'thinking' ? 'Đang suy nghĩ' :
+            agent.status === 'review' ? 'Đang review' :
+            'Đang rảnh';
 
         return {
             name: agent.name,
@@ -472,7 +472,7 @@ class AgentChatbox {
         this.ui.task.textContent = meta.task;
         this.ui.presence.className = `chatbox-presence ${meta.presence}`;
         this.el.setAttribute('data-role', (agent?.role || 'default'));
-        this.ui.input.placeholder = agent ? `Nhan ${agent.name}...` : 'Gui tin nhan...';
+        this.ui.input.placeholder = agent ? `Nhắn ${agent.name}...` : 'Gửi tin nhắn...';
     }
 
     setActiveTab(tab) {
@@ -563,8 +563,8 @@ class AgentChatbox {
             this.ui.historyList.innerHTML = `
                 <div class="chatbox-history-empty">
                     <div class="chatbox-history-empty-core">LOG</div>
-                    <div class="chatbox-history-empty-title">Chua co phien chat nao</div>
-                    <div class="chatbox-history-empty-text">Ket noi voi agent dau tien de bat dau lich su lien lac.</div>
+                    <div class="chatbox-history-empty-title">Chưa có phiên chat nào</div>
+                    <div class="chatbox-history-empty-text">Kết nối với agent đầu tiên để bắt đầu lịch sử liên lạc.</div>
                 </div>
             `;
             return;
@@ -575,7 +575,7 @@ class AgentChatbox {
             if (!agent) return '';
             const messages = this.messages.get(agentId) || [];
             const last = messages[messages.length - 1];
-            const preview = last?.text || 'Chua co tin nhan';
+            const preview = last?.text || 'Chưa có tin nhắn';
             return `
                 <button class="chatbox-history-card ${agentId === this.activeAgentId ? 'active' : ''}" data-agent-id="${agentId}">
                     <span class="chatbox-history-avatar ${this.getRoleClass(agent.role)}">${this.escapeHtml(this.getRoleAvatar(agent.role))}</span>

@@ -5,6 +5,8 @@
 (function () {
     'use strict';
 
+    let _gameStartTime = null;
+
     let engine, manager, editor, chatbox, game;
 
     // ============ START SCREEN ============
@@ -104,6 +106,7 @@
         game = new GameState();
         game.startNewGame();
         hideStartScreen();
+        _gameStartTime = Date.now();
         initGameWorld(true);
     }
 
@@ -112,6 +115,7 @@
         game.loadGame();
         game.continueGame();
         hideStartScreen();
+        _gameStartTime = Date.now();
         initGameWorld(false);
     }
 
@@ -305,6 +309,134 @@
                 if (justCompleted) {
                     game.onTaskCompleted(taskId);
                     game.sfx.taskComplete();
+                }
+            }
+        };
+
+        // === POKER SYSTEM ===
+        let _pokerUI = null;
+        let _pokerGame = null;
+        let _pokerPlayers = null;
+
+        manager.onPokerRequest = (players) => {
+            if (_pokerGame) return; // Already playing
+            _pokerPlayers = players;
+
+            // === COIN STAKE SYSTEM ===
+            const STAKE_PER_PLAYER = 20;
+            // Filter to agents that can afford the stake
+            const eligiblePlayers = players.filter(p => game.canAfford(STAKE_PER_PLAYER) || true); // all can try
+            const stakingPlayers = players.filter(() => game.canAfford(STAKE_PER_PLAYER));
+            let totalStake = 0;
+            stakingPlayers.forEach(p => {
+                if (game.spend(STAKE_PER_PLAYER, `Poker stake: ${p.name}`)) {
+                    p._pokerStaked = STAKE_PER_PLAYER;
+                    totalStake += STAKE_PER_PLAYER;
+                } else {
+                    p._pokerStaked = 0;
+                }
+            });
+            // Players without stake still play for fun (chips only)
+            players.forEach(p => { if (p._pokerStaked === undefined) p._pokerStaked = 0; });
+
+            if (totalStake > 0) {
+                manager.addLog('System', `🎰 Poker stake: -${STAKE_PER_PLAYER}Ⓒ/người. Tổng pool: ${totalStake}Ⓒ`, 'warning');
+                showToast(`🎰 Poker stake pool: ${totalStake}Ⓒ`, 'warning');
+            }
+
+            const roleEmojis = {
+                coder: '💻', tester: '🧪', reviewer: '📝', designer: '🎨',
+                devops: '🔧', researcher: '🔬', analyst: '📊', security: '🔒',
+                backend: '⚙️', mobile: '📱', writer: '✍️'
+            };
+
+            _pokerGame = new PokerGame({ stepDelay: 1200 });
+
+            players.forEach(a => {
+                const emoji = roleEmojis[a.role] || '🤖';
+                _pokerGame.addPlayer(a.id, a.name, a.role || 'coder', emoji, 200);
+            });
+
+            // Create poker UI
+            const overlayEl = document.getElementById('pokerOverlay');
+            _pokerUI = new PokerUI(overlayEl, _pokerGame);
+
+            // Connect callbacks
+            _pokerGame.onUpdate = () => _pokerUI?.render(_pokerGame.getState());
+            _pokerGame.onPhaseChange = (phase) => {
+                _pokerUI?.render(_pokerGame.getState());
+                if (phase === 'showdown') {
+                    manager.addLog('System', '🃏 Poker: Showdown!', 'info');
+                }
+            };
+            _pokerGame.onHandComplete = (gameRef) => {
+                _pokerUI?.render(gameRef.getState());
+                const lastResult = gameRef.history[gameRef.history.length - 1];
+                if (lastResult) {
+                    const winner = _pokerPlayers.find(p => p.id === lastResult.winnerId);
+                    if (winner) {
+                        manager.addLog(winner.name, `🏆 Thắng ván poker! +${lastResult.amount} chips (${lastResult.handName})`, 'success');
+                        showToast(`🃏 ${winner.name} thắng ván poker!`, 'success');
+                        if (winner.mood   !== undefined) winner.mood   = Math.min(100, winner.mood   + 8);
+                        if (winner.energy !== undefined) winner.energy = Math.min(100, winner.energy + 3);
+                        engine.showSpeechBubble(winner.id, '🏆 Tôi thắng!', 3000);
+                    }
+                }
+                if (gameRef.phase === 'finished') {
+                    manager.addLog('System', '🃏 Kết thúc phiên poker!', 'info');
+                }
+            };
+            _pokerGame.onGameLog = () => {};  // suppress console spam
+
+            // On close — settle coin stakes with tournament winner
+            _pokerUI.onClose = () => {
+                // Determine tournament winner (most chips)
+                if (_pokerGame && totalStake > 0) {
+                    const sortedByChips = [..._pokerGame.players].sort((a, b) => b.chips - a.chips);
+                    const tournamentWinner = _pokerPlayers.find(p => p.id === sortedByChips[0]?.id);
+                    if (tournamentWinner) {
+                        game.earn(totalStake, `Poker winnings: ${tournamentWinner.name}`);
+                        manager.addLog(tournamentWinner.name,
+                            `🏆 Thắng giải poker! +${totalStake}Ⓒ vào quỹ công ty!`, 'success');
+                        showToast(`🏆 ${tournamentWinner.name} thắng ${totalStake}Ⓒ poker prize!`, 'success');
+                        engine.showSpeechBubble(tournamentWinner.id, `💰 +${totalStake}Ⓒ!`, 4000);
+                        engine.spawnInteractionFx(25, 15, '💰');
+                        if (tournamentWinner.mood !== undefined)
+                            tournamentWinner.mood = Math.min(100, tournamentWinner.mood + 15);
+                    }
+                }
+
+                _pokerGame = null;
+                _pokerUI = null;
+                if (_pokerPlayers) {
+                    _pokerPlayers.forEach(p => {
+                        p._isPlayingPoker = false;
+                        p._pokerStaked = 0;
+                        // Participation mood boost for all
+                        if (p.mood !== undefined) p.mood = Math.min(100, p.mood + 3);
+                    });
+                    _pokerPlayers = null;
+                }
+                totalStake = 0;
+            };
+
+            // Show and start
+            _pokerUI.show();
+            manager.addLog('system', `🃏 Phiên poker bắt đầu với ${players.length} người chơi!`, 'info');
+            showToast(`🃏 Phiên poker bắt đầu!`, 'info');
+        };
+
+        // Also allow clicking the poker table in the engine to open poker
+        engine.onInteractionClick = (point) => {
+            if (point.type === 'poker' && !_pokerGame) {
+                // Manually trigger poker with all idle agents
+                const idleAgents = Array.from(manager.agents.values()).filter(a =>
+                    a.status === 'idle' && !a._isRoaming && !a._isPlayingPoker
+                ).slice(0, 4);
+                if (idleAgents.length >= 2) {
+                    manager.onPokerRequest(idleAgents);
+                } else {
+                    showToast('🃏 Cần ít nhất 2 agent rảnh để chơi poker!', 'warning');
                 }
             }
         };
@@ -599,7 +731,6 @@
         };
         const clearLogs = () => { manager.logs = []; refreshLogs(); };
         document.getElementById('btnClearLogs')?.addEventListener('click', clearLogs);
-        document.getElementById('btnClearLogsFooter')?.addEventListener('click', clearLogs);
         document.getElementById('btnFullscreen')?.addEventListener('click', () => {
             const vp = document.getElementById('officeViewport');
             if (document.fullscreenElement) document.exitFullscreen();
@@ -789,6 +920,31 @@
     function updateClock() {
         const c = document.getElementById('pixelClock');
         if (c) c.textContent = new Date().toLocaleTimeString('vi-VN');
+
+        // Update uptime
+        if (_gameStartTime) {
+            const elapsed = Math.floor((Date.now() - _gameStartTime) / 1000);
+            const h = String(Math.floor(elapsed / 3600)).padStart(2, '0');
+            const m = String(Math.floor((elapsed % 3600) / 60)).padStart(2, '0');
+            const s = String(elapsed % 60).padStart(2, '0');
+            const uptimeEl = document.getElementById('uptime');
+            if (uptimeEl) uptimeEl.textContent = `${h}:${m}:${s}`;
+        }
+
+        // Update memory usage
+        const memEl = document.getElementById('memoryUsage');
+        if (memEl) {
+            if (performance.memory) {
+                const mb = (performance.memory.usedJSHeapSize / 1048576).toFixed(1);
+                memEl.textContent = `Memory: ${mb} MB`;
+            } else {
+                // Estimate from DOM + data size
+                const agents = manager ? manager.agents.size : 0;
+                const tasks = manager ? manager.tasks.length : 0;
+                const est = (2 + agents * 0.5 + tasks * 0.1).toFixed(1);
+                memEl.textContent = `Memory: ~${est} MB`;
+            }
+        }
     }
 
     // ============ BOOT ============

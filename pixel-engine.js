@@ -46,7 +46,22 @@ class PixelEngine {
             this.drag = null;
             if (this._clickPos && Math.abs(e.clientX - this._clickPos.x) < 4 && Math.abs(e.clientY - this._clickPos.y) < 4) {
                 if (this.hoveredAgent) { this.selectedAgent = this.hoveredAgent; if (this.onAgentClick) this.onAgentClick(this.hoveredAgent); }
-                else this.selectedAgent = null;
+                else {
+                    this.selectedAgent = null;
+                    // Check for interaction point clicks
+                    if (this.onInteractionClick && this.interactionPoints) {
+                        const rect = this.canvas.getBoundingClientRect();
+                        const mx = (e.clientX - rect.left - this.camera.x) / this.scale;
+                        const my = (e.clientY - rect.top - this.camera.y) / this.scale;
+                        for (const pt of this.interactionPoints) {
+                            const px = pt.tx * this.T, py = pt.ty * this.T;
+                            if (Math.abs(mx - px) < this.T * 2 && Math.abs(my - py) < this.T * 2) {
+                                this.onInteractionClick(pt);
+                                break;
+                            }
+                        }
+                    }
+                }
             }
         });
         vp.addEventListener('mouseleave', () => { this.drag = null; });
@@ -165,6 +180,8 @@ class PixelEngine {
         f.push({ t: 'bookshelf', x: 28 * T, y: 13.3 * T });
         f.push({ t: 'painting', x: 20 * T, y: 13.2 * T });
         f.push({ t: 'plant', x: 17.3 * T, y: 20 * T }, { t: 'plant', x: 29 * T, y: 20 * T });
+        // Poker table in lounge
+        f.push({ t: 'poker_table', x: 24 * T, y: 14 * T, w: 3, h: 2 });
         // Lounge desks (3)
         const loungeDesks = [[18, 18], [22, 18], [18, 15]];
         loungeDesks.forEach(([dx, dy]) => {
@@ -194,6 +211,7 @@ class PixelEngine {
             { id: 'painting1', type: 'painting', tx: 9, ty: 2, emoji: '🎨', label: 'Tranh', effect: 'mood' },
             { id: 'paintingL', type: 'painting', tx: 20, ty: 14, emoji: '🖼️', label: 'Tranh lounge', effect: 'mood' },
             { id: 'counter1', type: 'counter', tx: 26, ty: 2, emoji: '🍳', label: 'Quầy bếp', effect: 'energy' },
+            { id: 'poker1', type: 'poker', tx: 25, ty: 15, emoji: '🃏', label: 'Bàn Poker', effect: 'poker' },
         ];
 
         // Active interaction animations
@@ -278,6 +296,7 @@ class PixelEngine {
             case 'cactus': this.drawCactus(x, y); break;
             case 'lamp': this.drawLamp(x, y); break;
             case 'pictureframe': this.drawPictureFrame(x, y); break;
+            case 'poker_table': this.drawPokerTable(x, y); break;
         }
     }
 
@@ -348,6 +367,36 @@ class PixelEngine {
         this.px(x, y, T * 4, 2, '#9b7a56');
         this.px(x + T * 1.5, y + T * 0.8, T, T * 0.8, '#555');
         this.px(x + T * 1.55, y + T * 0.85, T - 2, T * 0.7, '#444');
+    }
+
+    drawPokerTable(x, y) {
+        const T = this.T;
+        const w = T * 3, h = T * 2;
+        // Table legs
+        this.px(x + 4, y + h, 3, 5, '#3d2610');
+        this.px(x + w - 7, y + h, 3, 5, '#3d2610');
+        // Wooden border
+        this.px(x, y, w, h, '#5a3a1e');
+        this.px(x + 1, y + 1, w - 2, h - 2, '#6b4a2a');
+        // Green felt
+        this.px(x + 3, y + 3, w - 6, h - 6, '#1a6b3a');
+        this.px(x + 4, y + 4, w - 8, h - 8, '#1f7a42');
+        // Card slots (community cards)
+        const cardW = 4, cardH = 5;
+        const startX = x + (w - cardW * 5 - 4) / 2;
+        const cardY = y + (h - cardH) / 2;
+        for (let i = 0; i < 5; i++) {
+            this.px(startX + i * (cardW + 1), cardY, cardW, cardH, 'rgba(255,255,255,0.15)');
+        }
+        // Chips decoration
+        const chipColors = ['#e74c3c', '#3498db', '#f1c40f'];
+        for (let i = 0; i < 3; i++) {
+            this.px(x + 5 + i * 3, y + h - 8, 2, 2, chipColors[i]);
+        }
+        // Poker emoji indicator (animated glow)
+        if (Math.floor(this.elapsed * 0.03) % 2 === 0) {
+            this.px(x + w / 2 - 2, y + 3, 4, 1, 'rgba(255,217,61,0.3)');
+        }
     }
 
     drawMchair(x, y, dir) {
@@ -784,7 +833,10 @@ class PixelEngine {
 
     getRandomInteraction() {
         if (!this.interactionPoints?.length) return null;
-        return this.interactionPoints[Math.floor(Math.random() * this.interactionPoints.length)];
+        // Exclude poker points from normal roaming (poker handled separately)
+        const nonPoker = this.interactionPoints.filter(p => p.type !== 'poker');
+        if (!nonPoker.length) return null;
+        return nonPoker[Math.floor(Math.random() * nonPoker.length)];
     }
 
     // === MINIMAP ===
@@ -799,6 +851,11 @@ class PixelEngine {
         this.agentSprites.forEach(sp => { c.fillStyle = sp.color; c.fillRect(sp.x * sx, sp.y * sy, 4, 4); });
         c.strokeStyle = '#4ecdc4'; c.lineWidth = 1;
         c.strokeRect(-this.camera.x / this.scale * sx, -this.camera.y / this.scale * sy, this.canvas.width / this.scale * sx, this.canvas.height / this.scale * sy);
+    }
+
+    // === ZOOM ===
+    zoomTo(newScale) {
+        this.scale = Math.max(1, Math.min(5, newScale));
     }
 
     // === RENDER LOOP ===

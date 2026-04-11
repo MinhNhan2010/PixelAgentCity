@@ -327,7 +327,7 @@ class GameState {
             bonuses.summary.push(`Clock +${bonuses.deadlineHintDays}d`);
         }
 
-        bonuses.compact = bonuses.summary.slice(0, 2).join(' / ') || 'NONE';
+        bonuses.compact = bonuses.summary.slice(0, 3).join(' · ') || 'NONE';
         this.officeBonuses = bonuses;
         return bonuses;
     }

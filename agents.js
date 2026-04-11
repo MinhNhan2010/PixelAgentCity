@@ -443,6 +443,35 @@ class AgentManager {
                     this.addLog(agent.name, msgs[Math.floor(Math.random()*msgs.length)], 'info');
                 }
 
+                
+                // === POKER: Random chance for agents to start a poker game ===
+                if (!agent._isRoaming && !agent._isPlayingPoker && Math.random() < 0.002) {
+                    const idleForPoker = this.getAllAgents().filter(a =>
+                        a.status === 'idle' && !a._isRoaming && !a._isPlayingPoker && a.id !== agent.id
+                    );
+                    if (idleForPoker.length >= 1 && this.onPokerRequest) {
+                        const joinCount = Math.min(idleForPoker.length, 1 + Math.floor(Math.random() * 3));
+                        const shuffled = idleForPoker.sort(() => Math.random() - 0.5);
+                        const pokerPlayers = [agent, ...shuffled.slice(0, joinCount)];
+                        pokerPlayers.forEach(p => { p._isPlayingPoker = true; });
+                        this.addLog(agent.name, `🃏 Rủ ${pokerPlayers.length - 1} đồng nghiệp chơi poker!`, 'info');
+                        if (this.engine) {
+                            this.engine.sendAgentTo(agent.id, 25, 15, () => {
+                                this.engine.showSpeechBubble(agent.id, '🃏 Chơi poker nào!', 3000);
+                                this.engine.spawnInteractionFx(25, 15, '🃏');
+                                this.onPokerRequest(pokerPlayers);
+                            });
+                            pokerPlayers.slice(1).forEach((p, idx) => {
+                                const offsets = [[24, 14], [26, 14], [24, 16]];
+                                const [tx, ty] = offsets[idx % offsets.length];
+                                this.engine.sendAgentTo(p.id, tx, ty, () => {
+                                    this.engine.showSpeechBubble(p.id, '🃏 Chơi thôi!', 3000);
+                                });
+                            });
+                        }
+                    }
+                }
+
                 // === FREE ROAMING: Visit furniture/interaction points ===
                 if (this.engine && !agent._isRoaming && Math.random() < 0.006) {
                     const point = this.engine.getRandomInteraction();
