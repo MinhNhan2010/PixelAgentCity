@@ -88,6 +88,7 @@ class AgentManager {
             role: data.role || 'coder',
             model: data.model || 'claude-opus',
             color: data.color || '#4ecdc4',
+            charIndex: data.charIndex !== undefined ? data.charIndex : Math.floor(Math.random() * 6),
             workDir: data.workDir || '/projects/default',
             status: 'idle',
             currentTask: null,
@@ -135,6 +136,27 @@ class AgentManager {
     updateStatus(id, status) {
         const a = this.agents.get(id);
         if (a) { a.status = status; a.lastActive = new Date(); }
+    }
+
+    gainXP(agentId, amount) {
+        const agent = this.agents.get(agentId);
+        if (!agent) return;
+        agent.xp += amount;
+        
+        while (agent.xp >= agent.level * 50) {
+            agent.xp -= agent.level * 50;
+            agent.level++;
+            if (agent.level % 2 === 0) agent.skillLevel = Math.min(10, agent.skillLevel + 1);
+            
+            this.addLog(agent.name, `🎖️ Level Up! Đạt cấp ${agent.level} (Skill: ${agent.skillLevel})`, 'success');
+            
+            if (this.engine) {
+                const sp = this.engine.agentSprites.get(agentId);
+                if (sp) {
+                    this.engine.spawnInteractionFx(Math.floor(sp.x / this.engine.T), Math.floor(sp.y / this.engine.T), '✨');
+                }
+            }
+        }
     }
 
     createTask(data) {
@@ -241,13 +263,10 @@ class AgentManager {
                 agent.tasksCompleted++;
                 agent.commits++;
                 const config = this.roleConfigs[agent.role];
-                agent.xp += Math.floor((10 + Math.random()*15) * (config?.xpMul || 1) * office.xpGainMul);
-                // Level up check
-                if (agent.xp >= agent.skillLevel * 50) {
-                    agent.skillLevel = Math.min(5, agent.skillLevel+1);
-                    agent.xp = 0;
-                    this.addLog(agent.name, `🎖️ Level Up! Đã lên cấp ${agent.skillLevel}!`, 'success');
-                }
+                const gained = Math.floor((10 + Math.random()*15) * (config?.xpMul || 1) * office.xpGainMul);
+                
+                this.gainXP(agent.id, gained);
+                
                 agent.mood = Math.min(100, agent.mood + 5);
                 agent.currentTask = null;
                 agent.status = 'idle';
@@ -507,7 +526,7 @@ class AgentManager {
                                     agent.mood = Math.min(100, agent.mood + Math.max(1, Math.round((5 + Math.floor(Math.random() * 5)) * office.interactionMoodMul)));
                                     break;
                                 case 'xp':
-                                    agent.xp += Math.max(1, Math.round((2 + Math.floor(Math.random() * 3)) * office.xpGainMul));
+                                    this.gainXP(agent.id, Math.max(1, Math.round((2 + Math.floor(Math.random() * 3)) * office.xpGainMul)));
                                     break;
                                 case 'rest':
                                     agent.energy = Math.min(100, agent.energy + Math.max(1, Math.round(15 * office.interactionEnergyMul)));
@@ -539,7 +558,7 @@ class AgentManager {
                     );
                     if (mentee) {
                         agent.mentoring = mentee.id;
-                        mentee.xp += 5;
+                        this.gainXP(mentee.id, 5);
                         this.addLog(agent.name, `📖 Đang hướng dẫn ${mentee.name}`, 'info');
                         setTimeout(() => { agent.mentoring = null; }, 10000);
                     }
@@ -588,7 +607,7 @@ class AgentManager {
             case 'mood_boost':
                 this.agents.forEach(a => {
                     a.mood = Math.min(100, a.mood + 10);
-                    a.xp += 3;
+                    this.gainXP(a.id, 3);
                 });
                 break;
 
@@ -716,6 +735,7 @@ class AgentManager {
                     if (!a.mentoring) a.mentoring = null;
                     if (!a.reviewQueue) a.reviewQueue = [];
                     if (!a.level) a.level = 1;
+                    if (a.charIndex === undefined) a.charIndex = Math.floor(Math.random() * 6);
                     this.agents.set(id, a);
                     // Re-add sprite to engine
                     if (this.engine) this.engine.addAgentSprite(a);

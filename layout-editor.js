@@ -30,40 +30,48 @@ class LayoutEditor {
         // KayKit-inspired furniture items grouped by category
         return {
             'Bàn Ghế': [
-                { id: 'desk', name: 'Bàn làm việc', icon: '🖥️', w: 2, h: 1.2, hasSlot: true },
-                { id: 'mtable', name: 'Bàn họp', icon: '📋', w: 4, h: 3 },
-                { id: 'table_small', name: 'Bàn nhỏ', icon: '🪑', w: 1.5, h: 1.2 },
-                { id: 'table_low', name: 'Bàn trà', icon: '☕', w: 2, h: 1.2 },
-                { id: 'mchair', name: 'Ghế họp', icon: '💺', w: 0.8, h: 0.8 },
-                { id: 'chair', name: 'Ghế gỗ', icon: '🪑', w: 0.8, h: 0.8 },
+                { id: 'desk', name: 'Bàn làm việc', icon: '<img src="assets/furniture/DESK/DESK_FRONT.png" style="height:24px; image-rendering:pixelated;">', w: 3, h: 2, hasSlot: true },
+                { id: 'mtable', name: 'Bàn họp', icon: '<img src="assets/furniture/TABLE_FRONT/TABLE_FRONT.png" style="height:24px; image-rendering:pixelated;">', w: 4, h: 3 },
+                { id: 'table_small', name: 'Bàn nhỏ', icon: '<img src="assets/furniture/SMALL_TABLE/SMALL_TABLE_FRONT.png" style="height:24px; image-rendering:pixelated;">', w: 2, h: 1 },
+                { id: 'table_low', name: 'Bàn trà', icon: '<img src="assets/furniture/COFFEE_TABLE/COFFEE_TABLE.png" style="height:16px; image-rendering:pixelated;">', w: 2, h: 1 },
+                { id: 'mchair', name: 'Ghế họp', icon: '<img src="assets/furniture/CUSHIONED_CHAIR/CUSHIONED_CHAIR_FRONT.png" style="height:24px; image-rendering:pixelated;">', w: 1, h: 1 },
+                { id: 'chair', name: 'Ghế gỗ', icon: '<img src="assets/furniture/WOODEN_CHAIR/WOODEN_CHAIR_FRONT.png" style="height:24px; image-rendering:pixelated;">', w: 1, h: 1 },
             ],
             'Sofa & Giường': [
-                { id: 'sofa', name: 'Sofa', icon: '🛋️', w: 3, h: 1.5 },
-                { id: 'armchair', name: 'Ghế bành', icon: '🪑', w: 1.5, h: 1.5 },
+                { id: 'sofa', name: 'Sofa', icon: '<img src="assets/furniture/SOFA/SOFA_FRONT.png" style="height:24px; image-rendering:pixelated;">', w: 3, h: 2 },
+                { id: 'armchair', name: 'Ghế bành', icon: '<img src="assets/furniture/CUSHIONED_BENCH/CUSHIONED_BENCH.png" style="height:24px; image-rendering:pixelated;">', w: 2, h: 2 },
+                { id: 'bench', name: 'Ghế băng', icon: '<img src="assets/furniture/WOODEN_BENCH/WOODEN_BENCH.png" style="height:24px; image-rendering:pixelated;">', w: 3, h: 1 },
                 { id: 'bed_single', name: 'Giường đơn', icon: '🛏️', w: 2, h: 3 },
                 { id: 'bed_double', name: 'Giường đôi', icon: '🛏️', w: 3, h: 3 },
                 { id: 'rug', name: 'Thảm', icon: '🟦', w: 3, h: 2 },
                 { id: 'pillow', name: 'Gối', icon: '💤', w: 0.5, h: 0.5 },
             ],
             'Tủ & Kệ': [
-                { id: 'bookshelf', name: 'Kệ sách', icon: '📚', w: 2.5, h: 1.8 },
-                { id: 'cabinet', name: 'Tủ', icon: '🗄️', w: 2, h: 1.8 },
+                { id: 'bookshelf', name: 'Kệ sách', icon: '<img src="assets/furniture/BOOKSHELF/BOOKSHELF.png" style="height:24px; image-rendering:pixelated;">', w: 2, h: 1 },
+                { id: 'cabinet', name: 'Tủ', icon: '<img src="assets/furniture/DOUBLE_BOOKSHELF/DOUBLE_BOOKSHELF.png" style="height:24px; image-rendering:pixelated;">', w: 3, h: 1 },
                 { id: 'shelf', name: 'Kệ treo', icon: '📦', w: 2, h: 0.8 },
-                { id: 'boxes', name: 'Thùng hàng', icon: '📦', w: 1, h: 1 },
+                { id: 'boxes', name: 'Thùng hàng', icon: '<img src="assets/furniture/BIN/BIN.png" style="height:24px; image-rendering:pixelated;">', w: 1, h: 1 },
             ],
             'Thiết Bị': [
+                { id: 'pc', name: 'Máy tính', icon: '<img src="assets/furniture/PC/PC_FRONT_OFF.png" style="height:24px; image-rendering:pixelated;">', w: 1, h: 1 },
+                { id: 'whiteboard', name: 'Bảng trắng', icon: '<img src="assets/furniture/WHITEBOARD/WHITEBOARD.png" style="height:24px; image-rendering:pixelated;">', w: 3, h: 2 },
                 { id: 'vending', name: 'Máy bán hàng', icon: '🥤', w: 1, h: 2 },
-                { id: 'coffee', name: 'Máy cà phê', icon: '☕', w: 1, h: 1.6 },
+                { id: 'coffee', name: 'Máy cà phê', icon: '<img src="assets/furniture/COFFEE/COFFEE.png" style="height:24px; image-rendering:pixelated;">', w: 1, h: 1 },
                 { id: 'fridge', name: 'Tủ lạnh', icon: '🧊', w: 1, h: 2 },
                 { id: 'counter', name: 'Quầy bếp', icon: '🍳', w: 3, h: 1.5 },
             ],
             'Trang Trí': [
-                { id: 'plant', name: 'Cây cảnh', icon: '🌿', w: 1, h: 1.2 },
-                { id: 'cactus', name: 'Xương rồng', icon: '🌵', w: 0.6, h: 0.8 },
-                { id: 'painting', name: 'Tranh treo', icon: '🖼️', w: 1.5, h: 1 },
+                { id: 'plant', name: 'Cây cảnh', icon: '<img src="assets/furniture/PLANT/PLANT.png" style="height:24px; image-rendering:pixelated;">', w: 1, h: 1 },
+                { id: 'large_plant', name: 'Cây lớn', icon: '<img src="assets/furniture/LARGE_PLANT/LARGE_PLANT.png" style="height:24px; image-rendering:pixelated;">', w: 1, h: 1 },
+                { id: 'plant2', name: 'Cây kiểng', icon: '<img src="assets/furniture/PLANT_2/PLANT_2.png" style="height:24px; image-rendering:pixelated;">', w: 1, h: 1 },
+                { id: 'hanging_plant', name: 'Cây treo', icon: '<img src="assets/furniture/HANGING_PLANT/HANGING_PLANT.png" style="height:24px; image-rendering:pixelated;">', w: 1, h: 1 },
+                { id: 'cactus', name: 'Xương rồng', icon: '<img src="assets/furniture/CACTUS/CACTUS.png" style="height:24px; image-rendering:pixelated;">', w: 1, h: 1 },
+                { id: 'pot', name: 'Chậu hoa', icon: '<img src="assets/furniture/POT/POT.png" style="height:24px; image-rendering:pixelated;">', w: 1, h: 1 },
+                { id: 'painting', name: 'Tranh treo', icon: '<img src="assets/furniture/LARGE_PAINTING/LARGE_PAINTING.png" style="height:24px; image-rendering:pixelated;">', w: 2, h: 1 },
+                { id: 'painting2', name: 'Tranh nhỏ', icon: '<img src="assets/furniture/SMALL_PAINTING_2/SMALL_PAINTING_2.png" style="height:24px; image-rendering:pixelated;">', w: 1, h: 1 },
                 { id: 'lamp', name: 'Đèn đứng', icon: '💡', w: 0.8, h: 2 },
-                { id: 'clock', name: 'Đồng hồ', icon: '🕐', w: 0.8, h: 0.8 },
-                { id: 'pictureframe', name: 'Khung ảnh', icon: '📷', w: 0.5, h: 0.7 },
+                { id: 'clock', name: 'Đồng hồ', icon: '<img src="assets/furniture/CLOCK/CLOCK.png" style="height:24px; image-rendering:pixelated;">', w: 1, h: 1 },
+                { id: 'pictureframe', name: 'Khung ảnh', icon: '<img src="assets/furniture/SMALL_PAINTING/SMALL_PAINTING.png" style="height:24px; image-rendering:pixelated;">', w: 1, h: 1 },
             ],
         };
     }
@@ -425,9 +433,20 @@ class LayoutEditor {
             const fi = this.findCatalogItem(f.t);
             const fw = (fi?.w || 1) * T;
             const fh = (fi?.h || 1) * T;
+            
             // AABB intersection test
             if (newRect.x < f.x + fw && newRect.x + newRect.w > f.x &&
                 newRect.y < f.y + fh && newRect.y + newRect.h > f.y) {
+                
+                // Allow placing a PC on tables
+                const allowedSurfaces = ['desk', 'mtable', 'table_small', 'table_low', 'counter'];
+                if (type === 'pc' && allowedSurfaces.includes(f.t)) {
+                    continue;
+                }
+                if (allowedSurfaces.includes(type) && f.t === 'pc') {
+                    continue;
+                }
+
                 return 'overlap';
             }
         }

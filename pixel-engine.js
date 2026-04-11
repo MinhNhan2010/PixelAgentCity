@@ -26,6 +26,61 @@ class PixelEngine {
         this.onAgentClick = null;
         this._clickPos = null;
         this.editMode = null; // for toolbar
+        
+        this.charImages = [];
+        for (let i = 0; i < 6; i++) {
+            const img = new Image();
+            img.src = `assets/characters/char_${i}.png`;
+            this.charImages.push(img);
+        }
+        
+        this.floorImages = {};
+        const floorFiles = ['floor_0', 'floor_1', 'floor_2', 'floor_3', 'floor_4', 'floor_5', 'floor_6', 'floor_7', 'floor_8'];
+        floorFiles.forEach(f => {
+            const img = new Image();
+            img.src = `assets/floors/${f}.png`;
+            this.floorImages[f] = img;
+        });
+
+        this.wallImages = {};
+        const imgWall = new Image();
+        imgWall.src = `assets/walls/wall_0.png`;
+        this.wallImages['wall_0'] = imgWall;
+        
+        this.furnImages = {};
+        const furnMap = {
+            'desk': 'DESK/DESK_FRONT.png',
+            'mtable': 'TABLE_FRONT/TABLE_FRONT.png',
+            'table_small': 'SMALL_TABLE/SMALL_TABLE_FRONT.png',
+            'table_low': 'COFFEE_TABLE/COFFEE_TABLE.png',
+            'mchair': 'CUSHIONED_CHAIR/CUSHIONED_CHAIR_FRONT.png',
+            'chair': 'WOODEN_CHAIR/WOODEN_CHAIR_FRONT.png',
+            'sofa': 'SOFA/SOFA_FRONT.png',
+            'armchair': 'CUSHIONED_BENCH/CUSHIONED_BENCH.png',
+            'bookshelf': 'BOOKSHELF/BOOKSHELF.png',
+            'cabinet': 'DOUBLE_BOOKSHELF/DOUBLE_BOOKSHELF.png',
+            'boxes': 'BIN/BIN.png',
+            'coffee': 'COFFEE/COFFEE.png',
+            'plant': 'PLANT/PLANT.png',
+            'cactus': 'CACTUS/CACTUS.png',
+            'painting': 'LARGE_PAINTING/LARGE_PAINTING.png',
+            'clock': 'CLOCK/CLOCK.png',
+            'pictureframe': 'SMALL_PAINTING/SMALL_PAINTING.png',
+            'whiteboard': 'WHITEBOARD/WHITEBOARD.png',
+            'bench': 'WOODEN_BENCH/WOODEN_BENCH.png',
+            'large_plant': 'LARGE_PLANT/LARGE_PLANT.png',
+            'hanging_plant': 'HANGING_PLANT/HANGING_PLANT.png',
+            'plant2': 'PLANT_2/PLANT_2.png',
+            'pot': 'POT/POT.png',
+            'painting2': 'SMALL_PAINTING_2/SMALL_PAINTING_2.png',
+            'pc': 'PC/PC_FRONT_OFF.png'
+        };
+        for (const [id, path] of Object.entries(furnMap)) {
+            const img = new Image();
+            img.src = `assets/furniture/${path}`;
+            this.furnImages[id] = img;
+        }
+
         this.init();
     }
 
@@ -226,20 +281,32 @@ class PixelEngine {
     // === FLOORS ===
     drawFloors() {
         const T = this.T;
-        for (let y = 0; y < this.MH; y++) for (let x = 0; x < this.MW; x++) {
-            const fl = this.map[y][x];
-            const px = x * T, py = y * T;
-            if (fl === 'wood') {
-                this.px(px, py, T, T, (x + y) % 2 === 0 ? '#a0794a' : '#8c6838');
-                for (let i = 0; i < 3; i++) this.px(px, py + i * 5 + 3, T, 1, 'rgba(0,0,0,0.06)');
-                this.px(px + (x * 7 + y * 3) % 11, py + (x * 3 + y * 5) % 9, 2, 1, 'rgba(0,0,0,0.04)');
-            } else if (fl === 'tile') {
-                this.px(px, py, T, T, (x + y) % 2 === 0 ? '#e8e0d0' : '#ddd5c5');
-                this.px(px, py, T, 1, 'rgba(0,0,0,0.04)');
-                this.px(px, py, 1, T, 'rgba(0,0,0,0.04)');
-            } else if (fl === 'carpet') {
-                this.px(px, py, T, T, (x + y) % 2 === 0 ? '#4a6a8a' : '#456585');
-                if ((x + y * 3) % 7 === 0) this.px(px + 4, py + 4, 2, 2, 'rgba(255,255,255,0.02)');
+        const floorMap = {
+            'wood': 'floor_0',
+            'tile': 'floor_1',
+            'carpet': 'floor_3'
+        };
+        for (let y = 0; y < this.MH; y++) {
+            for (let x = 0; x < this.MW; x++) {
+                const fl = this.map[y][x];
+                if (!fl) continue;
+                
+                const px = x * T;
+                const py = y * T;
+                const imgKey = floorMap[fl] || 'floor_0';
+                const img = this.floorImages[imgKey];
+                
+                if (img && img.complete) {
+                    this.ctx.drawImage(
+                        img, 
+                        Math.floor(px * this.scale + this.camera.x), 
+                        Math.floor(py * this.scale + this.camera.y), 
+                        Math.ceil(T * this.scale), 
+                        Math.ceil(T * this.scale)
+                    );
+                } else {
+                    this.px(px, py, T, T, fl === 'wood' ? '#a0794a' : fl === 'tile' ? '#e8e0d0' : '#4a6a8a');
+                }
             }
         }
     }
@@ -257,19 +324,85 @@ class PixelEngine {
 
     drawWalls() {
         const T = this.T, map = this.map;
-        for (let y = 0; y < this.MH; y++) for (let x = 0; x < this.MW; x++) {
-            if (!map[y][x]) continue;
-            const hasFloor = (tx, ty) => tx >= 0 && ty >= 0 && tx < this.MW && ty < this.MH && map[ty][tx];
-            if (!hasFloor(x, y - 1)) { this.px(x * T, y * T - 3, T, 6, '#1e2638'); this.px(x * T, y * T + 2, T, 1, '#2a3550'); }
-            if (!hasFloor(x, y + 1)) { this.px(x * T, (y + 1) * T - 2, T, 5, '#1e2638'); this.px(x * T, (y + 1) * T - 2, T, 1, '#2a3550'); }
-            if (!hasFloor(x - 1, y)) { this.px(x * T - 2, y * T, 5, T, '#1e2638'); this.px(x * T + 2, y * T, 1, T, '#2a3550'); }
-            if (!hasFloor(x + 1, y)) { this.px((x + 1) * T - 2, y * T, 5, T, '#1e2638'); this.px((x + 1) * T - 2, y * T, 1, T, '#2a3550'); }
+        const imgWall = this.wallImages['wall_0'];
+        const sw = Math.ceil(16 * this.scale);
+        const sh = Math.ceil(32 * this.scale);
+
+        for (let y = 0; y < this.MH; y++) {
+            for (let x = 0; x < this.MW; x++) {
+                if (!map[y][x]) continue;
+                const hasFloor = (tx, ty) => tx >= 0 && ty >= 0 && tx < this.MW && ty < this.MH && map[ty][tx];
+                
+                const px = x * T;
+                const py = y * T;
+                
+                if (!hasFloor(x, y - 1)) {
+                    if (imgWall && imgWall.complete) {
+                        // Draw North Wall sprite spanning -16y to cover background behind top edge
+                        this.ctx.drawImage(
+                            imgWall, 
+                            0, 0, 16, 32,
+                            Math.floor(px * this.scale + this.camera.x), 
+                            Math.floor((py - T) * this.scale + this.camera.y), 
+                            sw, sh
+                        );
+                    } else {
+                        // Fallback procedural north wall
+                        this.px(px, py - 3, T, 6, '#1e2638'); 
+                        this.px(px, py + 2, T, 1, '#2a3550');
+                    }
+                }
+                
+                if (!imgWall || !imgWall.complete) {
+                     // Keep procedural trim for others if no image loaded
+                     if (!hasFloor(x, y + 1)) { this.px(x * T, (y + 1) * T - 2, T, 5, '#1e2638'); this.px(x * T, (y + 1) * T - 2, T, 1, '#2a3550'); }
+                     if (!hasFloor(x - 1, y)) { this.px(x * T - 2, y * T, 5, T, '#1e2638'); this.px(x * T + 2, y * T, 1, T, '#2a3550'); }
+                     if (!hasFloor(x + 1, y)) { this.px((x + 1) * T - 2, y * T, 5, T, '#1e2638'); this.px((x + 1) * T - 2, y * T, 1, T, '#2a3550'); }
+                }
+            }
         }
     }
 
     // === FURNITURE ===
     drawFurn(f) {
         const T = this.T, x = f.x, y = f.y;
+        
+        const img = this.furnImages[f.t];
+        if (img && img.complete) {
+            // How many footprint tiles tall is this object logically?
+            const footprintH = {
+                'desk': 2, 'mtable': 3, 'table_small': 1, 'table_low': 1,
+                'mchair': 1, 'chair': 1, 'sofa': 2, 'armchair': 2, 'bench': 1,
+                'bookshelf': 1, 'cabinet': 1, 'plant': 1, 'cactus': 1, 'large_plant': 1, 'hanging_plant': 1, 'plant2': 1, 'pot': 1,
+                'painting': 1, 'painting2': 1, 'clock': 1, 'pictureframe': 1, 'whiteboard': 2,
+                'coffee': 1, 'boxes': 1, 'pc': 1
+            }[f.t] || 1;
+            
+            this.ctx.drawImage(
+                img,
+                Math.floor(x * this.scale + this.camera.x),
+                Math.floor((y + footprintH * T - img.height) * this.scale + this.camera.y),
+                Math.ceil(img.width * this.scale),
+                Math.ceil(img.height * this.scale)
+            );
+            
+            // Screen code for desk
+            if (f.t === 'desk' && f.slotIdx !== undefined) {
+                const slot = this.deskSlots[f.slotIdx];
+                if (slot?.occupied) {
+                    const sp = this.agentSprites.get(slot.agentId);
+                    if (sp?.status === 'working' || sp?.status === 'thinking') {
+                        const scX = x + 16, scY = y + footprintH * T - img.height + 7;
+                        for (let i = 0; i < 3; i++) {
+                            const lw = 3 + Math.sin(this.elapsed * 0.04 + i) * 3;
+                            this.px(scX, scY + i * 2, Math.max(2, lw), 1, ['#4ecdc4', '#78e08f', '#ffd93d'][i]);
+                        }
+                    }
+                }
+            }
+            return;
+        }
+
         switch (f.t) {
             case 'desk': this.drawDesk(f); break;
             case 'bookshelf': this.drawBookshelf(x, y); break;
@@ -583,57 +716,52 @@ class PixelEngine {
     // === CHARACTERS ===
     drawCharSitting(sp, deskX, deskY) {
         const T = this.T, x = deskX + T * 0.3, y = deskY - T * 0.6;
-        const col = sp.color, skin = '#e8bc8a';
-        // Chair back
-        this.px(x - 1, y + 2, T * 0.75 + 2, T * 0.6, '#2a2a3e');
-        // Hair
-        this.px(x + 1, y - 2, T * 0.5, 4, sp.hairColor);
-        this.px(x, y, T * 0.6, 3, sp.hairColor);
-        // Head
-        this.px(x + 1, y + 2, T * 0.5, 5, skin);
-        // Eyes
-        if (!sp.blink) { this.px(x + 2, y + 3, 2, 2, '#fff'); this.px(x + T * 0.35, y + 3, 2, 2, '#fff'); this.px(x + 2.5, y + 4, 1, 1, '#111'); this.px(x + T * 0.4, y + 4, 1, 1, '#111'); }
-        else { this.px(x + 2, y + 4.5, 2, 1, '#333'); this.px(x + T * 0.35, y + 4.5, 2, 1, '#333'); }
-        // Body
-        this.px(x, y + 7, T * 0.6, 6, col);
-        this.px(x + T * 0.25, y + 7.5, 1, 4, this.dk(col, 20));
-        // Arms typing
-        const armUp = (Math.floor(this.elapsed) % 10 < 5) && (sp.status === 'working');
-        this.px(x - 2, y + 8 + (armUp ? -0.5 : 0.5), 2, 4, this.dk(col, 15));
-        this.px(x + T * 0.6, y + 8 + (armUp ? 0.5 : -0.5), 2, 4, this.dk(col, 15));
+        const img = this.charImages[sp.charIndex] || this.charImages[0];
+        if (!img || !img.complete) return;
+        
+        let frame = 1; // Idle is frame 1
+        if (sp.status === 'working') {
+            frame = (Math.floor(this.elapsed * 0.1) % 2) === 0 ? 3 : 4;
+        } else if (sp.status === 'reading') {
+            frame = (Math.floor(this.elapsed * 0.1) % 2) === 0 ? 5 : 6;
+        }
+        
+        this.ctx.drawImage(
+            img,
+            frame * 16, 0, 16, 32, // sx, sy, sw, sh
+            Math.floor((x - 8) * this.scale + this.camera.x), 
+            Math.floor((y - 14) * this.scale + this.camera.y),
+            Math.ceil(16 * this.scale), 
+            Math.ceil(32 * this.scale)
+        );
     }
 
     drawCharWalking(sp) {
         const T = this.T, x = sp.x, y = sp.y;
-        const col = sp.color, skin = '#e8bc8a';
-        const bob = sp.isWalking ? Math.abs(Math.sin(this.elapsed * 0.2)) * 1.5 : 0;
-        const yy = y - bob;
+
+        
+        const img = this.charImages[sp.charIndex] || this.charImages[0];
+        if (!img || !img.complete) return;
+        
+        const row = (sp.dir === 'down') ? 0 : (sp.dir === 'up') ? 1 : 2;
+        
+        // Walk cycle uses frames: [0, 1, 2, 1]
+        const walkCycle = [0, 1, 2, 1];
+        const frame = sp.isWalking ? walkCycle[Math.floor(this.elapsed * 0.15) % 4] : 1;
+        
         // Shadow
-        this.ctx.globalAlpha = 0.2; this.px(x - 1, y + 16, 14, 3, '#000'); this.ctx.globalAlpha = 1;
-        // Legs
-        if (sp.isWalking) {
-            const ls = Math.sin(this.elapsed * 0.2) * 3;
-            this.px(x + 2, yy + 13 + ls * 0.3, 3, 5 - ls * 0.2, '#2d3748');
-            this.px(x + 7, yy + 13 - ls * 0.3, 3, 5 + ls * 0.2, '#2d3748');
-        } else { this.px(x + 2, yy + 13, 3, 5, '#2d3748'); this.px(x + 7, yy + 13, 3, 5, '#2d3748'); }
-        // Body
-        this.px(x + 1, yy + 7, 10, 7, col);
-        this.px(x + 5, yy + 7.5, 1, 5, this.dk(col, 15));
-        // Arms
-        if (sp.isWalking) {
-            const as = Math.sin(this.elapsed * 0.2) * 2;
-            this.px(x - 1, yy + 8 + as, 2, 5, this.dk(col, 15));
-            this.px(x + 11, yy + 8 - as, 2, 5, this.dk(col, 15));
-        } else { this.px(x - 1, yy + 9, 2, 5, this.dk(col, 15)); this.px(x + 11, yy + 9, 2, 5, this.dk(col, 15)); }
-        // Head
-        this.px(x + 1, yy + 2, 10, 6, skin);
-        // Hair
-        this.px(x, yy - 1, 12, 4, sp.hairColor);
-        this.px(x + 1, yy - 2, 10, 3, sp.hairColor);
-        // Eyes
-        sp.blinkT -= this.deltaTime; if (sp.blinkT <= 0) { sp.blink = true; if (sp.blinkT <= -3) { sp.blink = false; sp.blinkT = 60 + Math.random() * 120; } }
-        if (!sp.blink) { this.px(x + 3, yy + 3, 2, 2, '#fff'); this.px(x + 7, yy + 3, 2, 2, '#fff'); this.px(x + 3.5, yy + 4, 1, 1, '#111'); this.px(x + 7.5, yy + 4, 1, 1, '#111'); }
-        else { this.px(x + 3, yy + 4.5, 2, 1, '#333'); this.px(x + 7, yy + 4.5, 2, 1, '#333'); }
+        this.ctx.globalAlpha = 0.2; this.px(x - 6, y + 14, 12, 3, '#000'); this.ctx.globalAlpha = 1;
+        
+        this.ctx.save();
+        if (sp.dir === 'left') {
+            this.ctx.translate(Math.floor((x + 8) * this.scale + this.camera.x), Math.floor((y - 15) * this.scale + this.camera.y));
+            this.ctx.scale(-1, 1);
+            this.ctx.drawImage(img, frame * 16, row * 32, 16, 32, Math.floor(-8 * this.scale), 0, Math.ceil(16 * this.scale), Math.ceil(32 * this.scale));
+        } else {
+            this.ctx.translate(Math.floor((x - 8) * this.scale + this.camera.x), Math.floor((y - 15) * this.scale + this.camera.y));
+            this.ctx.drawImage(img, frame * 16, row * 32, 16, 32, 0, 0, Math.ceil(16 * this.scale), Math.ceil(32 * this.scale));
+        }
+        this.ctx.restore();
     }
 
     drawOverlays(sp) {
@@ -747,6 +875,7 @@ class PixelEngine {
         this.agentSprites.set(agent.id, {
             id: agent.id, name: agent.name, color: agent.color, role: agent.role, status: 'idle',
             desk: slot, hairColor: hairs[Math.floor(Math.random() * hairs.length)],
+            charIndex: agent.charIndex || 0, dir: 'down',
             x: startTx * doorT + doorT/2, y: startTy * doorT + doorT/2,
             targetX: pTargetX,
             targetY: pTargetY,
@@ -890,6 +1019,12 @@ class PixelEngine {
                 if (d > 1) { 
                     sp.x += dx / d * moveSpeed; 
                     sp.y += dy / d * moveSpeed; 
+                    
+                    if (Math.abs(dx) > Math.abs(dy)) {
+                        sp.dir = dx > 0 ? 'right' : 'left';
+                    } else {
+                        sp.dir = dy > 0 ? 'down' : 'up';
+                    }
                 } else { 
                     sp.x = ptx; 
                     sp.y = pty;
@@ -912,7 +1047,12 @@ class PixelEngine {
 
         // Collect renderables sorted by Y
         const items = [];
-        this.furniture.forEach(f => items.push({ y: f.y + (f.t === 'desk' ? 20 : 16), type: 'f', data: f }));
+        this.furniture.forEach(f => {
+            let yOffset = 16;
+            if (f.t === 'pc') yOffset = 22; // Draw after desk
+            else if (f.t === 'desk') yOffset = 20;
+            items.push({ y: f.y + yOffset, type: 'f', data: f });
+        });
         this.agentSprites.forEach(sp => { if (sp.isWalking || sp.isRoaming) items.push({ y: sp.y + 18, type: 'a', data: sp }); });
         items.sort((a, b) => a.y - b.y);
 
