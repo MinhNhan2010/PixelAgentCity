@@ -81,6 +81,14 @@ class PixelEngine {
             this.furnImages[id] = img;
         }
 
+        // PC animation frames (ON state cycling)
+        this.pcOnFrames = [];
+        for (let i = 1; i <= 3; i++) {
+            const pcImg = new Image();
+            pcImg.src = `assets/furniture/PC/PC_FRONT_ON_${i}.png`;
+            this.pcOnFrames.push(pcImg);
+        }
+
         this.init();
     }
 
@@ -193,12 +201,12 @@ class PixelEngine {
         for (let y = 0; y < this.MH; y++) { this.map[y] = []; for (let x = 0; x < this.MW; x++) this.map[y][x] = null; }
         const rooms = [
             { x: 6, y: 1, w: 8, h: 6, f: 'wood' },     // meeting
-            { x: 9, y: 7, w: 2, h: 3, f: 'wood' },      // corridor
+            { x: 9, y: 7, w: 2, h: 3, f: 'wood' },      // corridor meeting-office
             { x: 1, y: 10, w: 14, h: 12, f: 'wood' },   // office
             { x: 17, y: 1, w: 13, h: 10, f: 'tile' },   // kitchen
             { x: 17, y: 13, w: 13, h: 9, f: 'carpet' }, // lounge
-            { x: 15, y: 4, w: 2, h: 2, f: 'wood' },     // corridor to kitchen
-            { x: 15, y: 15, w: 2, h: 2, f: 'wood' },    // corridor to lounge
+            { x: 14, y: 4, w: 3, h: 2, f: 'wood' },     // corridor meeting-kitchen (widened)
+            { x: 14, y: 15, w: 3, h: 2, f: 'wood' },    // corridor office-lounge (widened)
             { x: 17, y: 11, w: 3, h: 2, f: 'tile' },    // corridor kitchen-lounge
         ];
         rooms.forEach(r => { for (let dy = 0; dy < r.h; dy++) for (let dx = 0; dx < r.w; dx++) if (this.map[r.y + dy]) this.map[r.y + dy][r.x + dx] = r.f; });
@@ -207,45 +215,61 @@ class PixelEngine {
 
     placeFurniture() {
         const T = this.T, f = this.furniture;
-        // Meeting room: table + chairs + painting + plants
-        f.push({ t: 'mtable', x: 8 * T, y: 2 * T, w: 4, h: 3 });
-        f.push({ t: 'mchair', x: 8 * T, y: 1.5 * T, dir: 'down' }, { t: 'mchair', x: 10 * T, y: 1.5 * T, dir: 'down' });
+        // === MEETING ROOM (6,1 → 8×6) ===
+        f.push({ t: 'mtable', x: 8 * T, y: 1 * T, w: 3, h: 4 });
+        f.push({ t: 'mchair', x: 8 * T, y: 1 * T, dir: 'down' }, { t: 'mchair', x: 10 * T, y: 1 * T, dir: 'down' });
         f.push({ t: 'mchair', x: 8 * T, y: 5 * T, dir: 'up' }, { t: 'mchair', x: 10 * T, y: 5 * T, dir: 'up' });
         f.push({ t: 'mchair', x: 7 * T, y: 3 * T, dir: 'right' }, { t: 'mchair', x: 12 * T, y: 3 * T, dir: 'left' });
-        f.push({ t: 'painting', x: 9.5 * T, y: 1.1 * T });
-        f.push({ t: 'plant', x: 6.3 * T, y: 1.3 * T }, { t: 'plant', x: 13 * T, y: 1.3 * T });
-        // Office: desks (2 rows of 3), bookshelves, plants
-        const deskPositions = [[2, 18], [6, 18], [10, 18], [2, 14], [6, 14], [10, 14]];
+        f.push({ t: 'whiteboard', x: 12 * T, y: 1 * T });
+        f.push({ t: 'plant', x: 6 * T, y: 1 * T }, { t: 'plant', x: 6 * T, y: 5 * T });
+
+        // === MAIN OFFICE (1,10 → 14×12) ===
+        // Desks in 2 rows of 3
+        const deskPositions = [[2, 17], [6, 17], [10, 17], [2, 13], [6, 13], [10, 13]];
         deskPositions.forEach(([dx, dy]) => {
             f.push({ t: 'desk', x: dx * T, y: dy * T, slotIdx: this.deskSlots.length });
             this.deskSlots.push({ tx: dx, ty: dy, x: (dx + 0.5) * T, y: (dy + 0.5) * T, occupied: false, agentId: null });
         });
-        f.push({ t: 'bookshelf', x: 2 * T, y: 10.3 * T }, { t: 'bookshelf', x: 5 * T, y: 10.3 * T }, { t: 'bookshelf', x: 8 * T, y: 10.3 * T });
-        f.push({ t: 'plant', x: 1.3 * T, y: 12.5 * T }, { t: 'plant', x: 14 * T, y: 18 * T }, { t: 'plant', x: 1.3 * T, y: 20 * T });
-        f.push({ t: 'boxes', x: 11.5 * T, y: 10.5 * T });
-        // Kitchen: vending, coffee, clock, counter, fridge
-        f.push({ t: 'vending', x: 18 * T, y: 1.3 * T }, { t: 'vending', x: 20 * T, y: 1.3 * T });
-        f.push({ t: 'coffee', x: 22 * T, y: 1.3 * T });
-        f.push({ t: 'clock', x: 24 * T, y: 1.5 * T });
-        f.push({ t: 'counter', x: 25 * T, y: 1.3 * T, w: 4 });
-        f.push({ t: 'fridge', x: 28 * T, y: 1.3 * T });
-        f.push({ t: 'plant', x: 17.3 * T, y: 5 * T }, { t: 'plant', x: 29 * T, y: 9 * T });
-        // Lounge: sofa, bookshelf, painting, desks, rug
-        f.push({ t: 'sofa', x: 24 * T, y: 17 * T });
-        f.push({ t: 'bookshelf', x: 28 * T, y: 13.3 * T });
-        f.push({ t: 'painting', x: 20 * T, y: 13.2 * T });
-        f.push({ t: 'plant', x: 17.3 * T, y: 20 * T }, { t: 'plant', x: 29 * T, y: 20 * T });
-        // Poker table in lounge
-        f.push({ t: 'poker_table', x: 24 * T, y: 14 * T, w: 3, h: 2 });
-        // Lounge desks (3)
-        const loungeDesks = [[18, 18], [22, 18], [18, 15]];
-        loungeDesks.forEach(([dx, dy]) => {
-            f.push({ t: 'desk', x: dx * T, y: dy * T, slotIdx: this.deskSlots.length });
-            this.deskSlots.push({ tx: dx, ty: dy, x: (dx + 0.5) * T, y: (dy + 0.5) * T, occupied: false, agentId: null });
+        // PCs on each desk
+        deskPositions.forEach(([dx, dy]) => {
+            f.push({ t: 'pc', x: (dx + 1) * T, y: (dy - 1) * T });
         });
+        // Bookshelves along north wall
+        f.push({ t: 'bookshelf', x: 2 * T, y: 10 * T }, { t: 'bookshelf', x: 5 * T, y: 10 * T }, { t: 'bookshelf', x: 8 * T, y: 10 * T });
+        // Plants & decoration in office
+        f.push({ t: 'plant', x: 1 * T, y: 10 * T }, { t: 'plant', x: 13 * T, y: 10 * T });
+        f.push({ t: 'plant', x: 1 * T, y: 19 * T }, { t: 'plant', x: 13 * T, y: 19 * T });
+        f.push({ t: 'boxes', x: 12 * T, y: 10 * T });
+
+        // === KITCHEN (17,1 → 13×10) ===
+        f.push({ t: 'vending', x: 18 * T, y: 1 * T }, { t: 'vending', x: 20 * T, y: 1 * T });
+        f.push({ t: 'coffee', x: 22 * T, y: 1 * T });
+        f.push({ t: 'clock', x: 24 * T, y: 1 * T });
+        f.push({ t: 'counter', x: 25 * T, y: 1 * T, w: 4 });
+        f.push({ t: 'fridge', x: 29 * T, y: 1 * T });
+        // Kitchen table & bench
+        f.push({ t: 'table_small', x: 21 * T, y: 5 * T });
+        f.push({ t: 'bench', x: 21 * T, y: 7 * T });
+        f.push({ t: 'plant', x: 17 * T, y: 1 * T }, { t: 'plant', x: 17 * T, y: 9 * T });
         // Kitchen desks (2)
         const kitchenDesks = [[24, 6], [27, 6]];
         kitchenDesks.forEach(([dx, dy]) => {
+            f.push({ t: 'desk', x: dx * T, y: dy * T, slotIdx: this.deskSlots.length });
+            this.deskSlots.push({ tx: dx, ty: dy, x: (dx + 0.5) * T, y: (dy + 0.5) * T, occupied: false, agentId: null });
+        });
+
+        // === LOUNGE (17,13 → 13×9) ===
+        f.push({ t: 'sofa', x: 24 * T, y: 18 * T });
+        f.push({ t: 'armchair', x: 22 * T, y: 18 * T });
+        f.push({ t: 'table_low', x: 24 * T, y: 17 * T });
+        f.push({ t: 'bookshelf', x: 28 * T, y: 13 * T });
+        f.push({ t: 'painting', x: 20 * T, y: 13 * T });
+        f.push({ t: 'plant', x: 17 * T, y: 13 * T }, { t: 'plant', x: 29 * T, y: 20 * T });
+        // Poker table in lounge
+        f.push({ t: 'poker_table', x: 24 * T, y: 14 * T, w: 3, h: 2 });
+        // Lounge desks (3)
+        const loungeDesks = [[18, 17], [18, 14]];
+        loungeDesks.forEach(([dx, dy]) => {
             f.push({ t: 'desk', x: dx * T, y: dy * T, slotIdx: this.deskSlots.length });
             this.deskSlots.push({ tx: dx, ty: dy, x: (dx + 0.5) * T, y: (dy + 0.5) * T, occupied: false, agentId: null });
         });
@@ -255,15 +279,15 @@ class PixelEngine {
             { id: 'coffee1', type: 'coffee', tx: 22, ty: 2, emoji: '☕', label: 'Máy cà phê', effect: 'energy' },
             { id: 'vending1', type: 'vending', tx: 18, ty: 2, emoji: '🥤', label: 'Máy bán nước', effect: 'energy' },
             { id: 'vending2', type: 'vending', tx: 20, ty: 2, emoji: '🍫', label: 'Máy bán đồ ăn', effect: 'mood' },
-            { id: 'fridge1', type: 'fridge', tx: 28, ty: 2, emoji: '🍽️', label: 'Tủ lạnh', effect: 'energy' },
-            { id: 'sofa1', type: 'sofa', tx: 24, ty: 18, emoji: '😴', label: 'Sofa', effect: 'rest' },
+            { id: 'fridge1', type: 'fridge', tx: 29, ty: 2, emoji: '🍽️', label: 'Tủ lạnh', effect: 'energy' },
+            { id: 'sofa1', type: 'sofa', tx: 24, ty: 19, emoji: '😴', label: 'Sofa', effect: 'rest' },
             { id: 'bookshelf1', type: 'bookshelf', tx: 2, ty: 11, emoji: '📖', label: 'Kệ sách', effect: 'xp' },
             { id: 'bookshelf2', type: 'bookshelf', tx: 5, ty: 11, emoji: '📚', label: 'Kệ sách', effect: 'xp' },
             { id: 'bookshelf3', type: 'bookshelf', tx: 8, ty: 11, emoji: '🧠', label: 'Kệ sách', effect: 'xp' },
             { id: 'bookshelfL', type: 'bookshelf', tx: 28, ty: 14, emoji: '📖', label: 'Kệ sách lounge', effect: 'xp' },
-            { id: 'plant1', type: 'plant', tx: 6, ty: 2, emoji: '🌿', label: 'Cây xanh', effect: 'mood' },
-            { id: 'plant2', type: 'plant', tx: 13, ty: 2, emoji: '🌱', label: 'Cây xanh', effect: 'mood' },
-            { id: 'painting1', type: 'painting', tx: 9, ty: 2, emoji: '🎨', label: 'Tranh', effect: 'mood' },
+            { id: 'plant1', type: 'plant', tx: 1, ty: 11, emoji: '🌿', label: 'Cây xanh', effect: 'mood' },
+            { id: 'plant2', type: 'plant', tx: 13, ty: 11, emoji: '🌱', label: 'Cây xanh', effect: 'mood' },
+            { id: 'painting1', type: 'painting', tx: 20, ty: 14, emoji: '🎨', label: 'Tranh', effect: 'mood' },
             { id: 'paintingL', type: 'painting', tx: 20, ty: 14, emoji: '🖼️', label: 'Tranh lounge', effect: 'mood' },
             { id: 'counter1', type: 'counter', tx: 26, ty: 2, emoji: '🍳', label: 'Quầy bếp', effect: 'energy' },
             { id: 'poker1', type: 'poker', tx: 25, ty: 15, emoji: '🃏', label: 'Bàn Poker', effect: 'poker' },
@@ -367,23 +391,26 @@ class PixelEngine {
     drawFurn(f) {
         const T = this.T, x = f.x, y = f.y;
         
-        const img = this.furnImages[f.t];
+        let img = this.furnImages[f.t];
         if (img && img.complete) {
-            // How many footprint tiles tall is this object logically?
-            const footprintH = {
-                'desk': 2, 'mtable': 3, 'table_small': 1, 'table_low': 1,
-                'mchair': 1, 'chair': 1, 'sofa': 2, 'armchair': 2, 'bench': 1,
-                'bookshelf': 1, 'cabinet': 1, 'plant': 1, 'cactus': 1, 'large_plant': 1, 'hanging_plant': 1, 'plant2': 1, 'pot': 1,
-                'painting': 1, 'painting2': 1, 'clock': 1, 'pictureframe': 1, 'whiteboard': 2,
-                'coffee': 1, 'boxes': 1, 'pc': 1
-            }[f.t] || 1;
+            // Compute footprint from actual sprite dimensions (auto-matches manifest)
+            const footprintH = Math.ceil(img.height / T);
+
+            // PC animation: cycle ON frames when any agent is working
+            let drawImg = img;
+            if (f.t === 'pc' && this.pcOnFrames?.length) {
+                // Animate PC screen
+                const frame = Math.floor(this.elapsed * 0.08) % 3;
+                const pcFrame = this.pcOnFrames[frame];
+                if (pcFrame && pcFrame.complete) drawImg = pcFrame;
+            }
             
             this.ctx.drawImage(
-                img,
+                drawImg,
                 Math.floor(x * this.scale + this.camera.x),
-                Math.floor((y + footprintH * T - img.height) * this.scale + this.camera.y),
-                Math.ceil(img.width * this.scale),
-                Math.ceil(img.height * this.scale)
+                Math.floor((y + footprintH * T - drawImg.height) * this.scale + this.camera.y),
+                Math.ceil(drawImg.width * this.scale),
+                Math.ceil(drawImg.height * this.scale)
             );
             
             // Screen code for desk
@@ -392,7 +419,7 @@ class PixelEngine {
                 if (slot?.occupied) {
                     const sp = this.agentSprites.get(slot.agentId);
                     if (sp?.status === 'working' || sp?.status === 'thinking') {
-                        const scX = x + 16, scY = y + footprintH * T - img.height + 7;
+                        const scX = x + 16, scY = y + footprintH * T - drawImg.height + 7;
                         for (let i = 0; i < 3; i++) {
                             const lw = 3 + Math.sin(this.elapsed * 0.04 + i) * 3;
                             this.px(scX, scY + i * 2, Math.max(2, lw), 1, ['#4ecdc4', '#78e08f', '#ffd93d'][i]);
