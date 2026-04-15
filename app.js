@@ -439,6 +439,115 @@
                     showToast('🃏 Cần ít nhất 2 agent rảnh để chơi poker!', 'warning');
                 }
             }
+            if (point.type === 'billiard' && !_billiardGame) {
+                // Manually trigger billiard with 2 idle agents
+                const idleAgents = Array.from(manager.agents.values()).filter(a =>
+                    a.status === 'idle' && !a._isRoaming && !a._isPlayingPoker && !a._isPlayingBilliard
+                ).slice(0, 2);
+                if (idleAgents.length >= 2) {
+                    manager.onBilliardRequest(idleAgents);
+                } else {
+                    showToast('🎱 Cần ít nhất 2 agent rảnh để chơi billiard!', 'warning');
+                }
+            }
+        };
+
+        // === BILLIARD SYSTEM ===
+        let _billiardUI = null;
+        let _billiardGame = null;
+        let _billiardPlayers = null;
+
+        manager.onBilliardRequest = (players) => {
+            if (_billiardGame) return; // Already playing
+            _billiardPlayers = players;
+
+            // === COIN STAKE SYSTEM ===
+            const STAKE_PER_PLAYER = 15;
+            let totalStake = 0;
+            players.forEach(p => {
+                if (game.spend(STAKE_PER_PLAYER, `Billiard stake: ${p.name}`)) {
+                    p._billiardStaked = STAKE_PER_PLAYER;
+                    totalStake += STAKE_PER_PLAYER;
+                } else {
+                    p._billiardStaked = 0;
+                }
+            });
+
+            if (totalStake > 0) {
+                manager.addLog('System', `🎱 Billiard stake: -${STAKE_PER_PLAYER}Ⓒ/người. Tổng pool: ${totalStake}Ⓒ`, 'warning');
+                showToast(`🎱 Billiard stake pool: ${totalStake}Ⓒ`, 'warning');
+            }
+
+            const roleEmojis = {
+                coder: '💻', tester: '🧪', reviewer: '📝', designer: '🎨',
+                devops: '🔧', researcher: '🔬', analyst: '📊', security: '🔒',
+                backend: '⚙️', mobile: '📱', writer: '✍️'
+            };
+
+            _billiardGame = new BilliardGame({ stepDelay: 2200 });
+
+            players.forEach(a => {
+                const emoji = roleEmojis[a.role] || '🤖';
+                _billiardGame.addPlayer(a.id, a.name, a.role || 'coder', emoji);
+            });
+
+            // Create billiard UI
+            const overlayEl = document.getElementById('billiardOverlay');
+            _billiardUI = new BilliardUI(overlayEl, _billiardGame);
+
+            // Connect callbacks
+            _billiardUI.attach(_billiardGame);
+
+            _billiardGame.onGameComplete = (gameRef) => {
+                _billiardUI._updateScoreboard();
+                _billiardUI._updateControls();
+                const winner = gameRef.winner;
+                if (winner) {
+                    const agent = _billiardPlayers.find(p => p.id === winner.id);
+                    if (agent) {
+                        manager.addLog(agent.name, `🏆 Thắng trận billiard!`, 'success');
+                        showToast(`🎱 ${agent.name} thắng trận billiard!`, 'success');
+                        if (agent.mood !== undefined) agent.mood = Math.min(100, agent.mood + 8);
+                        if (agent.energy !== undefined) agent.energy = Math.min(100, agent.energy + 3);
+                        engine.showSpeechBubble(agent.id, '🏆 Thắng billiard!', 3000);
+                    }
+                }
+            };
+
+            // On close — settle coin stakes
+            _billiardUI.onClose = () => {
+                if (_billiardGame && totalStake > 0) {
+                    const winner = _billiardGame.winner;
+                    const winnerAgent = winner ? _billiardPlayers.find(p => p.id === winner.id) : null;
+                    if (winnerAgent) {
+                        game.earn(totalStake, `Billiard winnings: ${winnerAgent.name}`);
+                        manager.addLog(winnerAgent.name,
+                            `🏆 Thắng trận billiard! +${totalStake}Ⓒ vào quỹ công ty!`, 'success');
+                        showToast(`🏆 ${winnerAgent.name} thắng ${totalStake}Ⓒ billiard prize!`, 'success');
+                        engine.showSpeechBubble(winnerAgent.id, `💰 +${totalStake}Ⓒ!`, 4000);
+                        engine.spawnInteractionFx(22, 17, '💰');
+                        if (winnerAgent.mood !== undefined)
+                            winnerAgent.mood = Math.min(100, winnerAgent.mood + 15);
+                    }
+                }
+
+                _billiardGame = null;
+                _billiardUI = null;
+                if (_billiardPlayers) {
+                    _billiardPlayers.forEach(p => {
+                        p._isPlayingBilliard = false;
+                        p._billiardStaked = 0;
+                        if (p.mood !== undefined) p.mood = Math.min(100, p.mood + 3);
+                    });
+                    _billiardPlayers = null;
+                }
+                totalStake = 0;
+            };
+
+            // Show and start
+            _billiardUI.show();
+            manager.addLog('system', `🎱 Trận billiard bắt đầu: ${players[0].name} vs ${players[1].name}!`, 'info');
+            showToast(`🎱 Trận billiard bắt đầu!`, 'info');
         };
     }
 

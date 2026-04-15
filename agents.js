@@ -491,6 +491,29 @@ class AgentManager {
                     }
                 }
 
+                // === BILLIARDS: Random chance for agents to start a billiard game ===
+                if (!agent._isRoaming && !agent._isPlayingPoker && !agent._isPlayingBilliard && Math.random() < 0.0015) {
+                    const idleForBilliard = this.getAllAgents().filter(a =>
+                        a.status === 'idle' && !a._isRoaming && !a._isPlayingPoker && !a._isPlayingBilliard && a.id !== agent.id
+                    );
+                    if (idleForBilliard.length >= 1 && this.onBilliardRequest) {
+                        const opponent = idleForBilliard[Math.floor(Math.random() * idleForBilliard.length)];
+                        const billiardPlayers = [agent, opponent];
+                        billiardPlayers.forEach(p => { p._isPlayingBilliard = true; });
+                        this.addLog(agent.name, `🎱 Rủ ${opponent.name} chơi billiard!`, 'info');
+                        if (this.engine) {
+                            this.engine.sendAgentTo(agent.id, 22, 17, () => {
+                                this.engine.showSpeechBubble(agent.id, '🎱 Chơi billiard nào!', 3000);
+                                this.engine.spawnInteractionFx(22, 17, '🎱');
+                                this.onBilliardRequest(billiardPlayers);
+                            });
+                            this.engine.sendAgentTo(opponent.id, 23, 18, () => {
+                                this.engine.showSpeechBubble(opponent.id, '🎱 Chơi thôi!', 3000);
+                            });
+                        }
+                    }
+                }
+
                 // === FREE ROAMING: Visit furniture/interaction points ===
                 if (this.engine && !agent._isRoaming && Math.random() < 0.006) {
                     const point = this.engine.getRandomInteraction();

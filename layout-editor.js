@@ -59,6 +59,7 @@ class LayoutEditor {
                 { id: 'vending', name: 'Máy bán hàng', icon: '🥤', w: 1, h: 2 },
                 { id: 'coffee', name: 'Máy cà phê', icon: '<img src="assets/furniture/COFFEE/COFFEE.png" style="height:24px; image-rendering:pixelated;">', w: 1, h: 1 },
                 { id: 'fridge', name: 'Tủ lạnh', icon: '🧊', w: 1, h: 2 },
+                { id: 'billiard_table', name: 'Bàn Billiard', icon: '🎱', w: 3, h: 2 },
                 { id: 'counter', name: 'Quầy bếp', icon: '🍳', w: 3, h: 1 },
             ],
             'Trang Trí': [
@@ -97,6 +98,7 @@ class LayoutEditor {
             rug: 'Comfort bonus',
             pillow: 'Comfort bonus',
             mtable: 'Pair + Mentor boost',
+            billiard_table: 'Mood + Fun boost',
             clock: 'Deadline hint',
         };
         return bonusMap[type] || 'Style only';

@@ -267,6 +267,8 @@ class PixelEngine {
         f.push({ t: 'plant', x: 17 * T, y: 13 * T }, { t: 'plant', x: 29 * T, y: 20 * T });
         // Poker table in lounge
         f.push({ t: 'poker_table', x: 24 * T, y: 14 * T, w: 3, h: 2 });
+        // Billiard table in lounge
+        f.push({ t: 'billiard_table', x: 21 * T, y: 16 * T, w: 3, h: 2 });
         // Lounge desks (3)
         const loungeDesks = [[18, 17], [18, 14]];
         loungeDesks.forEach(([dx, dy]) => {
@@ -291,6 +293,7 @@ class PixelEngine {
             { id: 'paintingL', type: 'painting', tx: 20, ty: 14, emoji: '🖼️', label: 'Tranh lounge', effect: 'mood' },
             { id: 'counter1', type: 'counter', tx: 26, ty: 2, emoji: '🍳', label: 'Quầy bếp', effect: 'energy' },
             { id: 'poker1', type: 'poker', tx: 25, ty: 15, emoji: '🃏', label: 'Bàn Poker', effect: 'poker' },
+            { id: 'billiard1', type: 'billiard', tx: 22, ty: 17, emoji: '🎱', label: 'Bàn Billiard', effect: 'billiard' },
         ];
 
         // Active interaction animations
@@ -457,6 +460,7 @@ class PixelEngine {
             case 'lamp': this.drawLamp(x, y); break;
             case 'pictureframe': this.drawPictureFrame(x, y); break;
             case 'poker_table': this.drawPokerTable(x, y); break;
+            case 'billiard_table': this.drawBilliardTable(x, y); break;
         }
     }
 
@@ -556,6 +560,38 @@ class PixelEngine {
         // Poker emoji indicator (animated glow)
         if (Math.floor(this.elapsed * 0.03) % 2 === 0) {
             this.px(x + w / 2 - 2, y + 3, 4, 1, 'rgba(255,217,61,0.3)');
+        }
+    }
+
+    drawBilliardTable(x, y) {
+        const T = this.T;
+        const w = T * 3, h = T * 2;
+        // Table legs
+        this.px(x + 4, y + h, 3, 5, '#3d2610');
+        this.px(x + w - 7, y + h, 3, 5, '#3d2610');
+        // Wooden border
+        this.px(x, y, w, h, '#5a3a1e');
+        this.px(x + 1, y + 1, w - 2, h - 2, '#6b4a2a');
+        // Green felt
+        this.px(x + 3, y + 3, w - 6, h - 6, '#1a6b3a');
+        this.px(x + 4, y + 4, w - 8, h - 8, '#1f7a42');
+        // 6 pockets (corner + mid)
+        const pr = 2;
+        this.px(x + 2, y + 2, pr + 1, pr + 1, '#111');           // TL
+        this.px(x + w / 2 - 1, y + 1, pr + 1, pr, '#111');       // TC
+        this.px(x + w - pr - 3, y + 2, pr + 1, pr + 1, '#111');  // TR
+        this.px(x + 2, y + h - pr - 3, pr + 1, pr + 1, '#111');  // BL
+        this.px(x + w / 2 - 1, y + h - pr - 1, pr + 1, pr, '#111'); // BC
+        this.px(x + w - pr - 3, y + h - pr - 3, pr + 1, pr + 1, '#111'); // BR
+        // Decorative balls on table
+        const ballColors = ['#f1c40f', '#e74c3c', '#2980b9', '#1a1a1a', '#ffffff'];
+        const ballPositions = [[w*0.6, h*0.35], [w*0.65, h*0.5], [w*0.6, h*0.65], [w*0.7, h*0.5], [w*0.3, h*0.5]];
+        for (let i = 0; i < 5; i++) {
+            this.px(x + ballPositions[i][0], y + ballPositions[i][1], 2, 2, ballColors[i]);
+        }
+        // Billiard emoji indicator (animated glow)
+        if (Math.floor(this.elapsed * 0.025) % 2 === 0) {
+            this.px(x + w / 2 - 2, y + 3, 4, 1, 'rgba(78,205,196,0.3)');
         }
     }
 
@@ -990,7 +1026,7 @@ class PixelEngine {
     getRandomInteraction() {
         if (!this.interactionPoints?.length) return null;
         // Exclude poker points from normal roaming (poker handled separately)
-        const nonPoker = this.interactionPoints.filter(p => p.type !== 'poker');
+        const nonPoker = this.interactionPoints.filter(p => p.type !== 'poker' && p.type !== 'billiard');
         if (!nonPoker.length) return null;
         return nonPoker[Math.floor(Math.random() * nonPoker.length)];
     }
