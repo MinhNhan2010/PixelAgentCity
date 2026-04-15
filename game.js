@@ -103,7 +103,7 @@ class GameState {
             { id: 0, name: 'Phòng Họp',        icon: '📋', cost: 0,    level: 1, w: 10, h: 7,  floor: 'wood',   desc: 'Họp nhóm, brainstorm',             bonus: 'Meeting boost' },
             { id: 1, name: 'Văn Phòng Chính',   icon: '🖥️', cost: 0,    level: 1, w: 16, h: 14, floor: 'wood',   desc: '9 bàn làm việc + máy tính',        bonus: '9 desks' },
             { id: 2, name: 'Nhà Bếp',           icon: '🍳', cost: 200,  level: 1, w: 15, h: 10, floor: 'tile',   desc: 'Máy cà phê, máy bán hàng, tủ lạnh', bonus: 'Energy regen' },
-            { id: 3, name: 'Phòng Game',         icon: '🎱', cost: 500,  level: 2, w: 15, h: 8,  floor: 'carpet', desc: 'Poker + Billiard',                  bonus: 'Poker & Billiard' },
+            { id: 3, name: 'Phòng Game',         icon: '🎱', cost: 500,  level: 2, w: 18, h: 12, floor: 'carpet', desc: 'Poker, Billiard, Slot Machine, Gold Trading', bonus: 'Games & Trading' },
             { id: 4, name: 'Lounge',             icon: '🛋️', cost: 400,  level: 2, w: 15, h: 7,  floor: 'carpet', desc: 'Sofa, nghỉ ngơi, thư giãn',        bonus: 'Rest + Mood' },
             { id: 5, name: 'Server Room',        icon: '🖧', cost: 800,  level: 3, w: 12, h: 8,  floor: 'tile',   desc: 'Tăng tốc hoàn thành task',         bonus: '+20% productivity' },
             { id: 6, name: 'Phòng Gym',          icon: '💪', cost: 600,  level: 3, w: 12, h: 8,  floor: 'wood',   desc: 'Gym tập thể dục cho agent',        bonus: 'Energy boost' },

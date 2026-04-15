@@ -213,7 +213,7 @@ class PixelEngine {
         const PAD = 2, LX = 1, RX = 24, SY = 1;
         const roomDefs = {
             0:{w:12,h:8,f:'wood'}, 1:{w:20,h:16,f:'wood'}, 2:{w:15,h:10,f:'tile'},
-            3:{w:15,h:8,f:'carpet'}, 4:{w:15,h:7,f:'carpet'}, 5:{w:12,h:8,f:'tile'},
+            3:{w:18,h:12,f:'carpet'}, 4:{w:15,h:7,f:'carpet'}, 5:{w:12,h:8,f:'tile'},
             6:{w:12,h:8,f:'wood'}, 7:{w:14,h:8,f:'wood'}, 8:{w:12,h:8,f:'carpet'},
             9:{w:14,h:8,f:'carpet'}, 10:{w:15,h:10,f:'tile'},
         };
@@ -310,16 +310,25 @@ class PixelEngine {
                     {id:'fridge1',type:'fridge',tx:rx+12,ty:ry+1,emoji:'🍽️',label:'Tủ lạnh',effect:'energy'},
                 );
                 break;
-            case 3: // Game Room
+            case 3: // Game Room (expanded with Slot Machine & Gold Terminal)
+                // Row 1: Poker + Billiard tables
                 f.push({t:'poker_table',x:(rx+2)*T,y:(ry+2)*T,w:3,h:2});
                 f.push({t:'billiard_table',x:(rx+8)*T,y:(ry+2)*T,w:3,h:2});
-                f.push({t:'sofa',x:(rx+12)*T,y:(ry+1)*T},{t:'armchair',x:(rx+12)*T,y:(ry+6)*T});
-                f.push({t:'plant',x:rx*T,y:ry*T},{t:'plant',x:(rx+14)*T,y:ry*T});
-                f.push({t:'painting',x:(rx+5)*T,y:ry*T},{t:'bookshelf',x:rx*T,y:(ry+6)*T});
-                f.push({t:'table_low',x:(rx+6)*T,y:(ry+6)*T});
+                // Row 2: Slot Machine + Gold Trading Terminal
+                f.push({t:'slot_machine',x:(rx+2)*T,y:(ry+7)*T,w:2,h:3});
+                f.push({t:'gold_terminal',x:(rx+8)*T,y:(ry+7)*T,w:3,h:3});
+                // Furniture
+                f.push({t:'sofa',x:(rx+14)*T,y:(ry+1)*T},{t:'armchair',x:(rx+14)*T,y:(ry+8)*T});
+                f.push({t:'plant',x:rx*T,y:ry*T},{t:'plant',x:(rx+17)*T,y:ry*T});
+                f.push({t:'painting',x:(rx+5)*T,y:ry*T},{t:'painting',x:(rx+11)*T,y:ry*T});
+                f.push({t:'bookshelf',x:rx*T,y:(ry+6)*T},{t:'lamp',x:(rx+5)*T,y:(ry+6)*T});
+                f.push({t:'table_low',x:(rx+14)*T,y:(ry+5)*T});
+                f.push({t:'vending',x:(rx+16)*T,y:(ry+5)*T});
                 this.interactionPoints.push(
                     {id:'poker1',type:'poker',tx:rx+3,ty:ry+3,emoji:'🃏',label:'Bàn Poker',effect:'poker'},
                     {id:'billiard1',type:'billiard',tx:rx+9,ty:ry+3,emoji:'🎱',label:'Bàn Billiard',effect:'billiard'},
+                    {id:'slot1',type:'slot',tx:rx+3,ty:ry+8,emoji:'🎰',label:'Slot Machine',effect:'slot'},
+                    {id:'goldtrade1',type:'gold_trade',tx:rx+9,ty:ry+8,emoji:'📊',label:'Gold Trading',effect:'gold_trade'},
                 );
                 break;
             case 4: // Lounge — cozy relaxation area
@@ -602,6 +611,8 @@ class PixelEngine {
             case 'pictureframe': this.drawPictureFrame(x, y); break;
             case 'poker_table': this.drawPokerTable(x, y); break;
             case 'billiard_table': this.drawBilliardTable(x, y); break;
+            case 'slot_machine': this.drawSlotMachine(x, y); break;
+            case 'gold_terminal': this.drawGoldTerminal(x, y); break;
             // Room-specific assets
             case 'treadmill': this.drawTreadmill(x, y); break;
             case 'dumbbell': this.drawDumbbell(x, y); break;
@@ -743,6 +754,101 @@ class PixelEngine {
         if (Math.floor(this.elapsed * 0.025) % 2 === 0) {
             this.px(x + w / 2 - 2, y + 3, 4, 1, 'rgba(78,205,196,0.3)');
         }
+    }
+
+    drawSlotMachine(x, y) {
+        const T = this.T;
+        const w = T * 2, h = T * 3;
+        // Machine body
+        this.px(x, y, w, h, '#8B0000');
+        this.px(x + 1, y + 1, w - 2, h - 2, '#a01010');
+        // Top header — "SLOTS"
+        this.px(x + 2, y + 2, w - 4, 6, '#ffd93d');
+        this.px(x + 3, y + 3, w - 6, 4, '#ffaa00');
+        // Three reel windows
+        const reelW = 6, reelH = 8;
+        const reelY = y + 10;
+        for (let r = 0; r < 3; r++) {
+            const rx = x + 3 + r * (reelW + 2);
+            this.px(rx, reelY, reelW, reelH, '#1a1a2e');
+            this.px(rx + 1, reelY + 1, reelW - 2, reelH - 2, '#0d0d1a');
+            // Animated symbol lines
+            const frame = Math.floor(this.elapsed * 0.05 + r * 17) % 5;
+            const symColors = ['#ff6b6b', '#ffd93d', '#4ecdc4', '#6c5ce7', '#78e08f'];
+            this.px(rx + 1, reelY + 2 + frame, reelW - 2, 2, symColors[frame]);
+        }
+        // Payline indicator
+        const flash = Math.floor(this.elapsed * 0.04) % 2;
+        if (flash) {
+            this.px(x + 1, reelY + reelH / 2 - 1, w - 2, 1, 'rgba(255,217,61,0.6)');
+        }
+        // Handle/lever
+        this.px(x + w, y + 8, 3, 2, '#888');
+        this.px(x + w + 1, y + 10, 1, 12, '#666');
+        this.px(x + w, y + 22, 3, 3, '#e74c3c');
+        // Coin slot
+        this.px(x + w / 2 - 2, y + h - 10, 4, 2, '#333');
+        this.px(x + w / 2 - 1, y + h - 9, 2, 1, '#555');
+        // Tray at bottom
+        this.px(x + 2, y + h - 5, w - 4, 4, '#222');
+        this.px(x + 3, y + h - 4, w - 6, 2, '#333');
+        // Decorative lights (animated)
+        const lightPhase = Math.floor(this.elapsed * 0.06) % 4;
+        const lightColors = ['#ff6b6b', '#ffd93d', '#4ecdc4', '#6c5ce7'];
+        for (let i = 0; i < 4; i++) {
+            const lx = x + 2 + i * 7;
+            this.px(lx, y + h - 2, 2, 1, lightColors[(i + lightPhase) % 4]);
+        }
+        // Animated glow effect
+        if (Math.floor(this.elapsed * 0.03) % 3 === 0) {
+            this.px(x - 1, y - 1, w + 2, 1, 'rgba(255,217,61,0.15)');
+            this.px(x - 1, y + h, w + 2, 1, 'rgba(255,217,61,0.15)');
+        }
+    }
+
+    drawGoldTerminal(x, y) {
+        const T = this.T;
+        const w = T * 3, h = T * 3;
+        // Terminal body
+        this.px(x, y, w, h, '#1a1a2e');
+        this.px(x + 1, y + 1, w - 2, h - 2, '#16213e');
+        // Screen
+        const scX = x + 3, scY = y + 3;
+        const scW = w - 6, scH = h - 16;
+        this.px(scX, scY, scW, scH, '#0a1628');
+        this.px(scX + 1, scY + 1, scW - 2, scH - 2, '#0d1f33');
+        // Mini chart lines (animated)
+        const chartY = scY + scH - 3;
+        let prevPy = 0;
+        for (let i = 0; i < scW - 4; i++) {
+            const wave = Math.sin(this.elapsed * 0.008 + i * 0.5) * 4 +
+                         Math.sin(this.elapsed * 0.015 + i * 0.3) * 2;
+            const py = Math.floor(chartY - 4 - wave);
+            const isUp = i > 0 ? py <= prevPy : true;
+            this.px(scX + 2 + i, py, 1, chartY - py, isUp ? 'rgba(0,212,170,0.4)' : 'rgba(255,71,87,0.4)');
+            this.px(scX + 2 + i, py, 1, 1, isUp ? '#00d4aa' : '#ff4757');
+            prevPy = py;
+        }
+        // Price display
+        const priceFlash = Math.floor(this.elapsed * 0.03) % 2;
+        this.px(scX + 2, scY + 2, 12, 3, priceFlash ? '#00d4aa' : '#ffd93d');
+        // "XAU" label
+        this.px(scX + scW - 10, scY + 2, 8, 2, '#6c5ce7');
+        // Keyboard area
+        this.px(x + 3, y + h - 11, w - 6, 4, '#2a2a3a');
+        this.px(x + 4, y + h - 10, w - 8, 2, '#3a3a4a');
+        // Buy/Sell buttons
+        this.px(x + 4, y + h - 6, (w - 10) / 2, 3, '#00d4aa');
+        this.px(x + w / 2 + 1, y + h - 6, (w - 10) / 2, 3, '#ff4757');
+        // Status LED
+        const ledOn = Math.floor(this.elapsed * 0.04) % 3 !== 0;
+        this.px(x + w - 5, y + 2, 2, 2, ledOn ? '#00d4aa' : '#333');
+        // Gold bars decoration at base
+        this.px(x + 3, y + h - 2, 4, 2, '#ffd93d');
+        this.px(x + 8, y + h - 2, 4, 2, '#ffaa00');
+        // Animated ticker line at bottom of screen
+        const tickerOffset = Math.floor(this.elapsed * 0.1) % scW;
+        this.px(scX + tickerOffset, scY + scH - 2, 3, 1, '#ffd93d');
     }
 
     // === ROOM-SPECIFIC ASSETS ===

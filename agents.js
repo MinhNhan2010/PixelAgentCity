@@ -514,6 +514,36 @@ class AgentManager {
                     }
                 }
 
+                // === SLOT MACHINE: Random chance for agents to play slots ===
+                if (!agent._isRoaming && !agent._isPlayingPoker && !agent._isPlayingBilliard && !agent._isPlayingSlot && !agent._isTrading && Math.random() < 0.001) {
+                    if (this.onSlotRequest) {
+                        agent._isPlayingSlot = true;
+                        this.addLog(agent.name, `🎰 Đi chơi slot machine!`, 'info');
+                        if (this.engine) {
+                            this.engine.sendAgentTo(agent.id, 27, 22, () => {
+                                this.engine.showSpeechBubble(agent.id, '🎰 Thử vận may!', 3000);
+                                this.engine.spawnInteractionFx(27, 22, '🎰');
+                                this.onSlotRequest([agent]);
+                            });
+                        }
+                    }
+                }
+
+                // === GOLD TRADING: Random chance for agents to trade gold (analysts more likely) ===
+                if (!agent._isRoaming && !agent._isPlayingPoker && !agent._isPlayingBilliard && !agent._isPlayingSlot && !agent._isTrading && Math.random() < (agent.role === 'analyst' ? 0.002 : 0.0008)) {
+                    if (this.onGoldTradeRequest) {
+                        agent._isTrading = true;
+                        this.addLog(agent.name, `📊 Đi check giá vàng!`, 'info');
+                        if (this.engine) {
+                            this.engine.sendAgentTo(agent.id, 33, 22, () => {
+                                this.engine.showSpeechBubble(agent.id, '📊 Phân tích thị trường vàng...', 3000);
+                                this.engine.spawnInteractionFx(33, 22, '📊');
+                                this.onGoldTradeRequest([agent]);
+                            });
+                        }
+                    }
+                }
+
                 // === FREE ROAMING: Visit furniture/interaction points ===
                 if (this.engine && !agent._isRoaming && Math.random() < 0.006) {
                     const point = this.engine.getRandomInteraction();

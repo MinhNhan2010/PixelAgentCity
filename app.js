@@ -453,6 +453,18 @@
                     showToast('🎱 Cần ít nhất 2 agent rảnh để chơi billiard!', 'warning');
                 }
             }
+            if (point.type === 'slot') {
+                // Open Slot Machine — player or agent
+                if (!_slotUI || !_slotUI.overlay.classList.contains('show')) {
+                    openSlotMachine();
+                }
+            }
+            if (point.type === 'gold_trade') {
+                // Open Gold Trading Terminal
+                if (!_goldUI || !_goldUI.overlay.classList.contains('show')) {
+                    openGoldTrading();
+                }
+            }
         };
 
         // === BILLIARD SYSTEM ===
@@ -551,6 +563,220 @@
             _billiardUI.show();
             manager.addLog('system', `🎱 Trận billiard bắt đầu: ${players[0].name} vs ${players[1].name}!`, 'info');
             showToast(`🎱 Trận billiard bắt đầu!`, 'info');
+        };
+
+        // === SLOT MACHINE SYSTEM ===
+        let _slotUI = null;
+        let _slotGame = null;
+        let _slotPlayers = [];
+
+        function openSlotMachine(players) {
+            if (_slotUI && _slotUI.overlay.classList.contains('show')) return;
+
+            _slotGame = new SlotMachine({ stepDelay: 500 });
+            _slotPlayers = players || [];
+
+            const overlayEl = document.getElementById('slotOverlay');
+            _slotUI = new SlotMachineUI(overlayEl, _slotGame);
+            _slotUI.players = _slotPlayers;
+
+            // Validate and deduct coins on spin
+            _slotUI.onSpinRequest = (betAmount) => {
+                if (!game.canAfford(betAmount)) {
+                    showToast(`💸 Không đủ tiền! Cần ${betAmount}Ⓒ`, 'error');
+                    return false;
+                }
+                game.spend(betAmount, 'Slot Machine bet');
+                _slotUI.setBalance(game.coins);
+                return true;
+            };
+
+            // Handle results
+            _slotUI.onResultCallback = (result) => {
+                if (result.win) {
+                    game.earn(result.payout, 'Slot Machine win');
+                    manager.addLog('System', `🎰 Slot: ${result.name} +${result.payout}Ⓒ`, 'success');
+                    if (result.isJackpot) {
+                        showToast(`🎰🎰🎰 MEGA JACKPOT! +${result.payout}Ⓒ`, 'success');
+                        engine.spawnInteractionFx(27, 22, '💰');
+                        engine.spawnInteractionFx(28, 23, '🎰');
+                    }
+                    // Mood boost for playing agents
+                    _slotPlayers.forEach(p => {
+                        if (p.mood !== undefined) p.mood = Math.min(100, p.mood + 5);
+                    });
+                } else {
+                    manager.addLog('System', `🎰 Slot: Thua -${result.bet}Ⓒ`, 'info');
+                    _slotPlayers.forEach(p => {
+                        if (p.mood !== undefined) p.mood = Math.max(30, p.mood - 2);
+                    });
+                }
+                _slotUI.setBalance(game.coins);
+                refreshHUD();
+            };
+
+            // On close
+            _slotUI.onClose = () => {
+                if (_slotPlayers.length > 0) {
+                    _slotPlayers.forEach(p => {
+                        p._isPlayingSlot = false;
+                        if (p.mood !== undefined) p.mood = Math.min(100, p.mood + 2);
+                    });
+                }
+                const stats = _slotGame.getStats();
+                if (stats.totalSpins > 0) {
+                    manager.addLog('System', `🎰 Session: ${stats.totalSpins} spins, Won: ${stats.totalWon}Ⓒ, Lost: ${stats.totalLost}Ⓒ`, 'info');
+                }
+                _slotGame = null;
+                _slotUI = null;
+                _slotPlayers = [];
+            };
+
+            _slotUI.setBalance(game.coins);
+            _slotUI.show();
+            manager.addLog('system', `🎰 Slot Machine mở!`, 'info');
+            showToast('🎰 Chào mừng đến Lucky Pixel Slots!', 'info');
+        }
+
+        // Agent auto-slot request
+        manager.onSlotRequest = (players) => {
+            if (_slotUI && _slotUI.overlay.classList.contains('show')) return;
+            openSlotMachine(players);
+            // Auto-spin a few times for agent
+            let autoCount = 0;
+            const maxAuto = 3 + Math.floor(Math.random() * 3);
+            const autoInterval = setInterval(() => {
+                if (!_slotGame || autoCount >= maxAuto) {
+                    clearInterval(autoInterval);
+                    setTimeout(() => { if (_slotUI) _slotUI.hide(); }, 2000);
+                    return;
+                }
+                if (!_slotGame.isSpinning && game.canAfford(_slotGame.currentBet)) {
+                    _slotUI._doSpin();
+                    autoCount++;
+                }
+            }, 2500);
+        };
+
+        // === GOLD TRADING SYSTEM ===
+        let _goldUI = null;
+        let _goldSystem = new GoldTrading();
+        let _goldPlayers = [];
+
+        // Tick gold price in game loop
+        const origTickDay = game.tickDay.bind(game);
+        let _goldTickAccum = 0;
+        game.tickDay = function(realDeltaSec) {
+            origTickDay(realDeltaSec);
+            if (_goldSystem && !game.isPaused && game.started) {
+                _goldTickAccum += realDeltaSec * game.gameSpeed;
+                if (_goldTickAccum >= 2) {
+                    _goldSystem.tick(1);
+                    _goldTickAccum -= 2;
+                }
+            }
+        };
+
+        function openGoldTrading(players) {
+            if (_goldUI && _goldUI.overlay.classList.contains('show')) return;
+
+            _goldPlayers = players || [];
+
+            const overlayEl = document.getElementById('goldTradeOverlay');
+            _goldUI = new GoldTradingUI(overlayEl, _goldSystem);
+            _goldUI.players = _goldPlayers;
+
+            _goldUI.onBuyRequest = (ounces) => {
+                const cost = _goldSystem.getCostForOunces(ounces);
+                if (!game.canAfford(cost)) {
+                    showToast(`💸 Không đủ tiền! Cần ${cost}Ⓒ`, 'error');
+                    return;
+                }
+                const trade = _goldSystem.buy(ounces, game.coins);
+                if (trade) {
+                    game.spend(trade.costCoins, `Buy Gold: ${ounces} oz`);
+                    manager.addLog('System', `📈 Mua ${ounces} oz vàng @ $${trade.price.toFixed(2)} (-${trade.costCoins}Ⓒ)`, 'info');
+                    showToast(`📈 Mua ${ounces} oz vàng!`, 'success');
+                    _goldUI.setBalance(game.coins);
+                    refreshHUD();
+                }
+            };
+
+            _goldUI.onSellRequest = (ounces) => {
+                if (_goldSystem.goldHeld <= 0) {
+                    showToast('📉 Chưa có vàng để bán!', 'warning');
+                    return;
+                }
+                const trade = _goldSystem.sell(ounces);
+                if (trade) {
+                    game.earn(trade.revenueCoins, `Sell Gold: ${trade.ounces.toFixed(4)} oz`);
+                    const profitText = trade.profit >= 0 ? `+${trade.profit}Ⓒ` : `${trade.profit}Ⓒ`;
+                    manager.addLog('System', `📉 Bán ${trade.ounces.toFixed(4)} oz vàng @ $${trade.price.toFixed(2)} (${profitText})`, trade.profit >= 0 ? 'success' : 'warning');
+                    showToast(`📉 Bán vàng! P&L: ${profitText}`, trade.profit >= 0 ? 'success' : 'warning');
+                    _goldUI.setBalance(game.coins);
+                    refreshHUD();
+                    // Mood effect
+                    _goldPlayers.forEach(p => {
+                        if (p.mood !== undefined) {
+                            p.mood = Math.min(100, Math.max(30, p.mood + (trade.profit >= 0 ? 5 : -3)));
+                        }
+                    });
+                }
+            };
+
+            _goldUI.onSellAllRequest = () => {
+                if (_goldSystem.goldHeld <= 0) {
+                    showToast('📉 Chưa có vàng để bán!', 'warning');
+                    return;
+                }
+                const trade = _goldSystem.sellAll();
+                if (trade) {
+                    game.earn(trade.revenueCoins, `Sell All Gold`);
+                    const profitText = trade.profit >= 0 ? `+${trade.profit}Ⓒ` : `${trade.profit}Ⓒ`;
+                    manager.addLog('System', `🏧 Bán toàn bộ ${trade.ounces.toFixed(4)} oz vàng (${profitText})`, trade.profit >= 0 ? 'success' : 'warning');
+                    showToast(`🏧 Bán hết vàng! P&L: ${profitText}`, trade.profit >= 0 ? 'success' : 'warning');
+                    _goldUI.setBalance(game.coins);
+                    refreshHUD();
+                }
+            };
+
+            _goldUI.onClose = () => {
+                if (_goldPlayers.length > 0) {
+                    _goldPlayers.forEach(p => {
+                        p._isTrading = false;
+                        if (p.mood !== undefined) p.mood = Math.min(100, p.mood + 2);
+                    });
+                }
+                _goldUI = null;
+                _goldPlayers = [];
+            };
+
+            _goldUI.setBalance(game.coins);
+            _goldUI.show();
+            manager.addLog('system', `📊 Gold Trading Terminal mở!`, 'info');
+            showToast('📊 Chào mừng đến Gold Trading Terminal!', 'info');
+        }
+
+        // Agent auto-trade request
+        manager.onGoldTradeRequest = (players) => {
+            if (_goldUI && _goldUI.overlay.classList.contains('show')) return;
+            openGoldTrading(players);
+            // Auto-trade: agent buys a small amount
+            setTimeout(() => {
+                if (_goldSystem && game.canAfford(20)) {
+                    _goldUI?.onBuyRequest?.(0.01);
+                }
+            }, 3000);
+            // Auto-close after some time
+            setTimeout(() => {
+                if (_goldUI) {
+                    // Maybe sell if profitable
+                    if (_goldSystem.getUnrealizedPnL() > 0) {
+                        _goldUI.onSellAllRequest?.();
+                    }
+                    setTimeout(() => { if (_goldUI) _goldUI.hide(); }, 2000);
+                }
+            }, 15000 + Math.random() * 10000);
         };
     }
 
