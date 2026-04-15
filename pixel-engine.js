@@ -340,8 +340,8 @@ class PixelEngine {
                 );
                 break;
             case 5: // Server Room — tech equipment
-                for(let i=0;i<4;i++) f.push({t:'cabinet',x:(rx+1+i*3)*T,y:ry*T});
-                for(let i=0;i<4;i++) f.push({t:'cabinet',x:(rx+1+i*3)*T,y:(ry+6)*T});
+                for(let i=0;i<3;i++) f.push({t:'server_rack',x:(rx+1+i*4)*T,y:ry*T});
+                for(let i=0;i<3;i++) f.push({t:'server_rack',x:(rx+1+i*4)*T,y:(ry+5)*T});
                 f.push({t:'lamp',x:(rx+2)*T,y:(ry+3)*T},{t:'lamp',x:(rx+5)*T,y:(ry+3)*T},{t:'lamp',x:(rx+8)*T,y:(ry+3)*T});
                 f.push({t:'clock',x:(rx+11)*T,y:ry*T});
                 [[rx+1,ry+3],[rx+5,ry+3],[rx+9,ry+3]].forEach(([dx,dy])=>{
@@ -352,16 +352,16 @@ class PixelEngine {
                 f.push({t:'plant',x:rx*T,y:ry*T});
                 this.interactionPoints.push(
                     {id:'srv1',type:'cabinet',tx:rx+1,ty:ry+1,emoji:'🖥️',label:'Server Rack',effect:'productivity'},
-                    {id:'srv2',type:'cabinet',tx:rx+4,ty:ry+1,emoji:'🖥️',label:'Server Rack',effect:'productivity'},
+                    {id:'srv2',type:'cabinet',tx:rx+5,ty:ry+1,emoji:'🖥️',label:'Server Rack',effect:'productivity'},
                 );
                 break;
             case 6: // Gym — workout area
-                f.push({t:'bench',x:(rx+1)*T,y:(ry+2)*T},{t:'bench',x:(rx+4)*T,y:(ry+2)*T},{t:'bench',x:(rx+7)*T,y:(ry+2)*T});
-                f.push({t:'bench',x:(rx+1)*T,y:(ry+5)*T},{t:'bench',x:(rx+4)*T,y:(ry+5)*T},{t:'bench',x:(rx+7)*T,y:(ry+5)*T});
-                f.push({t:'rug',x:(rx+2)*T,y:(ry+3)*T},{t:'rug',x:(rx+5)*T,y:(ry+3)*T},{t:'rug',x:(rx+8)*T,y:(ry+3)*T});
+                f.push({t:'treadmill',x:(rx+1)*T,y:(ry+1)*T},{t:'treadmill',x:(rx+4)*T,y:(ry+1)*T},{t:'treadmill',x:(rx+7)*T,y:(ry+1)*T});
+                f.push({t:'dumbbell',x:(rx+1)*T,y:(ry+4)*T},{t:'dumbbell',x:(rx+4)*T,y:(ry+4)*T});
+                f.push({t:'yoga_mat',x:(rx+7)*T,y:(ry+4)*T},{t:'yoga_mat',x:(rx+9)*T,y:(ry+4)*T});
+                f.push({t:'bench',x:(rx+1)*T,y:(ry+6)*T},{t:'bench',x:(rx+4)*T,y:(ry+6)*T});
                 f.push({t:'vending',x:(rx+10)*T,y:ry*T},{t:'vending',x:(rx+10)*T,y:(ry+4)*T});
-                f.push({t:'painting',x:(rx+6)*T,y:ry*T},{t:'clock',x:(rx+8)*T,y:ry*T});
-                f.push({t:'lamp',x:(rx+3)*T,y:ry*T},{t:'lamp',x:(rx+9)*T,y:ry*T});
+                f.push({t:'clock',x:(rx+8)*T,y:ry*T});
                 f.push({t:'plant',x:rx*T,y:ry*T},{t:'plant',x:(rx+11)*T,y:ry*T});
                 this.interactionPoints.push(
                     {id:'gym1',type:'vending',tx:rx+10,ty:ry+1,emoji:'💪',label:'Tập gym',effect:'energy'},
@@ -386,16 +386,16 @@ class PixelEngine {
                 );
                 break;
             case 8: // Garden — outdoor zen
-                for(let i=0;i<5;i++) f.push({t:'plant',x:(rx+1+i*2)*T,y:ry*T});
-                for(let i=0;i<4;i++) f.push({t:'cactus',x:(rx+2+i*2.5)*T,y:(ry+6)*T});
-                for(let i=0;i<3;i++) f.push({t:'plant',x:(rx+1+i*3)*T,y:(ry+3)*T});
-                f.push({t:'bench',x:(rx+2)*T,y:(ry+4)*T},{t:'bench',x:(rx+7)*T,y:(ry+4)*T});
-                f.push({t:'table_low',x:(rx+4)*T,y:(ry+2)*T},{t:'table_low',x:(rx+9)*T,y:(ry+2)*T});
+                f.push({t:'tree',x:(rx+1)*T,y:ry*T},{t:'tree',x:(rx+9)*T,y:ry*T});
+                f.push({t:'fountain',x:(rx+4)*T,y:(ry+1)*T});
+                for(let i=0;i<5;i++) f.push({t:'plant',x:(rx+1+i*2)*T,y:(ry+5)*T});
+                for(let i=0;i<3;i++) f.push({t:'cactus',x:(rx+2+i*3)*T,y:(ry+6)*T});
+                f.push({t:'bench',x:(rx+2)*T,y:(ry+3)*T},{t:'bench',x:(rx+7)*T,y:(ry+3)*T});
+                f.push({t:'table_low',x:(rx+4)*T,y:(ry+4)*T});
                 f.push({t:'lamp',x:(rx+11)*T,y:ry*T});
-                f.push({t:'rug',x:(rx+5)*T,y:(ry+4)*T});
                 this.interactionPoints.push(
-                    {id:'garden1',type:'plant',tx:rx+2,ty:ry+1,emoji:'🌿',label:'Vườn cây',effect:'mood'},
-                    {id:'garden2',type:'plant',tx:rx+6,ty:ry+1,emoji:'🌺',label:'Hoa',effect:'mood'},
+                    {id:'garden1',type:'plant',tx:rx+5,ty:ry+2,emoji:'⛲',label:'Đài phun nước',effect:'mood'},
+                    {id:'garden2',type:'plant',tx:rx+2,ty:ry+1,emoji:'🌿',label:'Vườn cây',effect:'mood'},
                 );
                 break;
             case 9: // VIP Lounge — luxury
@@ -420,15 +420,16 @@ class PixelEngine {
                     this.deskSlots.push({tx:dx,ty:dy,x:(dx+0.5)*T,y:(dy+0.5)*T,occupied:false,agentId:null});
                     f.push({t:'pc',x:(dx+1)*T,y:(dy-1)*T});
                 });
-                f.push({t:'bookshelf',x:(rx+13)*T,y:ry*T},{t:'bookshelf',x:(rx+13)*T,y:(ry+4)*T});
-                f.push({t:'whiteboard',x:(rx+12)*T,y:(ry+2)*T});
-                f.push({t:'cabinet',x:(rx+13)*T,y:(ry+8)*T},{t:'cabinet',x:(rx+12)*T,y:(ry+8)*T});
+                f.push({t:'microscope',x:(rx+13)*T,y:(ry+1)*T},{t:'microscope',x:(rx+13)*T,y:(ry+5)*T});
+                f.push({t:'flask',x:(rx+12)*T,y:(ry+1)*T},{t:'flask',x:(rx+12)*T,y:(ry+5)*T});
+                f.push({t:'whiteboard',x:(rx+12)*T,y:(ry+3)*T});
+                f.push({t:'bookshelf',x:(rx+13)*T,y:(ry+8)*T});
                 f.push({t:'lamp',x:(rx+3)*T,y:ry*T},{t:'lamp',x:(rx+7)*T,y:ry*T},{t:'lamp',x:(rx+11)*T,y:ry*T});
                 f.push({t:'plant',x:rx*T,y:ry*T},{t:'plant',x:(rx+14)*T,y:ry*T});
                 f.push({t:'clock',x:(rx+6)*T,y:ry*T});
                 this.interactionPoints.push(
-                    {id:'lab1',type:'bookshelf',tx:rx+13,ty:ry+1,emoji:'🔬',label:'R&D Lab',effect:'xp'},
-                    {id:'lab2',type:'cabinet',tx:rx+13,ty:ry+5,emoji:'🧪',label:'Thiết bị',effect:'xp'},
+                    {id:'lab1',type:'bookshelf',tx:rx+13,ty:ry+2,emoji:'🔬',label:'Kính hiển vi',effect:'xp'},
+                    {id:'lab2',type:'cabinet',tx:rx+12,ty:ry+2,emoji:'🧪',label:'Phòng thí nghiệm',effect:'xp'},
                 );
                 break;
         }
@@ -601,6 +602,15 @@ class PixelEngine {
             case 'pictureframe': this.drawPictureFrame(x, y); break;
             case 'poker_table': this.drawPokerTable(x, y); break;
             case 'billiard_table': this.drawBilliardTable(x, y); break;
+            // Room-specific assets
+            case 'treadmill': this.drawTreadmill(x, y); break;
+            case 'dumbbell': this.drawDumbbell(x, y); break;
+            case 'yoga_mat': this.drawYogaMat(x, y); break;
+            case 'server_rack': this.drawServerRack(x, y); break;
+            case 'microscope': this.drawMicroscope(x, y); break;
+            case 'flask': this.drawFlask(x, y); break;
+            case 'fountain': this.drawFountain(x, y); break;
+            case 'tree': this.drawTree(x, y); break;
         }
     }
 
@@ -733,6 +743,174 @@ class PixelEngine {
         if (Math.floor(this.elapsed * 0.025) % 2 === 0) {
             this.px(x + w / 2 - 2, y + 3, 4, 1, 'rgba(78,205,196,0.3)');
         }
+    }
+
+    // === ROOM-SPECIFIC ASSETS ===
+
+    drawTreadmill(x, y) {
+        // Base/platform
+        this.px(x, y + 12, 14, 3, '#444');
+        this.px(x + 1, y + 13, 12, 1, '#555');
+        // Running belt
+        this.px(x + 1, y + 8, 12, 4, '#222');
+        this.px(x + 2, y + 9, 10, 2, '#333');
+        // Belt lines (animated)
+        const shift = Math.floor(this.elapsed * 0.1) % 3;
+        for (let i = 0; i < 4; i++) {
+            this.px(x + 2 + ((i * 3 + shift) % 10), y + 9, 1, 2, '#444');
+        }
+        // Handlebar posts
+        this.px(x + 2, y, 2, 9, '#666');
+        this.px(x + 10, y, 2, 9, '#666');
+        // Top bar
+        this.px(x + 2, y, 10, 2, '#777');
+        // Display panel
+        this.px(x + 5, y + 1, 4, 3, '#111');
+        this.px(x + 6, y + 2, 2, 1, '#4ecdc4');
+        // Speed indicator
+        if (Math.floor(this.elapsed * 0.03) % 2) this.px(x + 5, y + 3, 1, 1, '#ff6b6b');
+    }
+
+    drawDumbbell(x, y) {
+        // Left weight plates
+        this.px(x, y + 3, 3, 8, '#555');
+        this.px(x + 1, y + 4, 1, 6, '#666');
+        // Bar
+        this.px(x + 3, y + 6, 8, 2, '#888');
+        this.px(x + 3, y + 5, 8, 1, '#999');
+        // Right weight plates
+        this.px(x + 11, y + 3, 3, 8, '#555');
+        this.px(x + 12, y + 4, 1, 6, '#666');
+        // Shine
+        this.px(x + 1, y + 3, 1, 1, '#777');
+        this.px(x + 12, y + 3, 1, 1, '#777');
+    }
+
+    drawYogaMat(x, y) {
+        // Mat body (rolled slightly at top)
+        this.px(x, y + 2, 14, 10, '#9b59b6');
+        this.px(x + 1, y + 3, 12, 8, '#a66bbe');
+        // Rolled edge at top
+        this.px(x, y, 14, 3, '#8e44ad');
+        this.px(x + 1, y + 1, 12, 1, '#7d3c98');
+        // Center line
+        this.px(x + 6, y + 4, 2, 6, '#c39bd3');
+        // Texture dots
+        this.px(x + 3, y + 5, 1, 1, '#c39bd3');
+        this.px(x + 10, y + 5, 1, 1, '#c39bd3');
+        this.px(x + 3, y + 9, 1, 1, '#c39bd3');
+        this.px(x + 10, y + 9, 1, 1, '#c39bd3');
+    }
+
+    drawServerRack(x, y) {
+        const T = this.T;
+        // Rack body
+        this.px(x, y, 14, T + 8, '#2c3e50');
+        this.px(x + 1, y + 1, 12, T + 6, '#34495e');
+        // Server slots with blinking LEDs
+        for (let i = 0; i < 4; i++) {
+            const sy = y + 2 + i * 5;
+            this.px(x + 2, sy, 10, 4, '#1a252f');
+            this.px(x + 3, sy + 1, 8, 2, '#22303d');
+            // LEDs
+            const on = (Math.floor(this.elapsed * 0.05 + i * 7) % 3) !== 0;
+            this.px(x + 3, sy + 1, 1, 1, on ? '#2ecc71' : '#1a5c32');
+            this.px(x + 5, sy + 1, 1, 1, '#f39c12');
+            // Ventilation slots
+            for (let j = 0; j < 3; j++) this.px(x + 7 + j * 2, sy + 1, 1, 2, '#1a252f');
+        }
+        // Top handle
+        this.px(x + 5, y, 4, 1, '#7f8c8d');
+    }
+
+    drawMicroscope(x, y) {
+        // Base
+        this.px(x + 2, y + 12, 10, 3, '#2c3e50');
+        this.px(x + 3, y + 13, 8, 1, '#34495e');
+        // Stage/platform
+        this.px(x + 4, y + 10, 6, 2, '#555');
+        // Specimen (small colored dot)
+        this.px(x + 6, y + 10, 2, 1, '#4ecdc4');
+        // Body tube (vertical)
+        this.px(x + 6, y + 3, 2, 8, '#7f8c8d');
+        this.px(x + 7, y + 4, 1, 6, '#95a5a6');
+        // Eyepiece
+        this.px(x + 5, y, 4, 3, '#2c3e50');
+        this.px(x + 6, y + 1, 2, 1, '#87ceeb');
+        // Objective lens
+        this.px(x + 5, y + 9, 4, 2, '#bdc3c7');
+        this.px(x + 6, y + 10, 2, 1, '#ecf0f1');
+        // Focus knob
+        this.px(x + 9, y + 6, 2, 3, '#e74c3c');
+        this.px(x + 3, y + 6, 2, 3, '#e74c3c');
+    }
+
+    drawFlask(x, y) {
+        // Flask body (Erlenmeyer shape)
+        this.px(x + 3, y + 5, 8, 8, '#d5f5e3');
+        this.px(x + 4, y + 4, 6, 1, '#d5f5e3');
+        this.px(x + 5, y + 3, 4, 1, '#d5f5e3');
+        // Neck
+        this.px(x + 5, y, 4, 4, '#d5f5e3');
+        this.px(x + 6, y, 2, 1, '#bdc3c7');
+        // Liquid inside (animated bubbling)
+        this.px(x + 4, y + 7, 6, 5, '#2ecc71');
+        this.px(x + 5, y + 6, 4, 1, '#27ae60');
+        // Bubbles
+        const bub = Math.floor(this.elapsed * 0.06) % 4;
+        this.px(x + 5 + bub, y + 8, 1, 1, '#82e0aa');
+        this.px(x + 7 - (bub % 3), y + 9, 1, 1, '#abebc6');
+        // Glass shine
+        this.px(x + 4, y + 5, 1, 4, 'rgba(255,255,255,0.3)');
+        // Base
+        this.px(x + 2, y + 13, 10, 2, '#95a5a6');
+    }
+
+    drawFountain(x, y) {
+        const T = this.T;
+        // Bottom basin
+        this.px(x, y + 10, 16, 5, '#7f8c8d');
+        this.px(x + 1, y + 11, 14, 3, '#95a5a6');
+        // Water in basin
+        this.px(x + 2, y + 11, 12, 2, '#3498db');
+        this.px(x + 3, y + 12, 10, 1, '#2980b9');
+        // Middle tier
+        this.px(x + 4, y + 6, 8, 5, '#bdc3c7');
+        this.px(x + 5, y + 7, 6, 3, '#95a5a6');
+        // Water in middle
+        this.px(x + 5, y + 8, 6, 1, '#3498db');
+        // Top spout
+        this.px(x + 6, y + 1, 4, 5, '#bdc3c7');
+        this.px(x + 7, y + 2, 2, 3, '#95a5a6');
+        // Animated water spray
+        const sp = Math.floor(this.elapsed * 0.08) % 3;
+        this.px(x + 7, y - 1 - sp, 2, 2, 'rgba(52,152,219,0.6)');
+        // Water droplets falling
+        const d1 = (Math.floor(this.elapsed * 0.06) % 5);
+        const d2 = (Math.floor(this.elapsed * 0.06 + 2) % 5);
+        this.px(x + 3 + d1, y + 9 + (d1 > 2 ? 1 : 0), 1, 1, '#5dade2');
+        this.px(x + 10 - d2, y + 9 + (d2 > 2 ? 1 : 0), 1, 1, '#5dade2');
+    }
+
+    drawTree(x, y) {
+        // Trunk
+        this.px(x + 5, y + 8, 4, 8, '#5d4037');
+        this.px(x + 6, y + 9, 2, 6, '#6d4c41');
+        // Roots
+        this.px(x + 3, y + 15, 3, 1, '#5d4037');
+        this.px(x + 8, y + 15, 3, 1, '#5d4037');
+        // Crown (layered circles)
+        this.px(x + 2, y + 3, 10, 6, '#27ae60');
+        this.px(x + 1, y + 4, 12, 4, '#2ecc71');
+        this.px(x + 3, y + 1, 8, 4, '#27ae60');
+        this.px(x + 4, y, 6, 3, '#229954');
+        // Highlight/depth
+        this.px(x + 3, y + 2, 4, 3, '#2ecc71');
+        this.px(x + 8, y + 5, 3, 2, '#1e8449');
+        // Fruit/flowers
+        this.px(x + 4, y + 3, 1, 1, '#e74c3c');
+        this.px(x + 9, y + 4, 1, 1, '#f39c12');
+        this.px(x + 6, y + 1, 1, 1, '#e74c3c');
     }
 
     drawMchair(x, y, dir) {
