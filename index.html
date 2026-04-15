@@ -215,6 +215,11 @@
                 📋 Contracts <span class="hud-badge" id="hudContractBadge">0</span>
             </button>
         </div>
+        <div class="hud-section">
+            <button class="hud-btn hud-btn-expand" id="btnRoomShop" title="Mở rộng văn phòng">
+                🏗️ Mở rộng
+            </button>
+        </div>
         <div class="hud-section hud-speed">
             <button class="hud-speed-btn" id="btnSpeed" title="Tốc độ game">▶ 1x</button>
             <button class="hud-speed-btn hud-pause-btn" id="btnPauseGame" title="Tạm dừng">⏸</button>
@@ -412,6 +417,20 @@
     <script src="chatbox.js"></script>
     <script src="poker.js"></script>
     <script src="poker-ui.js"></script>
+    <!-- ========== ROOM SHOP OVERLAY ========== -->
+    <div class="room-shop-overlay" id="roomShopOverlay">
+        <div class="room-shop-modal">
+            <div class="room-shop-header">
+                <h2>🏗️ Mở Rộng Văn Phòng</h2>
+                <span class="room-shop-coins" id="roomShopCoins">💰 0Ⓒ</span>
+                <button class="room-shop-close" id="closeRoomShop">✕</button>
+            </div>
+            <div class="room-shop-body">
+                <div class="room-shop-grid" id="roomShopGrid"></div>
+            </div>
+        </div>
+    </div>
+
     <script src="billiards.js"></script>
     <script src="billiards-ui.js"></script>
     <script src="app.js"></script>

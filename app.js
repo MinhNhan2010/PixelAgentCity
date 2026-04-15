@@ -147,8 +147,8 @@
     function initGameWorld(isNewGame) {
         drawLogoSmall();
 
-        // PixelEngine takes string IDs (canvas ID, minimap ID)
-        engine = new PixelEngine('officeCanvas', 'minimapCanvas');
+        // PixelEngine takes string IDs (canvas ID, minimap ID, unlockedRooms)
+        engine = new PixelEngine('officeCanvas', 'minimapCanvas', game.unlockedRooms);
 
         // AgentManager takes engine reference
         manager = new AgentManager(engine);
@@ -162,6 +162,9 @@
 
         // Connect game callbacks
         connectGameCallbacks();
+
+        // Room shop button
+        wireRoomShopBtn();
 
         // Load saved agent data OR create starter agents
         if (isNewGame) {
@@ -1054,6 +1057,82 @@
                 memEl.textContent = `Memory: ~${est} MB`;
             }
         }
+    }
+
+    // ============ ROOM SHOP ============
+    function openRoomShop() {
+        const overlay = document.getElementById('roomShopOverlay');
+        if (!overlay || !game) return;
+        overlay.classList.add('show');
+        renderRoomShop();
+    }
+
+    function closeRoomShop() {
+        const overlay = document.getElementById('roomShopOverlay');
+        if (overlay) overlay.classList.remove('show');
+    }
+
+    function renderRoomShop() {
+        const grid = document.getElementById('roomShopGrid');
+        if (!grid || !game) return;
+        grid.innerHTML = '';
+
+        game.roomCatalog.forEach(room => {
+            const isUnlocked = game.isRoomUnlocked(room.id);
+            const canUnlock = game.canUnlockRoom(room.id);
+            const levelOk = game.companyLevel >= room.level;
+
+            const card = document.createElement('div');
+            card.className = 'room-card' + (isUnlocked ? ' unlocked' : '') + (canUnlock ? ' available' : '');
+
+            card.innerHTML = `
+                <div class="room-card-icon">${room.icon}</div>
+                <div class="room-card-name">${room.name}</div>
+                <div class="room-card-desc">${room.desc}</div>
+                <div class="room-card-bonus">✨ ${room.bonus}</div>
+                <div class="room-card-size">${room.w}×${room.h} tiles</div>
+                <div class="room-card-footer">
+                    ${isUnlocked ? '<span class="room-status unlocked">✅ Đã mở</span>' :
+                      !levelOk ? `<span class="room-status locked">🔒 Cần Level ${room.level}</span>` :
+                      `<span class="room-cost">${room.cost}Ⓒ</span>
+                       <button class="room-buy-btn" data-id="${room.id}" ${canUnlock ? '' : 'disabled'}>
+                           ${game.coins >= room.cost ? '🔓 Mở khóa' : '💰 Thiếu coin'}
+                       </button>`}
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+
+        // Bind buy buttons
+        grid.querySelectorAll('.room-buy-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = parseInt(btn.dataset.id);
+                if (game.unlockRoom(id)) {
+                    engine.rebuildMap(game.unlockedRooms);
+                    // Re-assign agents to new desks
+                    if (manager) {
+                        manager.agents.forEach(a => {
+                            engine.addAgentSprite(a.id, a.name, a.role);
+                        });
+                    }
+                    updateHUD();
+                    renderRoomShop(); // refresh
+                    game.saveGame(manager);
+                }
+            });
+        });
+
+        // Update coin display in shop
+        const coinEl = document.getElementById('roomShopCoins');
+        if (coinEl) coinEl.textContent = `💰 ${game.coins}Ⓒ`;
+    }
+
+    // Wire room shop button
+    function wireRoomShopBtn() {
+        const btn = document.getElementById('btnRoomShop');
+        if (btn) btn.addEventListener('click', openRoomShop);
+        const closeBtn = document.getElementById('closeRoomShop');
+        if (closeBtn) closeBtn.addEventListener('click', closeRoomShop);
     }
 
     // ============ BOOT ============

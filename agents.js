@@ -378,10 +378,11 @@ class AgentManager {
                 }
             }
 
-            // Working agent simulation
-            if (agent.status === 'working' && agent.currentTask) {
+            // Working agent simulation (thinking agents also progress, just slower)
+            if ((agent.status === 'working' || agent.status === 'thinking') && agent.currentTask) {
                 // Speed calculation with role multiplier, pair bonus, and mentor bonus
                 let speedBase = (0.4 + agent.skillLevel * 0.2) * config.speedMul;
+                if (agent.status === 'thinking') speedBase *= 0.6; // thinking = 60% speed
                 
                 // Pair programming bonus
                 if (agent.pairedWith) {
@@ -393,9 +394,20 @@ class AgentManager {
 
                 const moodBonus = agent.mood / 100;
                 const energyBonus = agent.energy / 100;
-                const increment = speedBase * moodBonus * energyBonus + Math.random() * 1.5;
+                const increment = speedBase * moodBonus * energyBonus + Math.random() * 2.0;
                 agent.progress = Math.min(100, agent.progress + increment);
                 agent.currentTask.progress = agent.progress;
+
+                // Task completion — check IMMEDIATELY after progress increment
+                if (agent.progress >= 100) {
+                    const taskTitle = agent.currentTask?.title || 'Task';
+                    if (agent.role === 'coder' && !agent.currentTask.needsReview && Math.random() < 0.3) {
+                        agent.currentTask.needsReview = true;
+                    }
+                    this.completeTask(agent.currentTask.id);
+                    this.addLog(agent.name, `✅ Hoàn thành: ${taskTitle}`, 'success');
+                    return; // skip rest of this agent's processing
+                }
 
                 // Role-specific random activity logs
                 if (Math.random() < 0.04) {
@@ -442,18 +454,6 @@ class AgentManager {
                         moodDelta = -Math.max(1, Math.round(Math.abs(moodDelta) * office.negativeMoodMul));
                     }
                     agent.mood = Math.max(30, Math.min(100, agent.mood + moodDelta));
-                }
-
-                // Task completion
-                if (agent.progress >= 100) {
-                    const taskTitle = agent.currentTask?.title || 'Task';
-                    // Coder tasks can require review
-                    if (agent.role === 'coder' && !agent.currentTask.needsReview && Math.random() < 0.3) {
-                        agent.currentTask.needsReview = true;
-                    }
-                    this.completeTask(agent.currentTask.id);
-                    this.addLog(agent.name, `✅ Hoàn thành: ${taskTitle}`, 'success');
-                    
                 }
             } else if (agent.status === 'idle') {
                 // Idle agent behaviors — random chatter

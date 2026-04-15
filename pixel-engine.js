@@ -3,14 +3,15 @@
  * Multi-room layout, distinct floor types, detailed sprites, grid overlay.
  */
 class PixelEngine {
-    constructor(canvasId, minimapId) {
+    constructor(canvasId, minimapId, unlockedRooms) {
+        this._initUnlockedRooms = unlockedRooms || [0, 1];
         this.canvas = document.getElementById(canvasId);
         this.ctx = this.canvas.getContext('2d');
         this.mmCanvas = document.getElementById(minimapId);
         this.mmCtx = this.mmCanvas.getContext('2d');
         this.T = 16; // tile size in world pixels
         this.scale = 2.5;
-        this.MW = 32; this.MH = 24; // map tiles
+        this.MW = 20; this.MH = 20; // will be set by buildMap()
         this.camera = { x: 0, y: 0 };
         this.drag = null;
         // DeltaTime system
@@ -189,115 +190,254 @@ class PixelEngine {
             this._lastPinchDist = 0;
         });
 
-        this.buildMap();
+        this.buildMap(this._initUnlockedRooms);
         this.render(performance.now());
     }
 
     resize() { const vp = document.getElementById('officeViewport'); this.canvas.width = vp.clientWidth; this.canvas.height = vp.clientHeight; this.ctx.imageSmoothingEnabled = false; }
 
-    // === MAP BUILDING ===
-    buildMap() {
+    // === MAP BUILDING (Dynamic Room System) ===
+    buildMap(unlockedRooms) {
         const T = this.T;
+        this.furniture = [];
+        this.deskSlots = [];
+        this.interactionPoints = [];
+        this.interactionFx = [];
+        this._unlockedRooms = unlockedRooms || [0, 1];
+
+        const leftOrder = [0, 1, 6, 7, 8];
+        const rightOrder = [2, 3, 4, 5, 9, 10];
+        const leftRooms = leftOrder.filter(id => this._unlockedRooms.includes(id));
+        const rightRooms = rightOrder.filter(id => this._unlockedRooms.includes(id));
+
+        const PAD = 2, LX = 1, RX = 24, SY = 1;
+        const roomDefs = {
+            0:{w:12,h:8,f:'wood'}, 1:{w:20,h:16,f:'wood'}, 2:{w:15,h:10,f:'tile'},
+            3:{w:15,h:8,f:'carpet'}, 4:{w:15,h:7,f:'carpet'}, 5:{w:12,h:8,f:'tile'},
+            6:{w:12,h:8,f:'wood'}, 7:{w:14,h:8,f:'wood'}, 8:{w:12,h:8,f:'carpet'},
+            9:{w:14,h:8,f:'carpet'}, 10:{w:15,h:10,f:'tile'},
+        };
+
+        const placed = [];
+        let ly = SY;
+        leftRooms.forEach(id => { const d = roomDefs[id]; placed.push({id,x:LX,y:ly,w:d.w,h:d.h,f:d.f}); ly += d.h + PAD; });
+        let ry = SY;
+        rightRooms.forEach(id => { const d = roomDefs[id]; placed.push({id,x:RX,y:ry,w:d.w,h:d.h,f:d.f}); ry += d.h + PAD; });
+
+        let mx = 20, my = 20;
+        placed.forEach(r => { mx = Math.max(mx, r.x+r.w+2); my = Math.max(my, r.y+r.h+2); });
+        this.MW = mx; this.MH = my;
+
+        this.map = [];
         for (let y = 0; y < this.MH; y++) { this.map[y] = []; for (let x = 0; x < this.MW; x++) this.map[y][x] = null; }
-        const rooms = [
-            { x: 6, y: 1, w: 8, h: 6, f: 'wood' },     // meeting
-            { x: 9, y: 7, w: 2, h: 3, f: 'wood' },      // corridor meeting-office
-            { x: 1, y: 10, w: 14, h: 12, f: 'wood' },   // office
-            { x: 17, y: 1, w: 13, h: 10, f: 'tile' },   // kitchen
-            { x: 17, y: 13, w: 13, h: 9, f: 'carpet' }, // lounge
-            { x: 14, y: 4, w: 3, h: 2, f: 'wood' },     // corridor meeting-kitchen (widened)
-            { x: 14, y: 15, w: 3, h: 2, f: 'wood' },    // corridor office-lounge (widened)
-            { x: 17, y: 11, w: 3, h: 2, f: 'tile' },    // corridor kitchen-lounge
-        ];
-        rooms.forEach(r => { for (let dy = 0; dy < r.h; dy++) for (let dx = 0; dx < r.w; dx++) if (this.map[r.y + dy]) this.map[r.y + dy][r.x + dx] = r.f; });
-        this.placeFurniture();
+        placed.forEach(r => { for (let dy=0;dy<r.h;dy++) for (let dx=0;dx<r.w;dx++) if(this.map[r.y+dy]) this.map[r.y+dy][r.x+dx]=r.f; });
+
+        this._addCorridors(placed);
+        placed.forEach(r => this._furnishRoom(r));
+        this._placedRooms = placed;
     }
 
-    placeFurniture() {
-        const T = this.T, f = this.furniture;
-        // === MEETING ROOM (6,1 → 8×6) ===
-        f.push({ t: 'mtable', x: 8 * T, y: 1 * T, w: 3, h: 4 });
-        f.push({ t: 'mchair', x: 8 * T, y: 1 * T, dir: 'down' }, { t: 'mchair', x: 10 * T, y: 1 * T, dir: 'down' });
-        f.push({ t: 'mchair', x: 8 * T, y: 5 * T, dir: 'up' }, { t: 'mchair', x: 10 * T, y: 5 * T, dir: 'up' });
-        f.push({ t: 'mchair', x: 7 * T, y: 3 * T, dir: 'right' }, { t: 'mchair', x: 12 * T, y: 3 * T, dir: 'left' });
-        f.push({ t: 'whiteboard', x: 12 * T, y: 1 * T });
-        f.push({ t: 'plant', x: 6 * T, y: 1 * T }, { t: 'plant', x: 6 * T, y: 5 * T });
+    _addCorridors(rooms) {
+        const connect = (list) => {
+            const sorted = list.sort((a,b) => a.y - b.y);
+            for (let i=0;i<sorted.length-1;i++) {
+                const top=sorted[i], bot=sorted[i+1];
+                const cy = top.y+top.h, ch = bot.y-cy;
+                if (ch>0 && ch<=4) {
+                    const cx = Math.max(top.x,bot.x)+3;
+                    for (let dy=0;dy<ch;dy++) for (let dx=0;dx<4;dx++)
+                        if(this.map[cy+dy]) this.map[cy+dy][cx+dx] = top.f;
+                }
+            }
+        };
+        connect(rooms.filter(r=>r.x<18));
+        connect(rooms.filter(r=>r.x>=18));
+        // Horizontal corridor between columns
+        const L = rooms.filter(r=>r.x<18).sort((a,b)=>a.y-b.y);
+        const R = rooms.filter(r=>r.x>=18).sort((a,b)=>a.y-b.y);
+        if (L.length && R.length) {
+            const oy = Math.max(L[0].y, R[0].y)+2;
+            const x1 = L[0].x+L[0].w, x2 = R[0].x;
+            if (x2>x1) for (let dy=0;dy<3;dy++) for (let dx=x1;dx<x2;dx++)
+                if(this.map[oy+dy]) this.map[oy+dy][dx]='wood';
+        }
+    }
 
-        // === MAIN OFFICE (1,10 → 14×12) ===
-        // Desks in 2 rows of 3
-        const deskPositions = [[2, 17], [6, 17], [10, 17], [2, 13], [6, 13], [10, 13]];
-        deskPositions.forEach(([dx, dy]) => {
-            f.push({ t: 'desk', x: dx * T, y: dy * T, slotIdx: this.deskSlots.length });
-            this.deskSlots.push({ tx: dx, ty: dy, x: (dx + 0.5) * T, y: (dy + 0.5) * T, occupied: false, agentId: null });
-        });
-        // PCs on each desk
-        deskPositions.forEach(([dx, dy]) => {
-            f.push({ t: 'pc', x: (dx + 1) * T, y: (dy - 1) * T });
-        });
-        // Bookshelves along north wall
-        f.push({ t: 'bookshelf', x: 2 * T, y: 10 * T }, { t: 'bookshelf', x: 5 * T, y: 10 * T }, { t: 'bookshelf', x: 8 * T, y: 10 * T });
-        // Plants & decoration in office
-        f.push({ t: 'plant', x: 1 * T, y: 10 * T }, { t: 'plant', x: 13 * T, y: 10 * T });
-        f.push({ t: 'plant', x: 1 * T, y: 19 * T }, { t: 'plant', x: 13 * T, y: 19 * T });
-        f.push({ t: 'boxes', x: 12 * T, y: 10 * T });
+    _furnishRoom(room) {
+        const T=this.T, f=this.furniture, rx=room.x, ry=room.y;
+        switch(room.id) {
+            case 0: // Meeting
+                f.push({t:'mtable',x:(rx+2)*T,y:(ry+1)*T,w:3,h:4});
+                f.push({t:'mchair',x:(rx+2)*T,y:(ry+1)*T,dir:'down'},{t:'mchair',x:(rx+4)*T,y:(ry+1)*T,dir:'down'});
+                f.push({t:'mchair',x:(rx+2)*T,y:(ry+5)*T,dir:'up'},{t:'mchair',x:(rx+4)*T,y:(ry+5)*T,dir:'up'});
+                f.push({t:'mchair',x:(rx+1)*T,y:(ry+3)*T,dir:'right'},{t:'mchair',x:(rx+7)*T,y:(ry+3)*T,dir:'left'});
+                f.push({t:'whiteboard',x:(rx+8)*T,y:ry*T});
+                f.push({t:'plant',x:rx*T,y:ry*T},{t:'plant',x:rx*T,y:(ry+5)*T});
+                f.push({t:'clock',x:(rx+9)*T,y:ry*T});
+                break;
+            case 1: // Office — 4 columns x 3 rows = 12 desks
+                [[rx+1,ry+3],[rx+5,ry+3],[rx+9,ry+3],[rx+13,ry+3],
+                 [rx+1,ry+7],[rx+5,ry+7],[rx+9,ry+7],[rx+13,ry+7],
+                 [rx+1,ry+11],[rx+5,ry+11],[rx+9,ry+11],[rx+13,ry+11]].forEach(([dx,dy])=>{
+                    f.push({t:'desk',x:dx*T,y:dy*T,slotIdx:this.deskSlots.length});
+                    this.deskSlots.push({tx:dx,ty:dy,x:(dx+0.5)*T,y:(dy+0.5)*T,occupied:false,agentId:null});
+                    f.push({t:'pc',x:(dx+1)*T,y:(dy-1)*T});
+                });
+                f.push({t:'bookshelf',x:(rx+1)*T,y:ry*T},{t:'bookshelf',x:(rx+4)*T,y:ry*T},{t:'bookshelf',x:(rx+7)*T,y:ry*T},{t:'bookshelf',x:(rx+10)*T,y:ry*T},{t:'bookshelf',x:(rx+13)*T,y:ry*T});
+                f.push({t:'plant',x:rx*T,y:ry*T},{t:'plant',x:(rx+18)*T,y:ry*T},{t:'plant',x:rx*T,y:(ry+14)*T},{t:'plant',x:(rx+18)*T,y:(ry+14)*T});
+                f.push({t:'boxes',x:(rx+16)*T,y:ry*T},{t:'painting',x:(rx+15)*T,y:ry*T});
+                this.interactionPoints.push(
+                    {id:'bs1',type:'bookshelf',tx:rx+1,ty:ry+1,emoji:'📖',label:'Kệ sách',effect:'xp'},
+                    {id:'bs2',type:'bookshelf',tx:rx+4,ty:ry+1,emoji:'📚',label:'Kệ sách',effect:'xp'},
+                    {id:'pl1',type:'plant',tx:rx,ty:ry+1,emoji:'🌿',label:'Cây xanh',effect:'mood'},
+                );
+                break;
+            case 2: // Kitchen
+                f.push({t:'vending',x:(rx+1)*T,y:ry*T},{t:'vending',x:(rx+3)*T,y:ry*T});
+                f.push({t:'coffee',x:(rx+5)*T,y:ry*T},{t:'counter',x:(rx+7)*T,y:ry*T,w:4});
+                f.push({t:'fridge',x:(rx+12)*T,y:ry*T},{t:'fridge',x:(rx+14)*T,y:ry*T});
+                f.push({t:'clock',x:(rx+11)*T,y:ry*T});
+                f.push({t:'table_small',x:(rx+3)*T,y:(ry+4)*T},{t:'bench',x:(rx+3)*T,y:(ry+6)*T});
+                f.push({t:'table_small',x:(rx+8)*T,y:(ry+4)*T},{t:'bench',x:(rx+8)*T,y:(ry+6)*T});
+                f.push({t:'plant',x:rx*T,y:ry*T},{t:'plant',x:rx*T,y:(ry+8)*T});
+                [[rx+11,ry+5],[rx+11,ry+7]].forEach(([dx,dy])=>{
+                    f.push({t:'desk',x:dx*T,y:dy*T,slotIdx:this.deskSlots.length});
+                    this.deskSlots.push({tx:dx,ty:dy,x:(dx+0.5)*T,y:(dy+0.5)*T,occupied:false,agentId:null});
+                });
+                this.interactionPoints.push(
+                    {id:'coffee1',type:'coffee',tx:rx+5,ty:ry+1,emoji:'☕',label:'Máy cà phê',effect:'energy'},
+                    {id:'vend1',type:'vending',tx:rx+1,ty:ry+1,emoji:'🥤',label:'Máy bán nước',effect:'energy'},
+                    {id:'fridge1',type:'fridge',tx:rx+12,ty:ry+1,emoji:'🍽️',label:'Tủ lạnh',effect:'energy'},
+                );
+                break;
+            case 3: // Game Room
+                f.push({t:'poker_table',x:(rx+2)*T,y:(ry+2)*T,w:3,h:2});
+                f.push({t:'billiard_table',x:(rx+8)*T,y:(ry+2)*T,w:3,h:2});
+                f.push({t:'sofa',x:(rx+12)*T,y:(ry+1)*T},{t:'armchair',x:(rx+12)*T,y:(ry+6)*T});
+                f.push({t:'plant',x:rx*T,y:ry*T},{t:'plant',x:(rx+14)*T,y:ry*T});
+                f.push({t:'painting',x:(rx+5)*T,y:ry*T},{t:'bookshelf',x:rx*T,y:(ry+6)*T});
+                f.push({t:'table_low',x:(rx+6)*T,y:(ry+6)*T});
+                this.interactionPoints.push(
+                    {id:'poker1',type:'poker',tx:rx+3,ty:ry+3,emoji:'🃏',label:'Bàn Poker',effect:'poker'},
+                    {id:'billiard1',type:'billiard',tx:rx+9,ty:ry+3,emoji:'🎱',label:'Bàn Billiard',effect:'billiard'},
+                );
+                break;
+            case 4: // Lounge — cozy relaxation area
+                f.push({t:'sofa',x:(rx+2)*T,y:(ry+2)*T},{t:'sofa',x:(rx+8)*T,y:(ry+2)*T});
+                f.push({t:'armchair',x:(rx+1)*T,y:(ry+4)*T},{t:'armchair',x:(rx+13)*T,y:(ry+4)*T});
+                f.push({t:'table_low',x:(rx+5)*T,y:(ry+3)*T},{t:'table_low',x:(rx+11)*T,y:(ry+3)*T});
+                f.push({t:'rug',x:(rx+4)*T,y:(ry+2)*T},{t:'rug',x:(rx+10)*T,y:(ry+2)*T});
+                f.push({t:'lamp',x:(rx+1)*T,y:ry*T},{t:'lamp',x:(rx+13)*T,y:ry*T});
+                f.push({t:'bookshelf',x:(rx+3)*T,y:ry*T},{t:'bookshelf',x:(rx+6)*T,y:ry*T});
+                f.push({t:'painting',x:(rx+9)*T,y:ry*T},{t:'painting',x:(rx+11)*T,y:ry*T});
+                f.push({t:'plant',x:rx*T,y:ry*T},{t:'plant',x:(rx+14)*T,y:ry*T});
+                f.push({t:'pillow',x:(rx+3)*T,y:(ry+2)*T},{t:'pillow',x:(rx+9)*T,y:(ry+2)*T});
+                f.push({t:'coffee',x:(rx+7)*T,y:(ry+5)*T});
+                this.interactionPoints.push(
+                    {id:'sofa1',type:'sofa',tx:rx+3,ty:ry+3,emoji:'😴',label:'Sofa',effect:'rest'},
+                    {id:'sofa2',type:'sofa',tx:rx+9,ty:ry+3,emoji:'😴',label:'Sofa',effect:'rest'},
+                    {id:'lcoffee',type:'coffee',tx:rx+7,ty:ry+5,emoji:'☕',label:'Cà phê',effect:'energy'},
+                );
+                break;
+            case 5: // Server Room — tech equipment
+                for(let i=0;i<4;i++) f.push({t:'cabinet',x:(rx+1+i*3)*T,y:ry*T});
+                for(let i=0;i<4;i++) f.push({t:'cabinet',x:(rx+1+i*3)*T,y:(ry+6)*T});
+                f.push({t:'lamp',x:(rx+2)*T,y:(ry+3)*T},{t:'lamp',x:(rx+5)*T,y:(ry+3)*T},{t:'lamp',x:(rx+8)*T,y:(ry+3)*T});
+                f.push({t:'clock',x:(rx+11)*T,y:ry*T});
+                [[rx+1,ry+3],[rx+5,ry+3],[rx+9,ry+3]].forEach(([dx,dy])=>{
+                    f.push({t:'desk',x:dx*T,y:dy*T,slotIdx:this.deskSlots.length});
+                    this.deskSlots.push({tx:dx,ty:dy,x:(dx+0.5)*T,y:(dy+0.5)*T,occupied:false,agentId:null});
+                    f.push({t:'pc',x:(dx+1)*T,y:(dy-1)*T});
+                });
+                f.push({t:'plant',x:rx*T,y:ry*T});
+                this.interactionPoints.push(
+                    {id:'srv1',type:'cabinet',tx:rx+1,ty:ry+1,emoji:'🖥️',label:'Server Rack',effect:'productivity'},
+                    {id:'srv2',type:'cabinet',tx:rx+4,ty:ry+1,emoji:'🖥️',label:'Server Rack',effect:'productivity'},
+                );
+                break;
+            case 6: // Gym — workout area
+                f.push({t:'bench',x:(rx+1)*T,y:(ry+2)*T},{t:'bench',x:(rx+4)*T,y:(ry+2)*T},{t:'bench',x:(rx+7)*T,y:(ry+2)*T});
+                f.push({t:'bench',x:(rx+1)*T,y:(ry+5)*T},{t:'bench',x:(rx+4)*T,y:(ry+5)*T},{t:'bench',x:(rx+7)*T,y:(ry+5)*T});
+                f.push({t:'rug',x:(rx+2)*T,y:(ry+3)*T},{t:'rug',x:(rx+5)*T,y:(ry+3)*T},{t:'rug',x:(rx+8)*T,y:(ry+3)*T});
+                f.push({t:'vending',x:(rx+10)*T,y:ry*T},{t:'vending',x:(rx+10)*T,y:(ry+4)*T});
+                f.push({t:'painting',x:(rx+6)*T,y:ry*T},{t:'clock',x:(rx+8)*T,y:ry*T});
+                f.push({t:'lamp',x:(rx+3)*T,y:ry*T},{t:'lamp',x:(rx+9)*T,y:ry*T});
+                f.push({t:'plant',x:rx*T,y:ry*T},{t:'plant',x:(rx+11)*T,y:ry*T});
+                this.interactionPoints.push(
+                    {id:'gym1',type:'vending',tx:rx+10,ty:ry+1,emoji:'💪',label:'Tập gym',effect:'energy'},
+                    {id:'gym2',type:'vending',tx:rx+10,ty:ry+5,emoji:'🥤',label:'Nước uống',effect:'energy'},
+                );
+                break;
+            case 7: // Library — study area
+                for(let i=0;i<6;i++) f.push({t:'bookshelf',x:(rx+1+i*2)*T,y:ry*T});
+                f.push({t:'table_small',x:(rx+2)*T,y:(ry+3)*T},{t:'table_small',x:(rx+7)*T,y:(ry+3)*T});
+                f.push({t:'armchair',x:(rx+2)*T,y:(ry+5)*T},{t:'armchair',x:(rx+7)*T,y:(ry+5)*T});
+                f.push({t:'lamp',x:(rx+3)*T,y:(ry+3)*T},{t:'lamp',x:(rx+8)*T,y:(ry+3)*T});
+                f.push({t:'rug',x:(rx+2)*T,y:(ry+4)*T},{t:'rug',x:(rx+7)*T,y:(ry+4)*T});
+                f.push({t:'plant',x:rx*T,y:ry*T},{t:'plant',x:(rx+13)*T,y:ry*T});
+                [[rx+2,ry+6],[rx+7,ry+6],[rx+11,ry+3]].forEach(([dx,dy])=>{
+                    f.push({t:'desk',x:dx*T,y:dy*T,slotIdx:this.deskSlots.length});
+                    this.deskSlots.push({tx:dx,ty:dy,x:(dx+0.5)*T,y:(dy+0.5)*T,occupied:false,agentId:null});
+                    f.push({t:'pc',x:(dx+1)*T,y:(dy-1)*T});
+                });
+                this.interactionPoints.push(
+                    {id:'lib1',type:'bookshelf',tx:rx+1,ty:ry+1,emoji:'📚',label:'Thư viện',effect:'xp'},
+                    {id:'lib2',type:'bookshelf',tx:rx+5,ty:ry+1,emoji:'📖',label:'Đọc sách',effect:'xp'},
+                );
+                break;
+            case 8: // Garden — outdoor zen
+                for(let i=0;i<5;i++) f.push({t:'plant',x:(rx+1+i*2)*T,y:ry*T});
+                for(let i=0;i<4;i++) f.push({t:'cactus',x:(rx+2+i*2.5)*T,y:(ry+6)*T});
+                for(let i=0;i<3;i++) f.push({t:'plant',x:(rx+1+i*3)*T,y:(ry+3)*T});
+                f.push({t:'bench',x:(rx+2)*T,y:(ry+4)*T},{t:'bench',x:(rx+7)*T,y:(ry+4)*T});
+                f.push({t:'table_low',x:(rx+4)*T,y:(ry+2)*T},{t:'table_low',x:(rx+9)*T,y:(ry+2)*T});
+                f.push({t:'lamp',x:(rx+11)*T,y:ry*T});
+                f.push({t:'rug',x:(rx+5)*T,y:(ry+4)*T});
+                this.interactionPoints.push(
+                    {id:'garden1',type:'plant',tx:rx+2,ty:ry+1,emoji:'🌿',label:'Vườn cây',effect:'mood'},
+                    {id:'garden2',type:'plant',tx:rx+6,ty:ry+1,emoji:'🌺',label:'Hoa',effect:'mood'},
+                );
+                break;
+            case 9: // VIP Lounge — luxury
+                f.push({t:'sofa',x:(rx+2)*T,y:(ry+2)*T},{t:'sofa',x:(rx+8)*T,y:(ry+2)*T});
+                f.push({t:'armchair',x:(rx+1)*T,y:(ry+4)*T},{t:'armchair',x:(rx+12)*T,y:(ry+4)*T});
+                f.push({t:'bed_single',x:(rx+5)*T,y:(ry+5)*T},{t:'bed_single',x:(rx+9)*T,y:(ry+5)*T});
+                f.push({t:'table_low',x:(rx+5)*T,y:(ry+2)*T},{t:'table_low',x:(rx+10)*T,y:(ry+2)*T});
+                f.push({t:'rug',x:(rx+3)*T,y:(ry+3)*T},{t:'rug',x:(rx+9)*T,y:(ry+3)*T});
+                f.push({t:'painting',x:(rx+4)*T,y:ry*T},{t:'painting',x:(rx+8)*T,y:ry*T},{t:'pictureframe',x:(rx+6)*T,y:ry*T});
+                f.push({t:'lamp',x:(rx+1)*T,y:ry*T},{t:'lamp',x:(rx+13)*T,y:ry*T});
+                f.push({t:'plant',x:rx*T,y:ry*T},{t:'plant',x:(rx+13)*T,y:(ry+6)*T});
+                f.push({t:'vending',x:(rx+12)*T,y:(ry+6)*T},{t:'coffee',x:(rx+12)*T,y:ry*T});
+                f.push({t:'pillow',x:(rx+3)*T,y:(ry+2)*T},{t:'pillow',x:(rx+9)*T,y:(ry+2)*T});
+                this.interactionPoints.push(
+                    {id:'vip1',type:'sofa',tx:rx+3,ty:ry+3,emoji:'👑',label:'VIP Sofa',effect:'rest'},
+                    {id:'vip2',type:'coffee',tx:rx+12,ty:ry+1,emoji:'☕',label:'VIP Coffee',effect:'energy'},
+                );
+                break;
+            case 10: // R&D Lab — research station
+                [[rx+1,ry+2],[rx+5,ry+2],[rx+9,ry+2],[rx+1,ry+6],[rx+5,ry+6],[rx+9,ry+6]].forEach(([dx,dy])=>{
+                    f.push({t:'desk',x:dx*T,y:dy*T,slotIdx:this.deskSlots.length});
+                    this.deskSlots.push({tx:dx,ty:dy,x:(dx+0.5)*T,y:(dy+0.5)*T,occupied:false,agentId:null});
+                    f.push({t:'pc',x:(dx+1)*T,y:(dy-1)*T});
+                });
+                f.push({t:'bookshelf',x:(rx+13)*T,y:ry*T},{t:'bookshelf',x:(rx+13)*T,y:(ry+4)*T});
+                f.push({t:'whiteboard',x:(rx+12)*T,y:(ry+2)*T});
+                f.push({t:'cabinet',x:(rx+13)*T,y:(ry+8)*T},{t:'cabinet',x:(rx+12)*T,y:(ry+8)*T});
+                f.push({t:'lamp',x:(rx+3)*T,y:ry*T},{t:'lamp',x:(rx+7)*T,y:ry*T},{t:'lamp',x:(rx+11)*T,y:ry*T});
+                f.push({t:'plant',x:rx*T,y:ry*T},{t:'plant',x:(rx+14)*T,y:ry*T});
+                f.push({t:'clock',x:(rx+6)*T,y:ry*T});
+                this.interactionPoints.push(
+                    {id:'lab1',type:'bookshelf',tx:rx+13,ty:ry+1,emoji:'🔬',label:'R&D Lab',effect:'xp'},
+                    {id:'lab2',type:'cabinet',tx:rx+13,ty:ry+5,emoji:'🧪',label:'Thiết bị',effect:'xp'},
+                );
+                break;
+        }
+    }
 
-        // === KITCHEN (17,1 → 13×10) ===
-        f.push({ t: 'vending', x: 18 * T, y: 1 * T }, { t: 'vending', x: 20 * T, y: 1 * T });
-        f.push({ t: 'coffee', x: 22 * T, y: 1 * T });
-        f.push({ t: 'clock', x: 24 * T, y: 1 * T });
-        f.push({ t: 'counter', x: 25 * T, y: 1 * T, w: 4 });
-        f.push({ t: 'fridge', x: 29 * T, y: 1 * T });
-        // Kitchen table & bench
-        f.push({ t: 'table_small', x: 21 * T, y: 5 * T });
-        f.push({ t: 'bench', x: 21 * T, y: 7 * T });
-        f.push({ t: 'plant', x: 17 * T, y: 1 * T }, { t: 'plant', x: 17 * T, y: 9 * T });
-        // Kitchen desks (2)
-        const kitchenDesks = [[24, 6], [27, 6]];
-        kitchenDesks.forEach(([dx, dy]) => {
-            f.push({ t: 'desk', x: dx * T, y: dy * T, slotIdx: this.deskSlots.length });
-            this.deskSlots.push({ tx: dx, ty: dy, x: (dx + 0.5) * T, y: (dy + 0.5) * T, occupied: false, agentId: null });
-        });
-
-        // === LOUNGE (17,13 → 13×9) ===
-        f.push({ t: 'sofa', x: 24 * T, y: 18 * T });
-        f.push({ t: 'armchair', x: 22 * T, y: 18 * T });
-        f.push({ t: 'table_low', x: 24 * T, y: 17 * T });
-        f.push({ t: 'bookshelf', x: 28 * T, y: 13 * T });
-        f.push({ t: 'painting', x: 20 * T, y: 13 * T });
-        f.push({ t: 'plant', x: 17 * T, y: 13 * T }, { t: 'plant', x: 29 * T, y: 20 * T });
-        // Poker table in lounge
-        f.push({ t: 'poker_table', x: 24 * T, y: 14 * T, w: 3, h: 2 });
-        // Billiard table in lounge
-        f.push({ t: 'billiard_table', x: 21 * T, y: 16 * T, w: 3, h: 2 });
-        // Lounge desks (3)
-        const loungeDesks = [[18, 17], [18, 14]];
-        loungeDesks.forEach(([dx, dy]) => {
-            f.push({ t: 'desk', x: dx * T, y: dy * T, slotIdx: this.deskSlots.length });
-            this.deskSlots.push({ tx: dx, ty: dy, x: (dx + 0.5) * T, y: (dy + 0.5) * T, occupied: false, agentId: null });
-        });
-
-        // === INTERACTION POINTS ===
-        this.interactionPoints = [
-            { id: 'coffee1', type: 'coffee', tx: 22, ty: 2, emoji: '☕', label: 'Máy cà phê', effect: 'energy' },
-            { id: 'vending1', type: 'vending', tx: 18, ty: 2, emoji: '🥤', label: 'Máy bán nước', effect: 'energy' },
-            { id: 'vending2', type: 'vending', tx: 20, ty: 2, emoji: '🍫', label: 'Máy bán đồ ăn', effect: 'mood' },
-            { id: 'fridge1', type: 'fridge', tx: 29, ty: 2, emoji: '🍽️', label: 'Tủ lạnh', effect: 'energy' },
-            { id: 'sofa1', type: 'sofa', tx: 24, ty: 19, emoji: '😴', label: 'Sofa', effect: 'rest' },
-            { id: 'bookshelf1', type: 'bookshelf', tx: 2, ty: 11, emoji: '📖', label: 'Kệ sách', effect: 'xp' },
-            { id: 'bookshelf2', type: 'bookshelf', tx: 5, ty: 11, emoji: '📚', label: 'Kệ sách', effect: 'xp' },
-            { id: 'bookshelf3', type: 'bookshelf', tx: 8, ty: 11, emoji: '🧠', label: 'Kệ sách', effect: 'xp' },
-            { id: 'bookshelfL', type: 'bookshelf', tx: 28, ty: 14, emoji: '📖', label: 'Kệ sách lounge', effect: 'xp' },
-            { id: 'plant1', type: 'plant', tx: 1, ty: 11, emoji: '🌿', label: 'Cây xanh', effect: 'mood' },
-            { id: 'plant2', type: 'plant', tx: 13, ty: 11, emoji: '🌱', label: 'Cây xanh', effect: 'mood' },
-            { id: 'painting1', type: 'painting', tx: 20, ty: 14, emoji: '🎨', label: 'Tranh', effect: 'mood' },
-            { id: 'paintingL', type: 'painting', tx: 20, ty: 14, emoji: '🖼️', label: 'Tranh lounge', effect: 'mood' },
-            { id: 'counter1', type: 'counter', tx: 26, ty: 2, emoji: '🍳', label: 'Quầy bếp', effect: 'energy' },
-            { id: 'poker1', type: 'poker', tx: 25, ty: 15, emoji: '🃏', label: 'Bàn Poker', effect: 'poker' },
-            { id: 'billiard1', type: 'billiard', tx: 22, ty: 17, emoji: '🎱', label: 'Bàn Billiard', effect: 'billiard' },
-        ];
-
-        // Active interaction animations
-        this.interactionFx = []; // { x, y, emoji, life, maxLife }
+    rebuildMap(unlockedRooms) {
+        this.furniture = [];
+        this.deskSlots = [];
+        this.buildMap(unlockedRooms);
     }
 
     // === DRAWING HELPERS ===

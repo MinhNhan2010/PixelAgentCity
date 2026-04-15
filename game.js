@@ -67,7 +67,7 @@ class GameState {
         // Time
         this.day = 1;
         this.dayTimer = 0;        // 0 → DAY_LENGTH
-        this.DAY_LENGTH = 60;     // seconds per day
+        this.DAY_LENGTH = 120;    // seconds per day (2 minutes)
         this.timeOfDay = 'morning'; // morning, afternoon, evening, night
         this.gameSpeed = 1;       // 1x, 2x, 3x
         this.isPaused = false;
@@ -95,6 +95,24 @@ class GameState {
         // Coin animations queue
         this.coinPopups = []; // { amount, x, y, life }
 
+        // === ROOM UNLOCK SYSTEM ===
+        this.unlockedRooms = [0, 1]; // Start with Meeting + Office
+
+        // Room catalog — positions auto-calculated by pixel-engine
+        this.roomCatalog = [
+            { id: 0, name: 'Phòng Họp',        icon: '📋', cost: 0,    level: 1, w: 10, h: 7,  floor: 'wood',   desc: 'Họp nhóm, brainstorm',             bonus: 'Meeting boost' },
+            { id: 1, name: 'Văn Phòng Chính',   icon: '🖥️', cost: 0,    level: 1, w: 16, h: 14, floor: 'wood',   desc: '9 bàn làm việc + máy tính',        bonus: '9 desks' },
+            { id: 2, name: 'Nhà Bếp',           icon: '🍳', cost: 200,  level: 1, w: 15, h: 10, floor: 'tile',   desc: 'Máy cà phê, máy bán hàng, tủ lạnh', bonus: 'Energy regen' },
+            { id: 3, name: 'Phòng Game',         icon: '🎱', cost: 500,  level: 2, w: 15, h: 8,  floor: 'carpet', desc: 'Poker + Billiard',                  bonus: 'Poker & Billiard' },
+            { id: 4, name: 'Lounge',             icon: '🛋️', cost: 400,  level: 2, w: 15, h: 7,  floor: 'carpet', desc: 'Sofa, nghỉ ngơi, thư giãn',        bonus: 'Rest + Mood' },
+            { id: 5, name: 'Server Room',        icon: '🖧', cost: 800,  level: 3, w: 12, h: 8,  floor: 'tile',   desc: 'Tăng tốc hoàn thành task',         bonus: '+20% productivity' },
+            { id: 6, name: 'Phòng Gym',          icon: '💪', cost: 600,  level: 3, w: 12, h: 8,  floor: 'wood',   desc: 'Gym tập thể dục cho agent',        bonus: 'Energy boost' },
+            { id: 7, name: 'Thư Viện',           icon: '📚', cost: 700,  level: 4, w: 14, h: 8,  floor: 'wood',   desc: 'Kệ sách lớn, học tập nâng cấp',   bonus: '+XP bonus' },
+            { id: 8, name: 'Vườn Cây',           icon: '🌿', cost: 500,  level: 4, w: 12, h: 8,  floor: 'carpet', desc: 'Khu vườn xanh thoáng đãng',        bonus: 'Mood boost' },
+            { id: 9, name: 'VIP Lounge',         icon: '👑', cost: 1200, level: 5, w: 14, h: 8,  floor: 'carpet', desc: 'Phòng nghỉ cao cấp, spa',          bonus: 'Premium rest' },
+            { id: 10, name: 'R&D Lab',           icon: '🔬', cost: 1500, level: 6, w: 15, h: 10, floor: 'tile',   desc: 'Phòng nghiên cứu công nghệ mới',  bonus: 'Research boost' },
+        ];
+
         // Sound
         this.sfx = new SoundFX();
 
@@ -106,6 +124,7 @@ class GameState {
         this.onLevelUp = null;
         this.onGameOver = null;
         this.onNewContracts = null;
+        this.onRoomUnlocked = null;
 
         // === CONFIG ===
         this.hiringCosts = {
@@ -143,25 +162,25 @@ class GameState {
         // Contract templates
         this.contractTemplates = [
             // Easy
-            { title: 'Landing Page', desc: 'Thiết kế landing page cho startup', reward: [60, 90], deadline: [2, 3], diff: 'easy', roles: ['coder'], tasks: 1 },
-            { title: 'Bug Fixes', desc: 'Sửa 5 bug trong production', reward: [50, 80], deadline: [2, 3], diff: 'easy', roles: ['coder', 'tester'], tasks: 1 },
-            { title: 'Logo Design', desc: 'Thiết kế logo cho thương hiệu', reward: [70, 100], deadline: [2, 4], diff: 'easy', roles: ['designer'], tasks: 1 },
-            { title: 'Unit Tests', desc: 'Viết unit tests cho API', reward: [55, 85], deadline: [2, 3], diff: 'easy', roles: ['tester'], tasks: 1 },
-            { title: 'Docs Update', desc: 'Cập nhật technical documentation', reward: [40, 60], deadline: [1, 2], diff: 'easy', roles: ['writer'], tasks: 1 },
+            { title: 'Landing Page', desc: 'Thiết kế landing page cho startup', reward: [90, 140], deadline: [2, 3], diff: 'easy', roles: ['coder'], tasks: 2 },
+            { title: 'Bug Fixes', desc: 'Sửa 5 bug trong production', reward: [80, 120], deadline: [2, 3], diff: 'easy', roles: ['coder', 'tester'], tasks: 2 },
+            { title: 'Logo Design', desc: 'Thiết kế logo cho thương hiệu', reward: [100, 150], deadline: [2, 4], diff: 'easy', roles: ['designer'], tasks: 2 },
+            { title: 'Unit Tests', desc: 'Viết unit tests cho API', reward: [85, 130], deadline: [2, 3], diff: 'easy', roles: ['tester'], tasks: 2 },
+            { title: 'Docs Update', desc: 'Cập nhật technical documentation', reward: [60, 100], deadline: [1, 2], diff: 'easy', roles: ['writer'], tasks: 2 },
             // Medium
-            { title: 'REST API v2', desc: 'Phát triển REST API mới', reward: [120, 180], deadline: [3, 5], diff: 'medium', roles: ['coder', 'backend'], tasks: 2 },
-            { title: 'Mobile App MVP', desc: 'Xây dựng app mobile MVP', reward: [150, 220], deadline: [4, 6], diff: 'medium', roles: ['mobile', 'designer'], tasks: 2 },
-            { title: 'Dashboard UI', desc: 'Thiết kế dashboard analytics', reward: [130, 190], deadline: [3, 5], diff: 'medium', roles: ['designer', 'coder'], tasks: 2 },
-            { title: 'CI/CD Pipeline', desc: 'Setup CI/CD hoàn chỉnh', reward: [140, 200], deadline: [3, 4], diff: 'medium', roles: ['devops'], tasks: 2 },
-            { title: 'Security Audit', desc: 'Kiểm tra bảo mật toàn hệ thống', reward: [160, 230], deadline: [3, 5], diff: 'medium', roles: ['security', 'tester'], tasks: 2 },
-            { title: 'Data Pipeline', desc: 'Xây dựng ETL data pipeline', reward: [140, 210], deadline: [3, 5], diff: 'medium', roles: ['analyst', 'backend'], tasks: 2 },
+            { title: 'REST API v2', desc: 'Phát triển REST API mới', reward: [180, 280], deadline: [3, 5], diff: 'medium', roles: ['coder', 'backend'], tasks: 4 },
+            { title: 'Mobile App MVP', desc: 'Xây dựng app mobile MVP', reward: [220, 340], deadline: [4, 6], diff: 'medium', roles: ['mobile', 'designer'], tasks: 4 },
+            { title: 'Dashboard UI', desc: 'Thiết kế dashboard analytics', reward: [200, 300], deadline: [3, 5], diff: 'medium', roles: ['designer', 'coder'], tasks: 4 },
+            { title: 'CI/CD Pipeline', desc: 'Setup CI/CD hoàn chỉnh', reward: [210, 310], deadline: [3, 4], diff: 'medium', roles: ['devops'], tasks: 4 },
+            { title: 'Security Audit', desc: 'Kiểm tra bảo mật toàn hệ thống', reward: [240, 350], deadline: [3, 5], diff: 'medium', roles: ['security', 'tester'], tasks: 4 },
+            { title: 'Data Pipeline', desc: 'Xây dựng ETL data pipeline', reward: [210, 320], deadline: [3, 5], diff: 'medium', roles: ['analyst', 'backend'], tasks: 4 },
             // Hard (unlock level 6)
-            { title: 'E-Commerce Platform', desc: 'Xây hệ thống e-commerce full-stack', reward: [300, 450], deadline: [5, 8], diff: 'hard', roles: ['coder', 'backend', 'designer'], tasks: 4 },
-            { title: 'AI Chatbot', desc: 'Phát triển chatbot AI tích hợp NLP', reward: [350, 500], deadline: [5, 7], diff: 'hard', roles: ['researcher', 'coder', 'backend'], tasks: 4 },
-            { title: 'Cross-Platform App', desc: 'App chạy trên cả iOS và Android', reward: [320, 480], deadline: [6, 9], diff: 'hard', roles: ['mobile', 'designer', 'tester'], tasks: 4 },
+            { title: 'E-Commerce Platform', desc: 'Xây hệ thống e-commerce full-stack', reward: [450, 680], deadline: [5, 8], diff: 'hard', roles: ['coder', 'backend', 'designer'], tasks: 8 },
+            { title: 'AI Chatbot', desc: 'Phát triển chatbot AI tích hợp NLP', reward: [520, 750], deadline: [5, 7], diff: 'hard', roles: ['researcher', 'coder', 'backend'], tasks: 8 },
+            { title: 'Cross-Platform App', desc: 'App chạy trên cả iOS và Android', reward: [480, 720], deadline: [6, 9], diff: 'hard', roles: ['mobile', 'designer', 'tester'], tasks: 8 },
             // Epic (unlock level 7)
-            { title: 'Enterprise SaaS', desc: 'Hệ thống SaaS Enterprise đầy đủ', reward: [600, 900], deadline: [8, 12], diff: 'epic', roles: ['coder', 'backend', 'devops', 'security', 'designer'], tasks: 6 },
-            { title: 'AI Research Project', desc: 'Dự án nghiên cứu AI quy mô lớn', reward: [700, 1000], deadline: [8, 12], diff: 'epic', roles: ['researcher', 'analyst', 'coder', 'writer'], tasks: 6 },
+            { title: 'Enterprise SaaS', desc: 'Hệ thống SaaS Enterprise đầy đủ', reward: [900, 1400], deadline: [8, 12], diff: 'epic', roles: ['coder', 'backend', 'devops', 'security', 'designer'], tasks: 12 },
+            { title: 'AI Research Project', desc: 'Dự án nghiên cứu AI quy mô lớn', reward: [1000, 1500], deadline: [8, 12], diff: 'epic', roles: ['researcher', 'analyst', 'coder', 'writer'], tasks: 12 },
         ];
 
         // Furniture costs for shop
@@ -195,6 +214,40 @@ class GameState {
         if (this.onCoinsChange) this.onCoinsChange(-amount, reason);
         this.sfx.spend();
         return true;
+    }
+
+    // ============ ROOM UNLOCK ============
+    isRoomUnlocked(roomId) {
+        return this.unlockedRooms.includes(roomId);
+    }
+
+    canUnlockRoom(roomId) {
+        const room = this.roomCatalog.find(r => r.id === roomId);
+        if (!room) return false;
+        if (this.isRoomUnlocked(roomId)) return false;
+        if (this.companyLevel < room.level) return false;
+        if (this.coins < room.cost) return false;
+        return true;
+    }
+
+    unlockRoom(roomId) {
+        const room = this.roomCatalog.find(r => r.id === roomId);
+        if (!room || !this.canUnlockRoom(roomId)) return false;
+        if (room.cost > 0) {
+            this.spend(room.cost, `Mở khóa phòng: ${room.name}`);
+        }
+        this.unlockedRooms.push(roomId);
+        this.sfx.levelUp();
+        if (this.onRoomUnlocked) this.onRoomUnlocked(room);
+        return true;
+    }
+
+    getAvailableRooms() {
+        return this.roomCatalog.filter(r => !this.isRoomUnlocked(r.id));
+    }
+
+    getUnlockedRoomData() {
+        return this.roomCatalog.filter(r => this.isRoomUnlocked(r.id));
     }
 
     getDailySalary(agents) {
@@ -395,9 +448,9 @@ class GameState {
                 return contract;
             }
         }
-        // Even uncontracted tasks earn a small bonus
-        this.earn(10, 'Task bonus');
-        this.addCompanyXP(3);
+        // Even uncontracted tasks earn a bonus
+        this.earn(25, 'Task bonus');
+        this.addCompanyXP(8);
         return null;
     }
 
@@ -417,8 +470,8 @@ class GameState {
         this.reputation = Math.min(5, this.reputation + repGain);
 
         // XP
-        const xpMap = { easy: 15, medium: 30, hard: 60, epic: 120 };
-        this.addCompanyXP(xpMap[contract.difficulty] || 15);
+        const xpMap = { easy: 30, medium: 60, hard: 120, epic: 250 };
+        this.addCompanyXP(xpMap[contract.difficulty] || 30);
 
         this.sfx.taskComplete();
         if (this.onContractComplete) this.onContractComplete(contract, bonus);
@@ -503,6 +556,7 @@ class GameState {
                 nextContractId: this.nextContractId, gameSpeed: this.gameSpeed,
                 availableContracts: this.availableContracts,
                 activeContracts: this.activeContracts,
+                unlockedRooms: this.unlockedRooms,
                 savedAt: new Date().toISOString(),
             };
             localStorage.setItem('pixelAgentGameState', JSON.stringify(data));
@@ -527,6 +581,7 @@ class GameState {
                 nextContractId: d.nextContractId ?? 1, gameSpeed: d.gameSpeed ?? 1,
                 availableContracts: d.availableContracts ?? [],
                 activeContracts: d.activeContracts ?? [],
+                unlockedRooms: d.unlockedRooms ?? [0, 1],
             });
             return true;
         } catch (e) { console.warn('Failed to load game:', e); return false; }
