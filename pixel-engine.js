@@ -196,7 +196,7 @@ class PixelEngine {
 
     resize() { const vp = document.getElementById('officeViewport'); this.canvas.width = vp.clientWidth; this.canvas.height = vp.clientHeight; this.ctx.imageSmoothingEnabled = false; }
 
-    // === MAP BUILDING (Dynamic Room System) ===
+    // === MAP BUILDING (Zone-Based Layout) ===
     buildMap(unlockedRooms) {
         const T = this.T;
         this.furniture = [];
@@ -205,40 +205,131 @@ class PixelEngine {
         this.interactionFx = [];
         this._unlockedRooms = unlockedRooms || [0, 1];
 
-        const leftOrder = [0, 1, 6, 7, 8, 12, 13];
-        const rightOrder = [2, 3, 4, 5, 9, 10, 11];
-        const leftRooms = leftOrder.filter(id => this._unlockedRooms.includes(id));
-        const rightRooms = rightOrder.filter(id => this._unlockedRooms.includes(id));
+        // Separate indoor rooms from special zones
+        const indoorLeft  = [0, 1, 6, 7, 8].filter(id => this._unlockedRooms.includes(id));
+        const indoorRight = [2, 3, 4, 5, 9, 10].filter(id => this._unlockedRooms.includes(id));
+        const hasRooftop  = this._unlockedRooms.includes(13);
+        const hasElevator = this._unlockedRooms.includes(12);
+        const hasOutdoor  = this._unlockedRooms.includes(11);
 
-        const PAD = 2, LX = 1, RX = 24, SY = 1;
+        const PAD = 2, LX = 1, RX = 24;
+        const ZONE_GAP = 5;
         const roomDefs = {
             0:{w:12,h:8,f:'wood'}, 1:{w:20,h:16,f:'wood'}, 2:{w:15,h:10,f:'tile'},
             3:{w:18,h:12,f:'carpet'}, 4:{w:15,h:7,f:'carpet'}, 5:{w:12,h:8,f:'tile'},
             6:{w:12,h:8,f:'wood'}, 7:{w:14,h:8,f:'wood'}, 8:{w:12,h:8,f:'carpet'},
             9:{w:14,h:8,f:'carpet'}, 10:{w:15,h:10,f:'tile'},
-            11:{w:18,h:12,f:'grass'}, 12:{w:6,h:6,f:'metal'}, 13:{w:18,h:10,f:'concrete'},
+            11:{w:18,h:12,f:'grass'}, 12:{w:6,h:6,f:'metal'}, 13:{w:20,h:10,f:'concrete'},
         };
 
         const placed = [];
-        let ly = SY;
-        leftRooms.forEach(id => { const d = roomDefs[id]; placed.push({id,x:LX,y:ly,w:d.w,h:d.h,f:d.f}); ly += d.h + PAD; });
-        let ry = SY;
-        rightRooms.forEach(id => { const d = roomDefs[id]; placed.push({id,x:RX,y:ry,w:d.w,h:d.h,f:d.f}); ry += d.h + PAD; });
+        let cursorY = 1;
+        this._zoneRanges = {};
 
+        // ═══ ZONE A: ROOFTOP ═══
+        if (hasRooftop) {
+            const rd = roomDefs[13];
+            placed.push({id:13, x:LX+2, y:cursorY, w:rd.w, h:rd.h, f:rd.f, zone:'rooftop'});
+            this._zoneRanges.rooftop = { y: cursorY, h: rd.h, x: LX+2, w: rd.w };
+            cursorY += rd.h + ZONE_GAP;
+        }
+
+        // ═══ ZONE B: ELEVATOR ═══
+        if (hasElevator) {
+            const ed = roomDefs[12];
+            placed.push({id:12, x:LX+7, y:cursorY, w:ed.w, h:ed.h, f:ed.f, zone:'elevator'});
+            this._zoneRanges.elevator = { y: cursorY, h: ed.h, x: LX+7, w: ed.w };
+            cursorY += ed.h + PAD;
+        }
+
+        // ═══ ZONE C: INDOOR BUILDING ═══
+        const buildingStartY = cursorY;
+        let ly = buildingStartY;
+        indoorLeft.forEach(id => {
+            const d = roomDefs[id];
+            placed.push({id, x:LX, y:ly, w:d.w, h:d.h, f:d.f, zone:'indoor'});
+            ly += d.h + PAD;
+        });
+        let ry = buildingStartY;
+        indoorRight.forEach(id => {
+            const d = roomDefs[id];
+            placed.push({id, x:RX, y:ry, w:d.w, h:d.h, f:d.f, zone:'indoor'});
+            ry += d.h + PAD;
+        });
+        const buildingEndY = Math.max(ly, ry);
+        if (indoorLeft.length || indoorRight.length) {
+            this._zoneRanges.indoor = { y: buildingStartY, h: buildingEndY - buildingStartY, x: LX, w: RX + 18 - LX };
+        }
+
+        // ═══ ZONE D: OUTDOOR ═══
+        if (hasOutdoor) {
+            const od = roomDefs[11];
+            const outdoorY = buildingEndY + ZONE_GAP;
+            placed.push({id:11, x:LX+1, y:outdoorY, w:od.w, h:od.h, f:od.f, zone:'outdoor'});
+            this._zoneRanges.outdoor = { y: outdoorY, h: od.h, x: LX+1, w: od.w };
+        }
+
+        // Calculate world bounds
         let mx = 20, my = 20;
         placed.forEach(r => { mx = Math.max(mx, r.x+r.w+2); my = Math.max(my, r.y+r.h+2); });
         this.MW = mx; this.MH = my;
 
+        // Build tile map
         this.map = [];
         for (let y = 0; y < this.MH; y++) { this.map[y] = []; for (let x = 0; x < this.MW; x++) this.map[y][x] = null; }
         placed.forEach(r => { for (let dy=0;dy<r.h;dy++) for (let dx=0;dx<r.w;dx++) if(this.map[r.y+dy]) this.map[r.y+dy][r.x+dx]=r.f; });
 
-        this._addCorridors(placed);
+        // Connect zones
+        this._addCorridors(placed, buildingStartY, buildingEndY);
+
+        // Furnish all rooms
         placed.forEach(r => this._furnishRoom(r));
         this._placedRooms = placed;
     }
 
-    _addCorridors(rooms) {
+    // === ZONE CAMERA NAVIGATION ===
+    panToZone(zoneName) {
+        const zone = this._zoneRanges && this._zoneRanges[zoneName];
+        if (!zone) return false;
+
+        const T = this.T;
+        const canvasW = this.canvas.width;
+        const canvasH = this.canvas.height;
+
+        // Calculate center of the zone in pixel coordinates
+        const zoneCenterX = (zone.x + zone.w / 2) * T * this.scale;
+        const zoneCenterY = (zone.y + zone.h / 2) * T * this.scale;
+
+        // Target camera position to center the zone on screen
+        const targetX = canvasW / 2 - zoneCenterX;
+        const targetY = canvasH / 2 - zoneCenterY;
+
+        // Smooth animation
+        const startX = this.camera.x;
+        const startY = this.camera.y;
+        const duration = 400; // ms
+        const startTime = performance.now();
+
+        const animate = (now) => {
+            const elapsed = now - startTime;
+            const t = Math.min(elapsed / duration, 1);
+            // Ease-out cubic
+            const ease = 1 - Math.pow(1 - t, 3);
+            this.camera.x = startX + (targetX - startX) * ease;
+            this.camera.y = startY + (targetY - startY) * ease;
+            if (t < 1) requestAnimationFrame(animate);
+        };
+        requestAnimationFrame(animate);
+        return true;
+    }
+
+    getZoneNames() {
+        return this._zoneRanges ? Object.keys(this._zoneRanges) : [];
+    }
+
+    _addCorridors(rooms, buildingStartY, buildingEndY) {
+        // 1. Connect indoor rooms vertically within each column
+        const indoorRooms = rooms.filter(r => r.zone === 'indoor');
         const connect = (list) => {
             const sorted = list.sort((a,b) => a.y - b.y);
             for (let i=0;i<sorted.length-1;i++) {
@@ -251,16 +342,49 @@ class PixelEngine {
                 }
             }
         };
-        connect(rooms.filter(r=>r.x<18));
-        connect(rooms.filter(r=>r.x>=18));
-        // Horizontal corridor between columns
-        const L = rooms.filter(r=>r.x<18).sort((a,b)=>a.y-b.y);
-        const R = rooms.filter(r=>r.x>=18).sort((a,b)=>a.y-b.y);
+        connect(indoorRooms.filter(r=>r.x<18));
+        connect(indoorRooms.filter(r=>r.x>=18));
+
+        // 2. Horizontal corridor between left and right columns
+        const L = indoorRooms.filter(r=>r.x<18).sort((a,b)=>a.y-b.y);
+        const R = indoorRooms.filter(r=>r.x>=18).sort((a,b)=>a.y-b.y);
         if (L.length && R.length) {
             const oy = Math.max(L[0].y, R[0].y)+2;
             const x1 = L[0].x+L[0].w, x2 = R[0].x;
             if (x2>x1) for (let dy=0;dy<3;dy++) for (let dx=x1;dx<x2;dx++)
                 if(this.map[oy+dy]) this.map[oy+dy][dx]='wood';
+        }
+
+        // 3. Rooftop → Elevator → Building vertical paths
+        const rooftop = rooms.find(r => r.id === 13);
+        const elevator = rooms.find(r => r.id === 12);
+        const topBuilding = L.length ? L[0] : (R.length ? R[0] : null);
+
+        if (rooftop && elevator) {
+            const px = elevator.x + 1;
+            for (let dy = rooftop.y + rooftop.h; dy < elevator.y; dy++)
+                for (let dx = 0; dx < 4; dx++)
+                    if (this.map[dy]) this.map[dy][px + dx] = 'metal';
+        }
+        if (elevator && topBuilding) {
+            const px = elevator.x + 1;
+            for (let dy = elevator.y + elevator.h; dy < topBuilding.y; dy++)
+                for (let dx = 0; dx < 4; dx++)
+                    if (this.map[dy]) this.map[dy][px + dx] = 'wood';
+        } else if (rooftop && !elevator && topBuilding) {
+            const px = rooftop.x + 5;
+            for (let dy = rooftop.y + rooftop.h; dy < topBuilding.y; dy++)
+                for (let dx = 0; dx < 4; dx++)
+                    if (this.map[dy]) this.map[dy][px + dx] = 'wood';
+        }
+
+        // 4. Building → Outdoor grass path
+        const outdoor = rooms.find(r => r.id === 11);
+        if (outdoor && (L.length || R.length)) {
+            const px = outdoor.x + 4;
+            for (let dy = buildingEndY; dy < outdoor.y; dy++)
+                for (let dx = 0; dx < 5; dx++)
+                    if (this.map[dy]) this.map[dy][px + dx] = 'grass';
         }
     }
 

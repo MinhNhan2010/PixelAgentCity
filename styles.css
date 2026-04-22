@@ -367,6 +367,67 @@ body {
     gap: var(--space-xs);
 }
 
+/* Zone Navigation Bar */
+.zone-nav {
+    display: flex;
+    gap: 2px;
+    padding: 4px 8px;
+    background: var(--bg-primary);
+    border-bottom: 2px solid rgba(78, 205, 196, 0.1);
+}
+
+.zone-btn {
+    flex: 1;
+    font-family: var(--font-pixel);
+    font-size: 7px;
+    padding: 6px 10px;
+    background: var(--bg-tertiary);
+    color: var(--text-muted);
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    position: relative;
+}
+
+.zone-btn:hover {
+    color: var(--text-secondary);
+    background: var(--bg-card-hover);
+    border-color: rgba(78, 205, 196, 0.2);
+}
+
+.zone-btn.active {
+    color: var(--accent-primary);
+    background: rgba(78, 205, 196, 0.1);
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 8px rgba(78, 205, 196, 0.15), inset 0 -2px 0 var(--accent-primary);
+}
+
+.zone-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 20%;
+    right: 20%;
+    height: 2px;
+    background: var(--accent-primary);
+    box-shadow: 0 0 6px var(--accent-primary);
+}
+
+.zone-btn[data-zone="rooftop"] { --zone-color: #6c5ce7; }
+.zone-btn[data-zone="indoor"]  { --zone-color: #4ecdc4; }
+.zone-btn[data-zone="outdoor"] { --zone-color: #78e08f; }
+.zone-btn[data-zone="elevator"]{ --zone-color: #ffd93d; }
+
+.zone-btn[data-zone="rooftop"].active { color: #6c5ce7; border-color: #6c5ce7; background: rgba(108,92,231,0.1); box-shadow: 0 0 8px rgba(108,92,231,0.2); }
+.zone-btn[data-zone="outdoor"].active { color: #78e08f; border-color: #78e08f; background: rgba(120,224,143,0.1); box-shadow: 0 0 8px rgba(120,224,143,0.2); }
+.zone-btn[data-zone="elevator"].active { color: #ffd93d; border-color: #ffd93d; background: rgba(255,217,61,0.1); box-shadow: 0 0 8px rgba(255,217,61,0.2); }
+
 .office-viewport {
     flex: 1;
     position: relative;
