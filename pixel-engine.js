@@ -1614,13 +1614,41 @@ class PixelEngine {
     }
 
     // === AGENT PATHFINDING (A*) ===
+    getFurnSize(type) {
+        const sizes = {
+            'desk': {w:3, h:2}, 'mtable': {w:3, h:4}, 'table_small': {w:2, h:2}, 'table_low': {w:2, h:1}, 'mchair': {w:1, h:1}, 'chair': {w:1, h:2}, 'sofa': {w:2, h:1}, 'armchair': {w:1, h:1}, 'bench': {w:1, h:1}, 'bed_single': {w:2, h:3}, 'bed_double': {w:3, h:3}, 'rug': {w:3, h:2}, 'pillow': {w:1, h:1}, 'bookshelf': {w:2, h:1}, 'cabinet': {w:2, h:1}, 'shelf': {w:2, h:1}, 'boxes': {w:1, h:1}, 'pc': {w:1, h:2}, 'whiteboard': {w:2, h:2}, 'vending': {w:1, h:2}, 'coffee': {w:1, h:1}, 'fridge': {w:1, h:2}, 'billiard_table': {w:3, h:2}, 'counter': {w:3, h:1}, 'plant': {w:1, h:2}, 'large_plant': {w:2, h:3}, 'plant2': {w:1, h:1}, 'hanging_plant': {w:1, h:1}, 'cactus': {w:1, h:2}, 'pot': {w:1, h:1}, 'painting': {w:2, h:1}, 'painting2': {w:1, h:1}, 'lamp': {w:1, h:2}, 'clock': {w:1, h:1}, 'pictureframe': {w:1, h:1}, 'poker_table': {w:3, h:2}, 'slot_machine': {w:2, h:3}, 'gold_terminal': {w:3, h:3}, 'treadmill': {w:2, h:1}, 'dumbbell': {w:1, h:1}, 'yoga_mat': {w:2, h:1}, 'server_rack': {w:2, h:1}, 'microscope': {w:1, h:1}, 'flask': {w:1, h:1}, 'tree': {w:2, h:2}, 'fountain': {w:3, h:3}, 'parasol': {w:3, h:3}, 'bbq_grill': {w:2, h:1}, 'pond': {w:4, h:3}, 'elevator_door': {w:2, h:1}, 'elevator_panel': {w:1, h:1}, 'telescope': {w:1, h:1}, 'antenna': {w:2, h:2}, 'helipad': {w:5, h:5}
+        };
+        return sizes[type] || {w:1, h:1};
+    }
+
     findPath(startX, startY, endX, endY) {
         const heuristic = (x1, y1, x2, y2) => Math.abs(x1 - x2) + Math.abs(y1 - y2);
         const open = [{ x: startX, y: startY, g: 0, f: heuristic(startX, startY, endX, endY), parent: null }];
         const closed = new Set();
+        
+        const walkableItems = ['rug', 'yoga_mat', 'painting', 'painting2', 'pictureframe', 'clock', 'whiteboard', 'shelf', 'pillow'];
         const getCost = (x, y) => {
             if (x < 0 || y < 0 || x >= this.MW || y >= this.MH) return Infinity; // out of bounds
-            if (!this.map[y][x]) return Infinity; // wall/null map
+            if (!this.map[y][x]) return Infinity; // wall/null map // wall/null map
+            
+            // Allow stepping onto the target exact tile (for interacting with items / sitting on chairs)
+            if (x === endX && y === endY) return 1;
+
+            // Check item box colliders
+            for (let i = 0; i < this.furniture.length; i++) {
+                const f = this.furniture[i];
+                if (walkableItems.includes(f.t)) continue;
+                
+                const size = this.getFurnSize(f.t);
+                const tx = Math.floor(f.x / this.T);
+                const ty = Math.floor(f.y / this.T);
+                const fw = f.w || size.w;
+                const fh = f.h || size.h;
+                
+                if (x >= tx && x < tx + fw && y >= ty && y < ty + fh) {
+                    return Infinity; // Tile is blocked by furniture
+                }
+            }
             return 1;
         };
         
@@ -1671,7 +1699,7 @@ class PixelEngine {
         const hairs = ['#3a2820', '#1a1a1a', '#8b4513', '#c0392b', '#2c3e50', '#d4a017'];
         const doorT = this.T;
         
-        let startTx = 1, startTy = 10;
+        let startTx = 5, startTy = 10;
         let pTargetX = slot ? (slot.tx + 0.5) * doorT : 5 * doorT;
         let pTargetY = slot ? (slot.ty + 1) * doorT : 5 * doorT;
         let targetTx = Math.floor(pTargetX / doorT);
@@ -1688,7 +1716,7 @@ class PixelEngine {
             targetY: pTargetY,
             path: path,
             pathIndex: 0,
-            isWalking: true, blink: false, blinkT: 60 + Math.random() * 120,
+            isWalking: path.length > 0, blink: false, blinkT: 60 + Math.random() * 120,
             speech: null, speechT: 0,
         });
     }
@@ -1746,6 +1774,7 @@ class PixelEngine {
         const startTx = Math.floor(sp.x / this.T);
         const startTy = Math.floor(sp.y / this.T);
         const path = this.findPath(startTx, startTy, slot.tx, slot.ty);
+        if (path.length === 0) return false;
 
         sp.targetX = slot.x;
         sp.targetY = slot.y;
@@ -1754,6 +1783,7 @@ class PixelEngine {
         sp.isWalking = true;
         sp.isRoaming = false;
         sp.onArrive = null;
+        return true;
     }
 
     // Spawn interaction FX

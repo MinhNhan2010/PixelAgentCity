@@ -475,18 +475,22 @@ class AgentManager {
                         pokerPlayers.forEach(p => { p._isPlayingPoker = true; });
                         this.addLog(agent.name, `🃏 Rủ ${pokerPlayers.length - 1} đồng nghiệp chơi poker!`, 'info');
                         if (this.engine) {
-                            this.engine.sendAgentTo(agent.id, 25, 15, () => {
+                            const success = this.engine.sendAgentTo(agent.id, 25, 15, () => {
                                 this.engine.showSpeechBubble(agent.id, '🃏 Chơi poker nào!', 3000);
                                 this.engine.spawnInteractionFx(25, 15, '🃏');
                                 this.onPokerRequest(pokerPlayers);
                             });
-                            pokerPlayers.slice(1).forEach((p, idx) => {
-                                const offsets = [[24, 14], [26, 14], [24, 16]];
-                                const [tx, ty] = offsets[idx % offsets.length];
-                                this.engine.sendAgentTo(p.id, tx, ty, () => {
-                                    this.engine.showSpeechBubble(p.id, '🃏 Chơi thôi!', 3000);
+                            if (!success) {
+                                pokerPlayers.forEach(p => { p._isPlayingPoker = false; });
+                            } else {
+                                pokerPlayers.slice(1).forEach((p, idx) => {
+                                    const offsets = [[24, 14], [26, 14], [24, 16]];
+                                    const [tx, ty] = offsets[idx % offsets.length];
+                                    this.engine.sendAgentTo(p.id, tx, ty, () => {
+                                        this.engine.showSpeechBubble(p.id, '🃏 Chơi thôi!', 3000);
+                                    });
                                 });
-                            });
+                            }
                         }
                     }
                 }
@@ -502,14 +506,18 @@ class AgentManager {
                         billiardPlayers.forEach(p => { p._isPlayingBilliard = true; });
                         this.addLog(agent.name, `🎱 Rủ ${opponent.name} chơi billiard!`, 'info');
                         if (this.engine) {
-                            this.engine.sendAgentTo(agent.id, 22, 17, () => {
+                            const success = this.engine.sendAgentTo(agent.id, 22, 17, () => {
                                 this.engine.showSpeechBubble(agent.id, '🎱 Chơi billiard nào!', 3000);
                                 this.engine.spawnInteractionFx(22, 17, '🎱');
                                 this.onBilliardRequest(billiardPlayers);
                             });
-                            this.engine.sendAgentTo(opponent.id, 23, 18, () => {
-                                this.engine.showSpeechBubble(opponent.id, '🎱 Chơi thôi!', 3000);
-                            });
+                            if (!success) {
+                                billiardPlayers.forEach(p => { p._isPlayingBilliard = false; });
+                            } else {
+                                this.engine.sendAgentTo(opponent.id, 23, 18, () => {
+                                    this.engine.showSpeechBubble(opponent.id, '🎱 Chơi thôi!', 3000);
+                                });
+                            }
                         }
                     }
                 }
@@ -520,11 +528,14 @@ class AgentManager {
                         agent._isPlayingSlot = true;
                         this.addLog(agent.name, `🎰 Đi chơi slot machine!`, 'info');
                         if (this.engine) {
-                            this.engine.sendAgentTo(agent.id, 27, 22, () => {
+                            const success = this.engine.sendAgentTo(agent.id, 27, 22, () => {
                                 this.engine.showSpeechBubble(agent.id, '🎰 Thử vận may!', 3000);
                                 this.engine.spawnInteractionFx(27, 22, '🎰');
                                 this.onSlotRequest([agent]);
                             });
+                            if (!success) {
+                                agent._isPlayingSlot = false;
+                            }
                         }
                     }
                 }
@@ -535,11 +546,14 @@ class AgentManager {
                         agent._isTrading = true;
                         this.addLog(agent.name, `📊 Đi check giá vàng!`, 'info');
                         if (this.engine) {
-                            this.engine.sendAgentTo(agent.id, 33, 22, () => {
+                            const success = this.engine.sendAgentTo(agent.id, 33, 22, () => {
                                 this.engine.showSpeechBubble(agent.id, '📊 Phân tích thị trường vàng...', 3000);
                                 this.engine.spawnInteractionFx(33, 22, '📊');
                                 this.onGoldTradeRequest([agent]);
                             });
+                            if (!success) {
+                                agent._isTrading = false;
+                            }
                         }
                     }
                 }
@@ -572,7 +586,7 @@ class AgentManager {
                         };
                         const speechText = roamSpeech[point.type] || `${point.emoji} ${point.label}`;
 
-                        this.engine.sendAgentTo(agent.id, point.tx, point.ty, (sp) => {
+                        const success = this.engine.sendAgentTo(agent.id, point.tx, point.ty, (sp) => {
                             // Agent arrived at interaction point!
                             this.engine.showSpeechBubble(agent.id, speechText, 4000);
                             this.engine.spawnInteractionFx(point.tx, point.ty, point.emoji);
@@ -609,6 +623,11 @@ class AgentManager {
                                 }
                             }, 3000 + Math.random() * 4000);
                         });
+                        
+                        if (!success) {
+                            agent._isRoaming = false;
+                            agent._roamTarget = null;
+                        }
                     }
                 }
 
