@@ -21,12 +21,19 @@ class PixelEngine {
         this.map = [];
         this.furniture = [];
         this.deskSlots = [];
+        this.interactionPoints = [];
+        this.interactionFx = [];
         this.agentSprites = new Map();
         this.hoveredAgent = null;
         this.selectedAgent = null;
         this.onAgentClick = null;
         this._clickPos = null;
         this.editMode = null; // for toolbar
+        
+        // Scene system
+        this.scenes = {};
+        this.activeScene = 'indoor';
+        this._sceneTransition = { active: false, alpha: 0, target: null, phase: 'none' };
         
         this.charImages = [];
         for (let i = 0; i < 6; i++) {
@@ -196,24 +203,12 @@ class PixelEngine {
 
     resize() { const vp = document.getElementById('officeViewport'); this.canvas.width = vp.clientWidth; this.canvas.height = vp.clientHeight; this.ctx.imageSmoothingEnabled = false; }
 
-    // === MAP BUILDING (Zone-Based Layout) ===
+    // === MAP BUILDING (Scene System) ===
     buildMap(unlockedRooms) {
-        const T = this.T;
-        this.furniture = [];
-        this.deskSlots = [];
-        this.interactionPoints = [];
-        this.interactionFx = [];
         this._unlockedRooms = unlockedRooms || [0, 1];
-
-        // Separate indoor rooms from special zones
-        const indoorLeft  = [0, 1, 6, 7, 8].filter(id => this._unlockedRooms.includes(id));
-        const indoorRight = [2, 3, 4, 5, 9, 10].filter(id => this._unlockedRooms.includes(id));
-        const hasRooftop  = this._unlockedRooms.includes(13);
-        const hasElevator = this._unlockedRooms.includes(12);
-        const hasOutdoor  = this._unlockedRooms.includes(11);
+        this.scenes = {};
 
         const PAD = 2, LX = 1, RX = 24;
-        const ZONE_GAP = 5;
         const roomDefs = {
             0:{w:12,h:8,f:'wood'}, 1:{w:20,h:16,f:'wood'}, 2:{w:15,h:10,f:'tile'},
             3:{w:18,h:12,f:'carpet'}, 4:{w:15,h:7,f:'carpet'}, 5:{w:12,h:8,f:'tile'},
@@ -222,114 +217,205 @@ class PixelEngine {
             11:{w:18,h:12,f:'grass'}, 12:{w:6,h:6,f:'metal'}, 13:{w:20,h:10,f:'concrete'},
         };
 
-        const placed = [];
-        let cursorY = 1;
-        this._zoneRanges = {};
-
-        // ═══ ZONE A: ROOFTOP ═══
-        if (hasRooftop) {
-            const rd = roomDefs[13];
-            placed.push({id:13, x:LX+2, y:cursorY, w:rd.w, h:rd.h, f:rd.f, zone:'rooftop'});
-            this._zoneRanges.rooftop = { y: cursorY, h: rd.h, x: LX+2, w: rd.w };
-            cursorY += rd.h + ZONE_GAP;
-        }
-
-        // ═══ ZONE B: ELEVATOR ═══
-        if (hasElevator) {
-            const ed = roomDefs[12];
-            placed.push({id:12, x:LX+7, y:cursorY, w:ed.w, h:ed.h, f:ed.f, zone:'elevator'});
-            this._zoneRanges.elevator = { y: cursorY, h: ed.h, x: LX+7, w: ed.w };
-            cursorY += ed.h + PAD;
-        }
-
-        // ═══ ZONE C: INDOOR BUILDING ═══
-        const buildingStartY = cursorY;
-        let ly = buildingStartY;
-        indoorLeft.forEach(id => {
-            const d = roomDefs[id];
-            placed.push({id, x:LX, y:ly, w:d.w, h:d.h, f:d.f, zone:'indoor'});
-            ly += d.h + PAD;
-        });
-        let ry = buildingStartY;
-        indoorRight.forEach(id => {
-            const d = roomDefs[id];
-            placed.push({id, x:RX, y:ry, w:d.w, h:d.h, f:d.f, zone:'indoor'});
-            ry += d.h + PAD;
-        });
-        const buildingEndY = Math.max(ly, ry);
+        // ═══ SCENE: INDOOR (Building) ═══
+        const indoorLeft  = [0, 1, 6, 7, 8].filter(id => this._unlockedRooms.includes(id));
+        const indoorRight = [2, 3, 4, 5, 9, 10].filter(id => this._unlockedRooms.includes(id));
         if (indoorLeft.length || indoorRight.length) {
-            this._zoneRanges.indoor = { y: buildingStartY, h: buildingEndY - buildingStartY, x: LX, w: RX + 18 - LX };
+            this._buildScene('indoor', indoorLeft, indoorRight, roomDefs, LX, RX, PAD, '🏢');
         }
 
-        // ═══ ZONE D: OUTDOOR ═══
-        if (hasOutdoor) {
-            const od = roomDefs[11];
-            const outdoorY = buildingEndY + ZONE_GAP;
-            placed.push({id:11, x:LX+1, y:outdoorY, w:od.w, h:od.h, f:od.f, zone:'outdoor'});
-            this._zoneRanges.outdoor = { y: outdoorY, h: od.h, x: LX+1, w: od.w };
+        // ═══ SCENE: OUTDOOR ═══
+        if (this._unlockedRooms.includes(11)) {
+            this._buildScene('outdoor', [11], [], roomDefs, LX + 1, RX, PAD, '🏞️');
         }
 
-        // Calculate world bounds
-        let mx = 20, my = 20;
-        placed.forEach(r => { mx = Math.max(mx, r.x+r.w+2); my = Math.max(my, r.y+r.h+2); });
-        this.MW = mx; this.MH = my;
+        // ═══ SCENE: ROOFTOP ═══
+        if (this._unlockedRooms.includes(13)) {
+            this._buildScene('rooftop', [13], [], roomDefs, LX + 2, RX, PAD, '🌆');
+        }
 
-        // Build tile map
-        this.map = [];
-        for (let y = 0; y < this.MH; y++) { this.map[y] = []; for (let x = 0; x < this.MW; x++) this.map[y][x] = null; }
-        placed.forEach(r => { for (let dy=0;dy<r.h;dy++) for (let dx=0;dx<r.w;dx++) if(this.map[r.y+dy]) this.map[r.y+dy][r.x+dx]=r.f; });
+        // ═══ SCENE: ELEVATOR ═══
+        if (this._unlockedRooms.includes(12)) {
+            this._buildScene('elevator', [12], [], roomDefs, LX + 5, RX, PAD, '🛗');
+        }
 
-        // Connect zones
-        this._addCorridors(placed, buildingStartY, buildingEndY);
-
-        // Furnish all rooms
-        placed.forEach(r => this._furnishRoom(r));
-        this._placedRooms = placed;
+        // Activate default scene
+        const defaultScene = this.scenes['indoor'] || this.scenes[Object.keys(this.scenes)[0]];
+        if (defaultScene) {
+            this.activeScene = defaultScene.name;
+            this._applyScene(defaultScene);
+        }
     }
 
-    // === ZONE CAMERA NAVIGATION ===
-    panToZone(zoneName) {
-        const zone = this._zoneRanges && this._zoneRanges[zoneName];
-        if (!zone) return false;
+    _buildScene(name, leftIds, rightIds, roomDefs, LX, RX, PAD, icon) {
+        const placed = [];
+        const furn = [];
+        const desks = [];
+        const iPoints = [];
 
-        const T = this.T;
-        const canvasW = this.canvas.width;
-        const canvasH = this.canvas.height;
+        // Store originals, swap temporarily
+        const origFurn = this.furniture;
+        const origDesks = this.deskSlots;
+        const origIP = this.interactionPoints;
+        this.furniture = furn;
+        this.deskSlots = desks;
+        this.interactionPoints = iPoints;
 
-        // Calculate center of the zone in pixel coordinates
-        const zoneCenterX = (zone.x + zone.w / 2) * T * this.scale;
-        const zoneCenterY = (zone.y + zone.h / 2) * T * this.scale;
+        let ly = 1;
+        leftIds.forEach(id => {
+            const d = roomDefs[id];
+            placed.push({id, x:LX, y:ly, w:d.w, h:d.h, f:d.f, zone:name});
+            ly += d.h + PAD;
+        });
+        let ry = 1;
+        rightIds.forEach(id => {
+            const d = roomDefs[id];
+            placed.push({id, x:RX, y:ry, w:d.w, h:d.h, f:d.f, zone:name});
+            ry += d.h + PAD;
+        });
 
-        // Target camera position to center the zone on screen
-        const targetX = canvasW / 2 - zoneCenterX;
-        const targetY = canvasH / 2 - zoneCenterY;
+        // Calculate map bounds
+        let mx = 20, my = 20;
+        placed.forEach(r => { mx = Math.max(mx, r.x+r.w+2); my = Math.max(my, r.y+r.h+2); });
 
-        // Smooth animation
-        const startX = this.camera.x;
-        const startY = this.camera.y;
-        const duration = 400; // ms
-        const startTime = performance.now();
+        // Build tile map
+        const map = [];
+        for (let y = 0; y < my; y++) { map[y] = []; for (let x = 0; x < mx; x++) map[y][x] = null; }
+        placed.forEach(r => {
+            for (let dy=0;dy<r.h;dy++) for (let dx=0;dx<r.w;dx++)
+                if(map[r.y+dy]) map[r.y+dy][r.x+dx]=r.f;
+        });
 
-        const animate = (now) => {
-            const elapsed = now - startTime;
-            const t = Math.min(elapsed / duration, 1);
-            // Ease-out cubic
-            const ease = 1 - Math.pow(1 - t, 3);
-            this.camera.x = startX + (targetX - startX) * ease;
-            this.camera.y = startY + (targetY - startY) * ease;
-            if (t < 1) requestAnimationFrame(animate);
+        // Temporarily swap map for corridor building
+        const origMap = this.map;
+        const origMW = this.MW;
+        const origMH = this.MH;
+        this.map = map;
+        this.MW = mx;
+        this.MH = my;
+
+        // Add corridors for indoor scene
+        if (name === 'indoor') {
+            this._addIndoorCorridors(placed);
+        }
+
+        // Furnish rooms
+        placed.forEach(r => this._furnishRoom(r));
+
+        // Save scene
+        this.scenes[name] = {
+            name, icon,
+            map, MW: mx, MH: my,
+            furniture: furn,
+            deskSlots: desks,
+            interactionPoints: iPoints,
+            placedRooms: placed,
         };
-        requestAnimationFrame(animate);
+
+        // Restore originals
+        this.furniture = origFurn;
+        this.deskSlots = origDesks;
+        this.interactionPoints = origIP;
+        this.map = origMap;
+        this.MW = origMW;
+        this.MH = origMH;
+    }
+
+    _applyScene(scene) {
+        this.map = scene.map;
+        this.MW = scene.MW;
+        this.MH = scene.MH;
+        this.furniture = scene.furniture;
+        this.deskSlots = scene.deskSlots;
+        this.interactionPoints = scene.interactionPoints;
+        this._placedRooms = scene.placedRooms;
+        this.activeScene = scene.name;
+    }
+
+    // === SCENE SWITCHING ===
+    switchScene(sceneName) {
+        const scene = this.scenes[sceneName];
+        if (!scene || sceneName === this.activeScene) return false;
+
+        // Start fade-out transition
+        this._sceneTransition = {
+            active: true,
+            alpha: 0,
+            target: sceneName,
+            phase: 'fadeOut',
+            startTime: performance.now(),
+            duration: 300,
+        };
         return true;
     }
 
-    getZoneNames() {
-        return this._zoneRanges ? Object.keys(this._zoneRanges) : [];
+    _updateSceneTransition() {
+        const tr = this._sceneTransition;
+        if (!tr.active) return;
+
+        const elapsed = performance.now() - tr.startTime;
+        const t = Math.min(elapsed / tr.duration, 1);
+
+        if (tr.phase === 'fadeOut') {
+            tr.alpha = t;
+            if (t >= 1) {
+                // Apply new scene at full black
+                const scene = this.scenes[tr.target];
+                this._applyScene(scene);
+                // Reset camera to center of new scene
+                const cW = this.canvas.width;
+                const cH = this.canvas.height;
+                const worldW = this.MW * this.T * this.scale;
+                const worldH = this.MH * this.T * this.scale;
+                this.camera.x = (cW - worldW) / 2;
+                this.camera.y = (cH - worldH) / 2;
+                // Start fade-in
+                tr.phase = 'fadeIn';
+                tr.startTime = performance.now();
+                tr.alpha = 1;
+            }
+        } else if (tr.phase === 'fadeIn') {
+            tr.alpha = 1 - t;
+            if (t >= 1) {
+                tr.active = false;
+                tr.alpha = 0;
+                tr.phase = 'none';
+            }
+        }
     }
 
-    _addCorridors(rooms, buildingStartY, buildingEndY) {
-        // 1. Connect indoor rooms vertically within each column
-        const indoorRooms = rooms.filter(r => r.zone === 'indoor');
+    _drawSceneTransition() {
+        const tr = this._sceneTransition;
+        if (!tr.active || tr.alpha <= 0) return;
+        this.ctx.globalAlpha = tr.alpha;
+        this.ctx.fillStyle = '#0a0e1a';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        // Scene name label at center during full fade
+        if (tr.alpha > 0.7) {
+            const scene = this.scenes[tr.target];
+            if (scene) {
+                this.ctx.globalAlpha = Math.min(1, (tr.alpha - 0.7) * 3.3);
+                this.ctx.fillStyle = '#4ecdc4';
+                this.ctx.font = '14px "Press Start 2P", monospace';
+                this.ctx.textAlign = 'center';
+                const label = {
+                    indoor: '🏢 TÒA NHÀ',
+                    outdoor: '🏞️ NGOÀI TRỜI',
+                    rooftop: '🌆 TẦNG THƯỢNG',
+                    elevator: '🛗 THANG MÁY'
+                }[tr.target] || tr.target.toUpperCase();
+                this.ctx.fillText(label, this.canvas.width / 2, this.canvas.height / 2);
+                this.ctx.textAlign = 'start';
+            }
+        }
+        this.ctx.globalAlpha = 1;
+    }
+
+    getSceneNames() {
+        return Object.keys(this.scenes);
+    }
+
+    _addIndoorCorridors(rooms) {
         const connect = (list) => {
             const sorted = list.sort((a,b) => a.y - b.y);
             for (let i=0;i<sorted.length-1;i++) {
@@ -342,49 +428,17 @@ class PixelEngine {
                 }
             }
         };
-        connect(indoorRooms.filter(r=>r.x<18));
-        connect(indoorRooms.filter(r=>r.x>=18));
+        connect(rooms.filter(r=>r.x<18));
+        connect(rooms.filter(r=>r.x>=18));
 
-        // 2. Horizontal corridor between left and right columns
-        const L = indoorRooms.filter(r=>r.x<18).sort((a,b)=>a.y-b.y);
-        const R = indoorRooms.filter(r=>r.x>=18).sort((a,b)=>a.y-b.y);
+        // Horizontal corridor between left and right columns
+        const L = rooms.filter(r=>r.x<18).sort((a,b)=>a.y-b.y);
+        const R = rooms.filter(r=>r.x>=18).sort((a,b)=>a.y-b.y);
         if (L.length && R.length) {
             const oy = Math.max(L[0].y, R[0].y)+2;
             const x1 = L[0].x+L[0].w, x2 = R[0].x;
             if (x2>x1) for (let dy=0;dy<3;dy++) for (let dx=x1;dx<x2;dx++)
                 if(this.map[oy+dy]) this.map[oy+dy][dx]='wood';
-        }
-
-        // 3. Rooftop → Elevator → Building vertical paths
-        const rooftop = rooms.find(r => r.id === 13);
-        const elevator = rooms.find(r => r.id === 12);
-        const topBuilding = L.length ? L[0] : (R.length ? R[0] : null);
-
-        if (rooftop && elevator) {
-            const px = elevator.x + 1;
-            for (let dy = rooftop.y + rooftop.h; dy < elevator.y; dy++)
-                for (let dx = 0; dx < 4; dx++)
-                    if (this.map[dy]) this.map[dy][px + dx] = 'metal';
-        }
-        if (elevator && topBuilding) {
-            const px = elevator.x + 1;
-            for (let dy = elevator.y + elevator.h; dy < topBuilding.y; dy++)
-                for (let dx = 0; dx < 4; dx++)
-                    if (this.map[dy]) this.map[dy][px + dx] = 'wood';
-        } else if (rooftop && !elevator && topBuilding) {
-            const px = rooftop.x + 5;
-            for (let dy = rooftop.y + rooftop.h; dy < topBuilding.y; dy++)
-                for (let dx = 0; dx < 4; dx++)
-                    if (this.map[dy]) this.map[dy][px + dx] = 'wood';
-        }
-
-        // 4. Building → Outdoor grass path
-        const outdoor = rooms.find(r => r.id === 11);
-        if (outdoor && (L.length || R.length)) {
-            const px = outdoor.x + 4;
-            for (let dy = buildingEndY; dy < outdoor.y; dy++)
-                for (let dx = 0; dx < 5; dx++)
-                    if (this.map[dy]) this.map[dy][px + dx] = 'grass';
         }
     }
 
@@ -566,12 +620,30 @@ class PixelEngine {
                     {id:'lab2',type:'cabinet',tx:rx+12,ty:ry+2,emoji:'🧪',label:'Phòng thí nghiệm',effect:'xp'},
                 );
                 break;
-            case 11: // Sân Ngoài Trời — Outdoor space with BBQ, pond, parasols
-                // Trees along top edge
-                f.push({t:'tree',x:(rx+1)*T,y:ry*T},{t:'tree',x:(rx+6)*T,y:ry*T},{t:'tree',x:(rx+11)*T,y:ry*T},{t:'tree',x:(rx+16)*T,y:ry*T});
+            case 11: // Sân Ngoài Trời — Outdoor space with nature & animals
+                // Fruit trees along top
+                f.push({t:'fruit_tree',x:(rx+1)*T,y:ry*T,fruit:'apple'});
+                f.push({t:'fruit_tree',x:(rx+6)*T,y:ry*T,fruit:'orange'});
+                f.push({t:'fruit_tree',x:(rx+11)*T,y:ry*T,fruit:'cherry'});
+                f.push({t:'tree',x:(rx+16)*T,y:ry*T});
+                // Parking area with vehicles
+                f.push({t:'car_sedan',x:(rx+1)*T,y:(ry+1)*T});
+                f.push({t:'car_van',x:(rx+5)*T,y:(ry+1)*T});
+                f.push({t:'car_sport',x:(rx+10)*T,y:(ry+1)*T});
+                // Flower beds (scattered)
+                f.push({t:'flower_bed',x:(rx+1)*T,y:(ry+3)*T,color:'#ff6b9d'});
+                f.push({t:'flower_bed',x:(rx+7)*T,y:(ry+3)*T,color:'#6c5ce7'});
+                f.push({t:'flower_bed',x:(rx+13)*T,y:(ry+3)*T,color:'#ffd93d'});
+                // Bushes
+                f.push({t:'bush',x:(rx)*T,y:(ry+5)*T});
+                f.push({t:'bush',x:(rx+17)*T,y:(ry+5)*T});
+                f.push({t:'bush',x:(rx)*T,y:(ry+8)*T});
+                f.push({t:'bush',x:(rx+17)*T,y:(ry+8)*T});
+                // Bird bath
+                f.push({t:'bird_bath',x:(rx+12)*T,y:(ry+5)*T});
                 // Parasol seating areas
-                f.push({t:'parasol',x:(rx+2)*T,y:(ry+3)*T},{t:'parasol',x:(rx+8)*T,y:(ry+3)*T},{t:'parasol',x:(rx+14)*T,y:(ry+3)*T});
-                f.push({t:'bench',x:(rx+2)*T,y:(ry+5)*T},{t:'bench',x:(rx+8)*T,y:(ry+5)*T},{t:'bench',x:(rx+14)*T,y:(ry+5)*T});
+                f.push({t:'parasol',x:(rx+2)*T,y:(ry+4)*T},{t:'parasol',x:(rx+8)*T,y:(ry+4)*T},{t:'parasol',x:(rx+14)*T,y:(ry+4)*T});
+                f.push({t:'bench',x:(rx+2)*T,y:(ry+6)*T},{t:'bench',x:(rx+8)*T,y:(ry+6)*T},{t:'bench',x:(rx+14)*T,y:(ry+6)*T});
                 // BBQ area
                 f.push({t:'bbq_grill',x:(rx+3)*T,y:(ry+7)*T},{t:'bbq_grill',x:(rx+6)*T,y:(ry+7)*T});
                 f.push({t:'table_small',x:(rx+4)*T,y:(ry+9)*T},{t:'bench',x:(rx+4)*T,y:(ry+10)*T});
@@ -579,16 +651,30 @@ class PixelEngine {
                 f.push({t:'pond',x:(rx+10)*T,y:(ry+7)*T});
                 f.push({t:'bench',x:(rx+13)*T,y:(ry+8)*T});
                 // Fountain
-                f.push({t:'fountain',x:(rx+10)*T,y:(ry+2)*T});
-                // Plants scattered
-                for (let i = 0; i < 6; i++) f.push({t:'plant',x:(rx+1+i*3)*T,y:(ry+10)*T});
-                f.push({t:'lamp',x:(rx)*T,y:(ry+6)*T},{t:'lamp',x:(rx+17)*T,y:(ry+6)*T});
+                f.push({t:'fountain',x:(rx+14)*T,y:(ry+3)*T});
+                // Cactus
                 f.push({t:'cactus',x:(rx+15)*T,y:(ry+10)*T},{t:'cactus',x:(rx+16)*T,y:(ry+10)*T});
+                // Street lamps
+                f.push({t:'street_lamp',x:(rx)*T,y:(ry+6)*T},{t:'street_lamp',x:(rx+17)*T,y:(ry+6)*T});
+                // === ANIMALS ===
+                // Birds (different colors)
+                f.push({t:'animal_bird',x:(rx+3)*T,y:(ry+5)*T,birdColor:'#e67e22',bellyColor:'#fdebd0'});
+                f.push({t:'animal_bird',x:(rx+9)*T,y:(ry+6)*T,birdColor:'#3498db',bellyColor:'#d6eaf8'});
+                f.push({t:'animal_bird',x:(rx+15)*T,y:(ry+4)*T,birdColor:'#e74c3c',bellyColor:'#fadbd8'});
+                // Cats
+                f.push({t:'animal_cat',x:(rx+5)*T,y:(ry+8)*T,catColor:'#f39c12',stripeColor:'#d68910'});
+                f.push({t:'animal_cat',x:(rx+12)*T,y:(ry+9)*T,catColor:'#2c3e50',stripeColor:'#1a252f'});
+                // Dog
+                f.push({t:'animal_dog',x:(rx+8)*T,y:(ry+9)*T,dogColor:'#8B4513',lightColor:'#d4a76a'});
+                // Interaction points
                 this.interactionPoints.push(
-                    {id:'outdoor1',type:'parasol',tx:rx+3,ty:ry+4,emoji:'☂️',label:'Ngồi dưới ô',effect:'rest'},
+                    {id:'outdoor1',type:'parasol',tx:rx+3,ty:ry+5,emoji:'☂️',label:'Ngồi dưới ô',effect:'rest'},
                     {id:'outdoor2',type:'bbq',tx:rx+4,ty:ry+8,emoji:'🍖',label:'Nướng BBQ',effect:'energy'},
                     {id:'outdoor3',type:'pond',tx:rx+11,ty:ry+8,emoji:'🐟',label:'Ngắm cá',effect:'mood'},
-                    {id:'outdoor4',type:'plant',tx:rx+11,ty:ry+3,emoji:'⛲',label:'Đài phun nước',effect:'mood'},
+                    {id:'outdoor4',type:'plant',tx:rx+15,ty:ry+4,emoji:'⛲',label:'Đài phun nước',effect:'mood'},
+                    {id:'outdoor5',type:'car',tx:rx+3,ty:ry+2,emoji:'🚗',label:'Bãi đỗ xe',effect:'mood'},
+                    {id:'outdoor6',type:'animal',tx:rx+9,ty:ry+7,emoji:'🐕',label:'Chơi với thú cưng',effect:'mood'},
+                    {id:'outdoor7',type:'fruit',tx:rx+4,ty:ry+1,emoji:'🍎',label:'Hái trái cây',effect:'energy'},
                 );
                 break;
             case 12: // Thang Máy — Elevator shaft with doors and panel
@@ -610,8 +696,9 @@ class PixelEngine {
                 f.push({t:'bench',x:(rx+1)*T,y:(ry+3)*T});
                 // Antenna/satellite (right)
                 f.push({t:'antenna',x:(rx+14)*T,y:ry*T},{t:'antenna',x:(rx+16)*T,y:ry*T});
-                // Helipad (center)
+                // Helipad (center) + Helicopter!
                 f.push({t:'helipad',x:(rx+6)*T,y:(ry+3)*T});
+                f.push({t:'helicopter',x:(rx+7)*T,y:(ry+3)*T});
                 // Lounge area
                 f.push({t:'parasol',x:(rx+2)*T,y:(ry+5)*T},{t:'parasol',x:(rx+8)*T,y:(ry+5)*T});
                 f.push({t:'sofa',x:(rx+2)*T,y:(ry+7)*T},{t:'sofa',x:(rx+8)*T,y:(ry+7)*T});
@@ -622,11 +709,19 @@ class PixelEngine {
                 // Plants & decor
                 f.push({t:'plant',x:rx*T,y:ry*T},{t:'plant',x:(rx+17)*T,y:ry*T});
                 f.push({t:'plant',x:rx*T,y:(ry+8)*T},{t:'plant',x:(rx+17)*T,y:(ry+8)*T});
-                f.push({t:'lamp',x:(rx+4)*T,y:(ry+5)*T},{t:'lamp',x:(rx+10)*T,y:(ry+5)*T},{t:'lamp',x:(rx+16)*T,y:(ry+5)*T});
+                f.push({t:'street_lamp',x:(rx+4)*T,y:(ry+5)*T},{t:'street_lamp',x:(rx+10)*T,y:(ry+5)*T},{t:'street_lamp',x:(rx+16)*T,y:(ry+5)*T});
                 f.push({t:'cactus',x:(rx+12)*T,y:(ry+8)*T},{t:'cactus',x:(rx+13)*T,y:(ry+8)*T});
+                // Rooftop garden: flowers & fruit tree
+                f.push({t:'flower_bed',x:(rx+3)*T,y:(ry+8)*T,color:'#e74c3c'});
+                f.push({t:'flower_bed',x:(rx+9)*T,y:(ry+8)*T,color:'#3498db'});
+                f.push({t:'fruit_tree',x:(rx+18)*T,y:(ry+3)*T,fruit:'lemon'});
+                f.push({t:'bush',x:(rx+18)*T,y:(ry+7)*T});
+                // Rooftop birds
+                f.push({t:'animal_bird',x:(rx+5)*T,y:(ry+2)*T,birdColor:'#ecf0f1',bellyColor:'#bdc3c7'});
+                f.push({t:'animal_bird',x:(rx+13)*T,y:(ry+4)*T,birdColor:'#f1c40f',bellyColor:'#fef9e7'});
                 this.interactionPoints.push(
                     {id:'roof1',type:'telescope',tx:rx+2,ty:ry+2,emoji:'🔭',label:'Kính thiên văn',effect:'xp'},
-                    {id:'roof2',type:'helipad',tx:rx+8,ty:ry+5,emoji:'🚁',label:'Bãi đáp',effect:'mood'},
+                    {id:'roof2',type:'helipad',tx:rx+8,ty:ry+5,emoji:'🚁',label:'Trực thăng',effect:'mood'},
                     {id:'roof3',type:'antenna',tx:rx+15,ty:ry+1,emoji:'📡',label:'Ăng-ten',effect:'xp'},
                     {id:'roof4',type:'parasol',tx:rx+3,ty:ry+6,emoji:'☂️',label:'Ngồi ngắm cảnh',effect:'rest'},
                     {id:'roof5',type:'bbq',tx:rx+15,ty:ry+7,emoji:'🍖',label:'BBQ Rooftop',effect:'energy'},
@@ -638,6 +733,8 @@ class PixelEngine {
     rebuildMap(unlockedRooms) {
         this.furniture = [];
         this.deskSlots = [];
+        this.interactionPoints = [];
+        this.interactionFx = [];
         this.buildMap(unlockedRooms);
     }
 
@@ -826,6 +923,22 @@ class PixelEngine {
             case 'antenna': this.drawAntenna(x, y); break;
             case 'helipad': this.drawHelipad(x, y); break;
             case 'bench_outdoor': this.drawBenchOutdoor(x, y); break;
+            // Vehicles
+            case 'helicopter': this.drawHelicopter(x, y); break;
+            case 'car_sedan': this.drawCarSedan(x, y); break;
+            case 'car_van': this.drawCarVan(x, y); break;
+            case 'car_sport': this.drawCarSport(x, y); break;
+            // Nature & Flora
+            case 'fruit_tree': this.drawFruitTree(x, y, f.fruit || 'apple'); break;
+            case 'flower_bed': this.drawFlowerBed(x, y, f.color || '#ff6b9d'); break;
+            case 'bush': this.drawBush(x, y); break;
+            case 'bird_bath': this.drawBirdBath(x, y); break;
+            // Animated Animals
+            case 'animal_bird': this.drawAnimalBird(f); break;
+            case 'animal_cat': this.drawAnimalCat(f); break;
+            case 'animal_dog': this.drawAnimalDog(f); break;
+            // Street furniture
+            case 'street_lamp': this.drawStreetLamp(x, y); break;
         }
     }
 
@@ -1644,6 +1757,539 @@ class PixelEngine {
         this.px(x + 1, y + 1, T * 2 - 2, 2, '#95a5a6');
     }
 
+    // === VEHICLES ===
+
+    drawHelicopter(x, y) {
+        const T = this.T;
+        // Shadow
+        this.ctx.globalAlpha = 0.15;
+        this.px(x - 4, y + T * 2 + 6, T * 3 + 8, 6, '#000');
+        this.ctx.globalAlpha = 1;
+        // Landing skids
+        this.px(x + 2, y + T * 2 + 2, T * 2.5, 2, '#555');
+        this.px(x + 4, y + T * 2 - 2, 2, 4, '#666');
+        this.px(x + T * 2, y + T * 2 - 2, 2, 4, '#666');
+        // Body (fuselage)
+        this.px(x + 4, y + T, T * 2, T, '#2c3e50');
+        this.px(x + 5, y + T + 1, T * 2 - 2, T - 2, '#34495e');
+        // Cockpit glass
+        this.px(x + 6, y + T + 2, 8, T - 4, '#87ceeb');
+        this.px(x + 7, y + T + 3, 6, T - 6, '#aee1f9');
+        // Glass shine
+        this.px(x + 7, y + T + 3, 2, 2, 'rgba(255,255,255,0.4)');
+        // Tail boom
+        this.px(x + T * 2 + 4, y + T + 2, T, 3, '#3d566e');
+        this.px(x + T * 2 + 4, y + T + 3, T + 2, 2, '#2c3e50');
+        // Tail rotor (animated)
+        const tailSpin = Math.floor(this.elapsed * 0.2) % 4;
+        const tailOffset = [-3, 0, 3, 0][tailSpin];
+        this.px(x + T * 3 + 4, y + T - 1 + tailOffset, 2, 8, '#95a5a6');
+        this.px(x + T * 3 + 3, y + T + 2, 4, 2, '#7f8c8d');
+        // Main rotor mast
+        this.px(x + T + 2, y + T - 2, 3, 4, '#555');
+        // Main rotor blades (animated spin)
+        const spin = Math.floor(this.elapsed * 0.25) % 6;
+        this.ctx.globalAlpha = 0.7;
+        if (spin < 2) {
+            // Horizontal position
+            this.px(x - 8, y + T - 3, T * 3 + 16, 2, '#7f8c8d');
+            this.px(x - 6, y + T - 2, T * 3 + 12, 1, '#95a5a6');
+        } else if (spin < 4) {
+            // Diagonal
+            this.px(x - 4, y + T - 5, T * 3 + 8, 2, '#7f8c8d');
+            this.px(x + 2, y + T - 1, T * 2, 2, '#95a5a6');
+        } else {
+            // Other diagonal
+            this.px(x - 2, y + T - 1, T * 3 + 4, 2, '#7f8c8d');
+            this.px(x + 4, y + T - 4, T, 2, '#95a5a6');
+        }
+        this.ctx.globalAlpha = 1;
+        // Rotor disc blur effect
+        this.ctx.globalAlpha = 0.06;
+        this.px(x - 10, y + T - 6, T * 3 + 20, 8, '#87ceeb');
+        this.ctx.globalAlpha = 1;
+        // Company logo stripe
+        this.px(x + 8, y + T + T - 2, T, 1, '#e74c3c');
+        this.px(x + 8, y + T + T - 1, T, 1, '#f1c40f');
+    }
+
+    drawCarSedan(x, y) {
+        const T = this.T;
+        // Shadow
+        this.ctx.globalAlpha = 0.12;
+        this.px(x - 1, y + T + 4, T * 2.5 + 2, 4, '#000');
+        this.ctx.globalAlpha = 1;
+        // Body
+        this.px(x + 2, y + 6, T * 2, T - 2, '#2980b9');
+        this.px(x + 3, y + 7, T * 2 - 2, T - 4, '#3498db');
+        // Roof
+        this.px(x + 6, y + 2, T, 5, '#2471a3');
+        this.px(x + 7, y + 3, T - 2, 3, '#87ceeb');
+        // Windshield
+        this.px(x + 5, y + 4, 3, 3, '#aed6f1');
+        this.px(x + T + 4, y + 4, 3, 3, '#aed6f1');
+        // Wheels
+        this.px(x + 3, y + T + 2, 4, 4, '#222');
+        this.px(x + 4, y + T + 3, 2, 2, '#555');
+        this.px(x + T + 7, y + T + 2, 4, 4, '#222');
+        this.px(x + T + 8, y + T + 3, 2, 2, '#555');
+        // Headlights
+        this.px(x + 2, y + 8, 2, 2, '#f1c40f');
+        // Taillights
+        this.px(x + T * 2, y + 8, 2, 2, '#e74c3c');
+        // Shine
+        this.px(x + 8, y + 3, 3, 1, 'rgba(255,255,255,0.3)');
+    }
+
+    drawCarVan(x, y) {
+        const T = this.T;
+        // Shadow
+        this.ctx.globalAlpha = 0.12;
+        this.px(x - 1, y + T + 6, T * 2.5 + 2, 4, '#000');
+        this.ctx.globalAlpha = 1;
+        // Body (taller than sedan)
+        this.px(x + 1, y + 2, T * 2.2, T + 4, '#ecf0f1');
+        this.px(x + 2, y + 3, T * 2.2 - 2, T + 2, '#f0f0f0');
+        // Roof
+        this.px(x + 2, y, T * 2.2 - 2, 3, '#bdc3c7');
+        // Windows
+        this.px(x + 3, y + 3, 4, 4, '#87ceeb');
+        this.px(x + 9, y + 3, 4, 4, '#87ceeb');
+        this.px(x + 15, y + 3, 4, 4, '#87ceeb');
+        // Side stripe
+        this.px(x + 2, y + 8, T * 2, 2, '#e74c3c');
+        this.px(x + 2, y + 10, T * 2, 1, '#c0392b');
+        // Company text area
+        this.px(x + 5, y + 9, 6, 1, '#f5f5f5');
+        // Wheels
+        this.px(x + 3, y + T + 4, 5, 5, '#222');
+        this.px(x + 4, y + T + 5, 3, 3, '#555');
+        this.px(x + T + 6, y + T + 4, 5, 5, '#222');
+        this.px(x + T + 7, y + T + 5, 3, 3, '#555');
+        // Headlights
+        this.px(x + 1, y + 6, 2, 3, '#f1c40f');
+        // Taillights
+        this.px(x + T * 2, y + 6, 2, 3, '#e74c3c');
+    }
+
+    drawCarSport(x, y) {
+        const T = this.T;
+        // Shadow
+        this.ctx.globalAlpha = 0.12;
+        this.px(x - 1, y + T + 2, T * 2.5 + 2, 4, '#000');
+        this.ctx.globalAlpha = 1;
+        // Low body (sport car)
+        this.px(x + 1, y + 6, T * 2.2, T - 4, '#c0392b');
+        this.px(x + 2, y + 7, T * 2.2 - 2, T - 6, '#e74c3c');
+        // Roof (very low)
+        this.px(x + 7, y + 4, T - 2, 3, '#a93226');
+        this.px(x + 8, y + 4, T - 4, 2, '#85c1e9');
+        // Front windshield
+        this.px(x + 5, y + 5, 3, 2, '#aed6f1');
+        // Rear window
+        this.px(x + T + 3, y + 5, 3, 2, '#aed6f1');
+        // Spoiler
+        this.px(x + T * 2, y + 5, 3, 1, '#922b21');
+        this.px(x + T * 2 + 1, y + 4, 1, 2, '#7b241c');
+        // Wheels (low profile)
+        this.px(x + 3, y + T, 4, 4, '#1a1a1a');
+        this.px(x + 4, y + T + 1, 2, 2, '#c0c0c0');
+        this.px(x + T + 6, y + T, 4, 4, '#1a1a1a');
+        this.px(x + T + 7, y + T + 1, 2, 2, '#c0c0c0');
+        // Headlights (aggressive)
+        this.px(x + 1, y + 7, 2, 1, '#f1c40f');
+        this.px(x + 1, y + 9, 2, 1, '#f1c40f');
+        // Taillights
+        this.px(x + T * 2 + 1, y + 7, 2, 1, '#ff3333');
+        this.px(x + T * 2 + 1, y + 9, 2, 1, '#ff3333');
+        // Racing stripe
+        this.px(x + 4, y + 7, T + 6, 1, '#f5f5f5');
+        // Shine
+        this.px(x + 8, y + 5, 4, 1, 'rgba(255,255,255,0.35)');
+    }
+
+    // === NATURE & FLORA ===
+    drawFruitTree(x, y, fruit) {
+        const T = this.T;
+        // Trunk
+        this.px(x + 5, y + T, 5, T, '#5d3a1a');
+        this.px(x + 6, y + T, 3, T, '#7a4d28');
+        // Root bumps
+        this.px(x + 3, y + T * 2 - 2, 3, 2, '#5d3a1a');
+        this.px(x + 9, y + T * 2 - 2, 3, 2, '#5d3a1a');
+        // Canopy layers
+        const sway = Math.sin(this.elapsed * 0.02) * 0.5;
+        this.px(x - 2 + sway, y - 6, T + 4, T + 2, '#2d6a2e');
+        this.px(x - 1 + sway, y - 4, T + 2, T, '#3a8c3e');
+        this.px(x + 1 + sway, y - 2, T - 2, T - 2, '#4a9e4a');
+        // Highlight
+        this.px(x + 2 + sway, y - 5, 4, 3, '#5cb85c');
+        // Fruits
+        const fruitColors = {
+            apple: '#e74c3c', orange: '#f39c12', cherry: '#c0392b',
+            lemon: '#f1c40f', plum: '#8e44ad', peach: '#f5b7b1'
+        };
+        const fc = fruitColors[fruit] || '#e74c3c';
+        const bob = Math.sin(this.elapsed * 0.03) * 1;
+        this.px(x + sway, y - 3 + bob, 3, 3, fc);
+        this.px(x + 7 + sway, y - 1 + bob * 0.7, 3, 3, fc);
+        this.px(x + 3 + sway, y + 2 - bob * 0.5, 3, 3, fc);
+        this.px(x + 10 + sway, y + 1 + bob, 2, 2, fc);
+        // Fruit shine
+        this.px(x + 1 + sway, y - 2 + bob, 1, 1, 'rgba(255,255,255,0.5)');
+        this.px(x + 8 + sway, y + bob * 0.7, 1, 1, 'rgba(255,255,255,0.5)');
+    }
+
+    drawFlowerBed(x, y, color) {
+        const T = this.T;
+        // Soil bed
+        this.px(x, y + T - 4, T, 4, '#4a3520');
+        this.px(x + 1, y + T - 3, T - 2, 2, '#5c422e');
+        // Flowers with swaying
+        const colors = [color, '#ffd93d', '#ff6b9d', '#78e08f', '#6c5ce7'];
+        for (let i = 0; i < 4; i++) {
+            const fx = x + 2 + i * 3;
+            const sway = Math.sin(this.elapsed * 0.025 + i * 1.5) * 1;
+            const fc = colors[i % colors.length];
+            // Stem
+            this.px(fx + 1, y + 4 + sway * 0.3, 1, T - 8, '#2d8a2e');
+            // Petals
+            this.px(fx + sway, y + 2, 3, 3, fc);
+            this.px(fx + 1 + sway, y + 1, 1, 1, fc);
+            this.px(fx + sway, y + 3, 1, 1, fc);
+            this.px(fx + 2 + sway, y + 3, 1, 1, fc);
+            // Center
+            this.px(fx + 1 + sway, y + 3, 1, 1, '#f1c40f');
+        }
+    }
+
+    drawBush(x, y) {
+        const T = this.T;
+        const sway = Math.sin(this.elapsed * 0.015) * 0.5;
+        // Bush body
+        this.px(x + 1 + sway, y + 4, T - 2, T - 6, '#2d7a2e');
+        this.px(x + 2 + sway, y + 2, T - 4, T - 4, '#3a8c3e');
+        this.px(x + 3 + sway, y + 3, T - 6, T - 6, '#4a9e4a');
+        // Highlights
+        this.px(x + 4 + sway, y + 3, 3, 2, '#5cb85c');
+        this.px(x + 2 + sway, y + 6, 2, 1, '#5cb85c');
+        // Small berries
+        if (Math.sin(this.elapsed * 0.01) > 0) {
+            this.px(x + 3 + sway, y + 5, 2, 2, '#c0392b');
+            this.px(x + 8 + sway, y + 4, 2, 2, '#c0392b');
+        }
+    }
+
+    drawBirdBath(x, y) {
+        const T = this.T;
+        // Pedestal
+        this.px(x + 5, y + T, 5, T - 2, '#95a5a6');
+        this.px(x + 4, y + T * 2 - 4, 7, 3, '#7f8c8d');
+        // Bowl
+        this.px(x + 1, y + T - 4, T - 2, 5, '#bdc3c7');
+        this.px(x + 2, y + T - 3, T - 4, 3, '#ecf0f1');
+        // Water
+        const ripple = Math.sin(this.elapsed * 0.04) * 1;
+        this.px(x + 3 + ripple, y + T - 2, T - 6 - ripple, 1, '#74b9ff');
+        this.px(x + 4, y + T - 3, T - 8, 1, '#a8d8ff');
+    }
+
+    drawStreetLamp(x, y) {
+        const T = this.T;
+        // Base plate
+        this.px(x + 3, y + T * 2 - 3, 9, 3, '#5a5a5a');
+        this.px(x + 4, y + T * 2 - 2, 7, 2, '#6b6b6b');
+        // Pole (tall, dark metal)
+        this.px(x + 6, y + 4, 3, T * 2 - 7, '#4a4a4a');
+        this.px(x + 7, y + 4, 1, T * 2 - 7, '#5a5a5a');
+        // Curved arm (extends right)
+        this.px(x + 8, y + 4, 4, 2, '#4a4a4a');
+        this.px(x + 11, y + 3, 2, 2, '#4a4a4a');
+        // Curved arm (extends left)
+        this.px(x + 3, y + 4, 4, 2, '#4a4a4a');
+        this.px(x + 2, y + 3, 2, 2, '#4a4a4a');
+        // Lamp head right
+        this.px(x + 11, y + 4, 3, 4, '#3a3a3a');
+        this.px(x + 12, y + 5, 1, 2, '#ffeaa7');
+        // Lamp head left
+        this.px(x + 1, y + 4, 3, 4, '#3a3a3a');
+        this.px(x + 2, y + 5, 1, 2, '#ffeaa7');
+        // Lamp bulb glow (animated warm light)
+        const glow = 0.3 + Math.sin(this.elapsed * 0.03) * 0.1;
+        this.ctx.globalAlpha = glow;
+        this.px(x + 10, y + 5, 5, 3, '#ffeaa7');
+        this.px(x, y + 5, 5, 3, '#ffeaa7');
+        this.ctx.globalAlpha = 1;
+        // Light cone on ground (right)
+        this.ctx.globalAlpha = 0.08 + Math.sin(this.elapsed * 0.02) * 0.02;
+        this.px(x + 8, y + T * 2 - 5, 8, 4, '#ffeaa7');
+        // Light cone on ground (left)
+        this.px(x - 1, y + T * 2 - 5, 8, 4, '#ffeaa7');
+        this.ctx.globalAlpha = 1;
+        // Ornamental top
+        this.px(x + 6, y + 2, 3, 2, '#5a5a5a');
+        this.px(x + 7, y + 1, 1, 2, '#6b6b6b');
+    }
+
+    // === ANIMATED ANIMALS ===
+    drawAnimalBird(f) {
+        const T = this.T;
+        // Initialize movement state
+        if (!f._animalInit) {
+            f._animalInit = true;
+            f._baseX = f.x; f._baseY = f.y;
+            f._wanderX = f.x; f._wanderY = f.y;
+            f._nextMove = this.elapsed + 30 + Math.random() * 60;
+            f._flying = false; f._flyY = 0;
+        }
+        // Wander logic
+        if (this.elapsed > f._nextMove) {
+            f._nextMove = this.elapsed + 40 + Math.random() * 80;
+            f._wanderX = f._baseX + (Math.random() - 0.5) * T * 3;
+            f._wanderY = f._baseY + (Math.random() - 0.5) * T * 1.5;
+            f._flying = Math.random() < 0.3;
+        }
+        // Move toward target
+        const dx = f._wanderX - f.x, dy = f._wanderY - f.y;
+        const d = Math.sqrt(dx*dx + dy*dy);
+        if (d > 1) {
+            f.x += dx * 0.02 * this.deltaTime;
+            f.y += dy * 0.02 * this.deltaTime;
+        }
+        const x = f.x, y = f.y;
+        const flapAnim = Math.sin(this.elapsed * 0.3) > 0;
+        const flyOff = f._flying ? Math.sin(this.elapsed * 0.08) * 6 : 0;
+        const birdColor = f.birdColor || '#e67e22';
+        const bellyColor = f.bellyColor || '#fdebd0';
+
+        // Shadow
+        this.ctx.globalAlpha = 0.15;
+        this.px(x + 1, y + T - 1 - flyOff * 0.3, 6, 2, '#000');
+        this.ctx.globalAlpha = 1;
+        // Body
+        this.px(x + 1, y + 4 - flyOff, 6, 5, birdColor);
+        this.px(x + 2, y + 5 - flyOff, 4, 3, bellyColor);
+        // Head
+        this.px(x + 5, y + 2 - flyOff, 4, 4, birdColor);
+        this.px(x + 6, y + 3 - flyOff, 2, 2, bellyColor);
+        // Eye
+        this.px(x + 7, y + 3 - flyOff, 1, 1, '#1a1a1a');
+        // Beak
+        this.px(x + 9, y + 4 - flyOff, 2, 1, '#f39c12');
+        // Wings
+        if (f._flying || flapAnim) {
+            this.px(x - 1, y + 3 - flyOff - 2, 3, 2, birdColor);
+            this.px(x + 6, y + 3 - flyOff - 2, 3, 2, birdColor);
+        } else {
+            this.px(x, y + 5 - flyOff, 2, 3, birdColor);
+        }
+        // Tail
+        this.px(x - 1, y + 5 - flyOff, 2, 2, birdColor);
+        // Legs (only on ground)
+        if (!f._flying) {
+            this.px(x + 3, y + 9 - flyOff, 1, 3, '#e67e22');
+            this.px(x + 5, y + 9 - flyOff, 1, 3, '#e67e22');
+            this.px(x + 2, y + 11 - flyOff, 3, 1, '#e67e22');
+            this.px(x + 4, y + 11 - flyOff, 3, 1, '#e67e22');
+        }
+    }
+
+    drawAnimalCat(f) {
+        const T = this.T;
+        if (!f._animalInit) {
+            f._animalInit = true;
+            f._baseX = f.x; f._baseY = f.y;
+            f._wanderX = f.x; f._wanderY = f.y;
+            f._nextMove = this.elapsed + 60 + Math.random() * 120;
+            f._sitting = Math.random() < 0.5;
+        }
+        if (this.elapsed > f._nextMove) {
+            f._nextMove = this.elapsed + 80 + Math.random() * 150;
+            f._wanderX = f._baseX + (Math.random() - 0.5) * T * 2.5;
+            f._wanderY = f._baseY + (Math.random() - 0.5) * T * 1.5;
+            f._sitting = Math.random() < 0.4;
+        }
+        const dx = f._wanderX - f.x, dy = f._wanderY - f.y;
+        const d = Math.sqrt(dx*dx + dy*dy);
+        if (d > 1 && !f._sitting) {
+            f.x += dx * 0.015 * this.deltaTime;
+            f.y += dy * 0.015 * this.deltaTime;
+        }
+        const x = f.x, y = f.y;
+        const catColor = f.catColor || '#f39c12';
+        const stripe = f.stripeColor || '#d68910';
+        const tailWag = Math.sin(this.elapsed * 0.05) * 3;
+
+        // Shadow
+        this.ctx.globalAlpha = 0.12;
+        this.px(x + 1, y + T + 1, 10, 2, '#000');
+        this.ctx.globalAlpha = 1;
+
+        if (f._sitting) {
+            // Sitting cat
+            // Body (round)
+            this.px(x + 2, y + 4, 7, 8, catColor);
+            this.px(x + 3, y + 5, 5, 6, catColor);
+            // Stripes
+            this.px(x + 3, y + 5, 1, 5, stripe);
+            this.px(x + 6, y + 5, 1, 5, stripe);
+            // Head
+            this.px(x + 3, y, 6, 5, catColor);
+            this.px(x + 4, y + 1, 4, 3, catColor);
+            // Ears
+            this.px(x + 3, y - 2, 2, 3, catColor);
+            this.px(x + 7, y - 2, 2, 3, catColor);
+            this.px(x + 3, y - 1, 1, 2, '#ffb6c1');
+            this.px(x + 8, y - 1, 1, 2, '#ffb6c1');
+            // Eyes
+            const blink = Math.sin(this.elapsed * 0.02) > 0.95;
+            if (!blink) {
+                this.px(x + 4, y + 2, 2, 1, '#2ecc71');
+                this.px(x + 7, y + 2, 2, 1, '#2ecc71');
+                this.px(x + 5, y + 2, 1, 1, '#1a1a1a');
+                this.px(x + 7, y + 2, 1, 1, '#1a1a1a');
+            }
+            // Nose
+            this.px(x + 6, y + 3, 1, 1, '#ffb6c1');
+            // Tail (curled)
+            this.px(x + 8, y + 8 + tailWag * 0.3, 3, 2, catColor);
+            this.px(x + 10, y + 7 + tailWag * 0.5, 2, 2, catColor);
+        } else {
+            // Walking cat
+            const walkFrame = Math.floor(this.elapsed * 0.1) % 2;
+            // Body
+            this.px(x + 2, y + 4, 9, 5, catColor);
+            this.px(x + 3, y + 5, 7, 3, catColor);
+            // Stripes
+            this.px(x + 4, y + 4, 1, 4, stripe);
+            this.px(x + 7, y + 4, 1, 4, stripe);
+            // Head
+            this.px(x, y + 1, 5, 5, catColor);
+            // Ears
+            this.px(x, y - 1, 2, 2, catColor);
+            this.px(x + 3, y - 1, 2, 2, catColor);
+            this.px(x + 1, y - 1, 1, 1, '#ffb6c1');
+            this.px(x + 3, y - 1, 1, 1, '#ffb6c1');
+            // Eyes
+            this.px(x + 1, y + 2, 1, 1, '#2ecc71');
+            this.px(x + 3, y + 2, 1, 1, '#2ecc71');
+            // Nose
+            this.px(x + 2, y + 3, 1, 1, '#ffb6c1');
+            // Legs (animated walk)
+            const legOff = walkFrame * 2;
+            this.px(x + 3, y + 9 + legOff, 2, 3 - legOff, catColor);
+            this.px(x + 7, y + 9 - legOff, 2, 3 + legOff, catColor);
+            // Paws
+            this.px(x + 3, y + 11, 2, 1, '#ecf0f1');
+            this.px(x + 7, y + 11, 2, 1, '#ecf0f1');
+            // Tail
+            this.px(x + 10, y + 3 + tailWag, 2, 2, catColor);
+            this.px(x + 11, y + 2 + tailWag, 2, 2, catColor);
+        }
+    }
+
+    drawAnimalDog(f) {
+        const T = this.T;
+        if (!f._animalInit) {
+            f._animalInit = true;
+            f._baseX = f.x; f._baseY = f.y;
+            f._wanderX = f.x; f._wanderY = f.y;
+            f._nextMove = this.elapsed + 40 + Math.random() * 80;
+            f._sitting = false;
+        }
+        if (this.elapsed > f._nextMove) {
+            f._nextMove = this.elapsed + 50 + Math.random() * 100;
+            f._wanderX = f._baseX + (Math.random() - 0.5) * T * 3;
+            f._wanderY = f._baseY + (Math.random() - 0.5) * T * 1.5;
+            f._sitting = Math.random() < 0.3;
+        }
+        const dx = f._wanderX - f.x, dy = f._wanderY - f.y;
+        const d = Math.sqrt(dx*dx + dy*dy);
+        if (d > 1 && !f._sitting) {
+            f.x += dx * 0.018 * this.deltaTime;
+            f.y += dy * 0.018 * this.deltaTime;
+        }
+        const x = f.x, y = f.y;
+        const dogColor = f.dogColor || '#8B4513';
+        const lightColor = f.lightColor || '#d4a76a';
+        const tailWag = Math.sin(this.elapsed * 0.15) * 4;
+        const pant = Math.sin(this.elapsed * 0.1) > 0;
+
+        // Shadow
+        this.ctx.globalAlpha = 0.12;
+        this.px(x, y + T + 2, 12, 3, '#000');
+        this.ctx.globalAlpha = 1;
+
+        if (f._sitting) {
+            // Sitting dog
+            // Body
+            this.px(x + 2, y + 3, 8, 9, dogColor);
+            this.px(x + 3, y + 6, 6, 5, lightColor);
+            // Head
+            this.px(x + 1, y - 2, 7, 6, dogColor);
+            this.px(x + 2, y - 1, 5, 4, dogColor);
+            // Snout
+            this.px(x + 3, y + 2, 3, 3, lightColor);
+            // Nose
+            this.px(x + 4, y + 2, 2, 1, '#1a1a1a');
+            // Mouth (pant animation)
+            if (pant) {
+                this.px(x + 4, y + 4, 2, 1, '#e74c3c');
+                this.px(x + 4, y + 5, 1, 1, '#e74c3c');
+            }
+            // Eyes
+            this.px(x + 2, y, 2, 2, '#ecf0f1');
+            this.px(x + 5, y, 2, 2, '#ecf0f1');
+            this.px(x + 3, y + 1, 1, 1, '#2c3e50');
+            this.px(x + 5, y + 1, 1, 1, '#2c3e50');
+            // Ears (floppy)
+            this.px(x, y - 1, 2, 4, dogColor);
+            this.px(x + 7, y - 1, 2, 4, dogColor);
+            // Tail (wagging!)
+            this.px(x + 9, y + 5 + tailWag * 0.5, 3, 2, dogColor);
+            // Front paws
+            this.px(x + 3, y + 11, 2, 2, lightColor);
+            this.px(x + 6, y + 11, 2, 2, lightColor);
+        } else {
+            // Walking dog
+            const walkFrame = Math.floor(this.elapsed * 0.12) % 2;
+            // Body
+            this.px(x + 2, y + 2, 10, 7, dogColor);
+            this.px(x + 3, y + 4, 8, 4, lightColor);
+            // Head
+            this.px(x - 1, y - 1, 6, 5, dogColor);
+            this.px(x, y, 4, 3, dogColor);
+            // Snout
+            this.px(x - 2, y + 1, 3, 2, lightColor);
+            // Nose
+            this.px(x - 2, y + 1, 1, 1, '#1a1a1a');
+            // Tongue (pant)
+            if (pant) {
+                this.px(x - 1, y + 3, 1, 2, '#e74c3c');
+            }
+            // Eyes
+            this.px(x, y, 1, 1, '#ecf0f1');
+            this.px(x + 2, y, 1, 1, '#ecf0f1');
+            this.px(x + 1, y, 1, 1, '#2c3e50');
+            this.px(x + 3, y, 1, 1, '#2c3e50');
+            // Ears
+            this.px(x - 1, y - 2, 2, 3, dogColor);
+            this.px(x + 3, y - 2, 2, 3, dogColor);
+            // Legs (animated)
+            const lo = walkFrame * 2;
+            this.px(x + 3, y + 9 + lo, 2, 4 - lo, dogColor);
+            this.px(x + 9, y + 9 - lo, 2, 4 + lo, dogColor);
+            this.px(x + 5, y + 9 - lo, 2, 4 + lo, dogColor);
+            this.px(x + 7, y + 9 + lo, 2, 4 - lo, dogColor);
+            // Paws
+            this.px(x + 3, y + 12, 2, 1, lightColor);
+            this.px(x + 9, y + 12, 2, 1, lightColor);
+            // Tail (wagging!!)
+            this.px(x + 11, y + 1 + tailWag, 2, 2, dogColor);
+            this.px(x + 12, y + tailWag, 2, 2, dogColor);
+        }
+    }
+
     // === CHARACTERS ===
     drawCharSitting(sp, deskX, deskY) {
         const T = this.T, x = deskX + T * 0.3, y = deskY - T * 0.6;
@@ -1835,6 +2481,7 @@ class PixelEngine {
             id: agent.id, name: agent.name, color: agent.color, role: agent.role, status: 'idle',
             desk: slot, hairColor: hairs[Math.floor(Math.random() * hairs.length)],
             charIndex: agent.charIndex || 0, dir: 'down',
+            scene: this.activeScene,
             x: startTx * doorT + doorT/2, y: startTy * doorT + doorT/2,
             targetX: pTargetX,
             targetY: pTargetY,
@@ -1957,6 +2604,9 @@ class PixelEngine {
         this.lastTime = timestamp;
         this.elapsed += this.deltaTime;
 
+        // Update scene transition
+        this._updateSceneTransition();
+
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.ctx.fillStyle = '#0d1117';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -2014,7 +2664,7 @@ class PixelEngine {
             else if (f.t === 'desk') yOffset = 20;
             items.push({ y: f.y + yOffset, type: 'f', data: f });
         });
-        this.agentSprites.forEach(sp => { if (sp.isWalking || sp.isRoaming) items.push({ y: sp.y + 18, type: 'a', data: sp }); });
+        this.agentSprites.forEach(sp => { if ((sp.isWalking || sp.isRoaming) && sp.scene === this.activeScene) items.push({ y: sp.y + 18, type: 'a', data: sp }); });
         items.sort((a, b) => a.y - b.y);
 
         items.forEach(it => {
@@ -2048,14 +2698,17 @@ class PixelEngine {
 
         // Draw standing roaming agents (at interaction points, not walking)
         this.agentSprites.forEach(sp => {
-            if (sp.isRoaming && !sp.isWalking) {
+            if (sp.isRoaming && !sp.isWalking && sp.scene === this.activeScene) {
                 this.drawCharWalking(sp);
             }
         });
 
-        // Overlays
-        this.agentSprites.forEach(sp => this.drawOverlays(sp));
+        // Overlays (only for agents in current scene)
+        this.agentSprites.forEach(sp => { if (sp.scene === this.activeScene) this.drawOverlays(sp); });
         this.drawMinimap();
+
+        // Scene transition overlay
+        this._drawSceneTransition();
         
         if (this._postRender) this._postRender();
         requestAnimationFrame((t) => this.render(t));

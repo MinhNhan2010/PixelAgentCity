@@ -1030,11 +1030,11 @@
         document.getElementById('btnZoomIn')?.addEventListener('click', () => engine.zoomTo(engine.scale + 0.5));
         document.getElementById('btnZoomOut')?.addEventListener('click', () => engine.zoomTo(engine.scale - 0.5));
 
-        // Zone navigation buttons
+        // Scene navigation buttons
         document.querySelectorAll('.zone-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const zone = btn.dataset.zone;
-                if (engine.panToZone(zone)) {
+                if (engine.switchScene(zone)) {
                     // Update active state
                     document.querySelectorAll('.zone-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
