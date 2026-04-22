@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -9,9 +10,11 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>🎮 PixelAgent City — AI Office Tycoon</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
     <!-- Scanline overlay for retro effect -->
     <div class="scanlines"></div>
@@ -55,28 +58,33 @@
             </div>
             <div class="modal-body" style="font-size:13px;line-height:1.8;color:var(--text-secondary)">
                 <div style="margin-bottom:16px">
-                    <span style="font-family:var(--font-pixel);font-size:9px;color:var(--accent-primary)">🎯 MỤC TIÊU</span><br>
+                    <span style="font-family:var(--font-pixel);font-size:9px;color:var(--accent-primary)">🎯 MỤC
+                        TIÊU</span><br>
                     Xây dựng studio AI từ startup thành đế chế! Đạt Level 10 để chiến thắng.
                 </div>
                 <div style="margin-bottom:16px">
-                    <span style="font-family:var(--font-pixel);font-size:9px;color:var(--accent-success)">💰 KINH TẾ</span><br>
+                    <span style="font-family:var(--font-pixel);font-size:9px;color:var(--accent-success)">💰 KINH
+                        TẾ</span><br>
                     • Tuyển Agent tốn tiền, mỗi ngày trả lương<br>
                     • Nhận Contracts (hợp đồng) → Agent hoàn thành → Kiếm tiền<br>
                     • Hết tiền = Game Over!
                 </div>
                 <div style="margin-bottom:16px">
-                    <span style="font-family:var(--font-pixel);font-size:9px;color:var(--accent-warning)">📋 CONTRACTS</span><br>
+                    <span style="font-family:var(--font-pixel);font-size:9px;color:var(--accent-warning)">📋
+                        CONTRACTS</span><br>
                     • Click <strong>📋 Contracts</strong> để xem hợp đồng<br>
                     • Mỗi contract có deadline, reward, và roles cần thiết<br>
                     • Accept contract → Hệ thống tự tạo tasks cho agents
                 </div>
                 <div style="margin-bottom:16px">
-                    <span style="font-family:var(--font-pixel);font-size:9px;color:var(--accent-secondary)">⭐ REPUTATION</span><br>
+                    <span style="font-family:var(--font-pixel);font-size:9px;color:var(--accent-secondary)">⭐
+                        REPUTATION</span><br>
                     • Hoàn thành đúng hạn → Tăng rep → Contracts tốt hơn<br>
                     • Thất bại → Giảm rep → Ít contracts
                 </div>
                 <div>
-                    <span style="font-family:var(--font-pixel);font-size:9px;color:var(--accent-tertiary)">🏢 LEVEL UP</span><br>
+                    <span style="font-family:var(--font-pixel);font-size:9px;color:var(--accent-tertiary)">🏢 LEVEL
+                        UP</span><br>
                     • Hoàn thành contracts → +XP → Level up<br>
                     • Unlock roles mới, contracts lớn hơn, furniture premium
                 </div>
@@ -189,7 +197,9 @@
             <span class="hud-icon" id="hudTimeIcon">🌅</span>
             <span class="hud-label">DAY</span>
             <span class="hud-value" id="hudDay">1</span>
-            <div class="hud-day-bar"><div class="hud-day-fill" id="hudDayFill"></div></div>
+            <div class="hud-day-bar">
+                <div class="hud-day-fill" id="hudDayFill"></div>
+            </div>
         </div>
         <div class="hud-divider"></div>
         <div class="hud-section hud-rep">
@@ -201,7 +211,9 @@
             <span class="hud-icon">🏢</span>
             <span class="hud-label">Lv.</span>
             <span class="hud-value" id="hudLevel">1</span>
-            <div class="hud-xp-bar"><div class="hud-xp-fill" id="hudXpFill"></div></div>
+            <div class="hud-xp-bar">
+                <div class="hud-xp-fill" id="hudXpFill"></div>
+            </div>
         </div>
         <div class="hud-divider"></div>
         <div class="hud-section hud-office-bonus" id="hudOfficeBonusWrap" title="Office bonus">
@@ -257,7 +269,8 @@
                     <button class="toolbar-btn" data-tool="furniture" title="Đặt nội thất">Furniture</button>
                 </div>
                 <div class="toolbar-group">
-                    <button class="toolbar-btn toolbar-primary" id="btnAddAgentToolbar" title="Tuyển Agent">+ Hire</button>
+                    <button class="toolbar-btn toolbar-primary" id="btnAddAgentToolbar" title="Tuyển Agent">+
+                        Hire</button>
                     <button class="toolbar-btn toolbar-accent" data-tool="layout" title="Bố cục">Layout</button>
                 </div>
             </div>
@@ -337,11 +350,13 @@
             </div>
             <div class="modal-body" style="padding:12px">
                 <div style="margin-bottom:12px">
-                    <span style="font-family:var(--font-pixel);font-size:8px;color:var(--accent-warning)">📌 ACTIVE CONTRACTS</span>
+                    <span style="font-family:var(--font-pixel);font-size:8px;color:var(--accent-warning)">📌 ACTIVE
+                        CONTRACTS</span>
                 </div>
                 <div id="activeContractsList" class="contract-list"></div>
                 <div style="margin:16px 0 12px;border-top:1px solid rgba(78,205,196,0.1);padding-top:12px">
-                    <span style="font-family:var(--font-pixel);font-size:8px;color:var(--accent-success)">📬 AVAILABLE CONTRACTS</span>
+                    <span style="font-family:var(--font-pixel);font-size:8px;color:var(--accent-success)">📬 AVAILABLE
+                        CONTRACTS</span>
                 </div>
                 <div id="availableContractsList" class="contract-list"></div>
             </div>
@@ -445,26 +460,27 @@
     <script src="gold-trading-ui.js"></script>
     <script src="app.js"></script>
     <script>
-    // Mobile bottom-sheet panel toggle
-    (function() {
-        const panel = document.querySelector('.management-panel');
-        if (!panel) return;
-        let startY = 0;
-        panel.addEventListener('click', function(e) {
-            const rect = panel.getBoundingClientRect();
-            if (e.clientY - rect.top < 20) {
-                panel.classList.toggle('panel-open');
-            }
-        });
-        panel.addEventListener('touchstart', function(e) {
-            startY = e.touches[0].clientY;
-        }, { passive: true });
-        panel.addEventListener('touchend', function(e) {
-            const dy = e.changedTouches[0].clientY - startY;
-            if (dy < -40) panel.classList.add('panel-open');
-            else if (dy > 40) panel.classList.remove('panel-open');
-        }, { passive: true });
-    })();
+        // Mobile bottom-sheet panel toggle
+        (function () {
+            const panel = document.querySelector('.management-panel');
+            if (!panel) return;
+            let startY = 0;
+            panel.addEventListener('click', function (e) {
+                const rect = panel.getBoundingClientRect();
+                if (e.clientY - rect.top < 20) {
+                    panel.classList.toggle('panel-open');
+                }
+            });
+            panel.addEventListener('touchstart', function (e) {
+                startY = e.touches[0].clientY;
+            }, { passive: true });
+            panel.addEventListener('touchend', function (e) {
+                const dy = e.changedTouches[0].clientY - startY;
+                if (dy < -40) panel.classList.add('panel-open');
+                else if (dy > 40) panel.classList.remove('panel-open');
+            }, { passive: true });
+        })();
     </script>
 </body>
+
 </html>

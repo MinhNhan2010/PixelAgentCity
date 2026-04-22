@@ -60,7 +60,7 @@ class SoundFX {
 class GameState {
     constructor() {
         // Economy
-        this.coins = 500;
+        this.coins = 9999999999;
         this.totalEarned = 0;
         this.totalSpent = 0;
 
@@ -96,7 +96,7 @@ class GameState {
         this.coinPopups = []; // { amount, x, y, life }
 
         // === ROOM UNLOCK SYSTEM ===
-        this.unlockedRooms = [0, 1]; // Start with Meeting + Office
+        this.unlockedRooms = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]; // All rooms unlocked
 
         // Room catalog — positions auto-calculated by pixel-engine
         this.roomCatalog = [
@@ -111,6 +111,9 @@ class GameState {
             { id: 8, name: 'Vườn Cây',           icon: '🌿', cost: 500,  level: 4, w: 12, h: 8,  floor: 'carpet', desc: 'Khu vườn xanh thoáng đãng',        bonus: 'Mood boost' },
             { id: 9, name: 'VIP Lounge',         icon: '👑', cost: 1200, level: 5, w: 14, h: 8,  floor: 'carpet', desc: 'Phòng nghỉ cao cấp, spa',          bonus: 'Premium rest' },
             { id: 10, name: 'R&D Lab',           icon: '🔬', cost: 1500, level: 6, w: 15, h: 10, floor: 'tile',   desc: 'Phòng nghiên cứu công nghệ mới',  bonus: 'Research boost' },
+            { id: 11, name: 'Sân Ngoài Trời',    icon: '🏞️', cost: 800,  level: 3, w: 18, h: 12, floor: 'grass',  desc: 'Không gian xanh, BBQ, hồ cá',     bonus: 'Mood + Energy boost' },
+            { id: 12, name: 'Thang Máy',          icon: '🛗', cost: 300,  level: 2, w: 6,  h: 6,  floor: 'metal',  desc: 'Kết nối các tầng, di chuyển nhanh', bonus: 'Travel speed' },
+            { id: 13, name: 'Tầng Thượng',        icon: '🌆', cost: 1500, level: 6, w: 18, h: 10, floor: 'concrete', desc: 'Sân thượng ngắm cảnh, kính thiên văn', bonus: 'Premium mood + XP' },
         ];
 
         // Sound
@@ -192,6 +195,10 @@ class GameState {
             plant: 15, cactus: 10, painting: 25, lamp: 20,
             clock: 15, pictureframe: 8, bed_single: 90, bed_double: 130,
             rug: 35, pillow: 8,
+            // New areas furniture
+            parasol: 45, bbq_grill: 65, pond: 80, bench_outdoor: 30,
+            elevator_door: 100, elevator_panel: 40,
+            telescope: 120, antenna: 90, helipad: 150,
         };
 
         this.officeBonuses = this.getOfficeBonuses([]);
@@ -225,7 +232,7 @@ class GameState {
         const room = this.roomCatalog.find(r => r.id === roomId);
         if (!room) return false;
         if (this.isRoomUnlocked(roomId)) return false;
-        if (this.companyLevel < room.level) return false;
+        // Level check removed — all rooms available
         if (this.coins < room.cost) return false;
         return true;
     }
@@ -342,21 +349,23 @@ class GameState {
             counts[key] = (counts[key] || 0) + 1;
         });
 
-        const foodCount = (counts.coffee || 0) + (counts.vending || 0) + (counts.fridge || 0) + (counts.counter || 0);
+        const foodCount = (counts.coffee || 0) + (counts.vending || 0) + (counts.fridge || 0) + (counts.counter || 0) + (counts.bbq_grill || 0);
         const shelfCount = (counts.bookshelf || 0) + (counts.shelf || 0);
-        const greeneryCount = (counts.plant || 0) + (counts.cactus || 0);
+        const greeneryCount = (counts.plant || 0) + (counts.cactus || 0) + (counts.pond || 0);
         const decorCount = (counts.painting || 0) + (counts.lamp || 0) + (counts.pictureframe || 0);
-        const loungeCount = (counts.sofa || 0) + (counts.armchair || 0) + (counts.bed_single || 0) + (counts.bed_double || 0) + (counts.rug || 0) + (counts.pillow || 0);
+        const loungeCount = (counts.sofa || 0) + (counts.armchair || 0) + (counts.bed_single || 0) + (counts.bed_double || 0) + (counts.rug || 0) + (counts.pillow || 0) + (counts.parasol || 0);
         const meetingCount = counts.mtable || 0;
+        const outdoorCount = (counts.parasol || 0) + (counts.bench_outdoor || 0) + (counts.bbq_grill || 0) + (counts.pond || 0);
+        const rooftopCount = (counts.telescope || 0) + (counts.antenna || 0) + (counts.helipad || 0);
 
         const bonuses = {
             counts,
-            idleEnergyRegen: Math.min(0.2, foodCount * 0.03),
-            workEnergyDrainMul: Math.max(0.82, 1 - foodCount * 0.025),
-            interactionEnergyMul: 1 + Math.min(0.45, foodCount * 0.05 + loungeCount * 0.08),
-            xpGainMul: 1 + Math.min(0.24, shelfCount * 0.06),
-            negativeMoodMul: Math.max(0.72, 1 - greeneryCount * 0.05 - decorCount * 0.025),
-            interactionMoodMul: 1 + Math.min(0.35, greeneryCount * 0.06 + decorCount * 0.04 + loungeCount * 0.03),
+            idleEnergyRegen: Math.min(0.25, foodCount * 0.03 + outdoorCount * 0.02),
+            workEnergyDrainMul: Math.max(0.78, 1 - foodCount * 0.025 - outdoorCount * 0.01),
+            interactionEnergyMul: 1 + Math.min(0.55, foodCount * 0.05 + loungeCount * 0.08 + outdoorCount * 0.04),
+            xpGainMul: 1 + Math.min(0.32, shelfCount * 0.06 + rooftopCount * 0.04),
+            negativeMoodMul: Math.max(0.65, 1 - greeneryCount * 0.05 - decorCount * 0.025 - outdoorCount * 0.03),
+            interactionMoodMul: 1 + Math.min(0.45, greeneryCount * 0.06 + decorCount * 0.04 + loungeCount * 0.03 + outdoorCount * 0.05 + rooftopCount * 0.03),
             pairChanceAdd: Math.min(0.004, meetingCount * 0.0015),
             mentorChanceAdd: Math.min(0.004, meetingCount * 0.001 + shelfCount * 0.0007),
             deadlineHintDays: counts.clock ? 1 : 0,
@@ -573,7 +582,7 @@ class GameState {
                 if (age > 30 * 24 * 60 * 60 * 1000) { localStorage.removeItem('pixelAgentGameState'); return false; }
             }
             Object.assign(this, {
-                coins: d.coins ?? 500, day: d.day ?? 1, dayTimer: d.dayTimer ?? 0,
+                coins: d.coins ?? 9999999999, day: d.day ?? 1, dayTimer: d.dayTimer ?? 0,
                 reputation: d.reputation ?? 3, companyLevel: d.companyLevel ?? 1,
                 companyXP: d.companyXP ?? 0, companyName: d.companyName ?? 'PixelAgent Studio',
                 totalEarned: d.totalEarned ?? 0, totalSpent: d.totalSpent ?? 0,
@@ -581,7 +590,7 @@ class GameState {
                 nextContractId: d.nextContractId ?? 1, gameSpeed: d.gameSpeed ?? 1,
                 availableContracts: d.availableContracts ?? [],
                 activeContracts: d.activeContracts ?? [],
-                unlockedRooms: d.unlockedRooms ?? [0, 1],
+                unlockedRooms: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
             });
             return true;
         } catch (e) { console.warn('Failed to load game:', e); return false; }

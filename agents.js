@@ -561,6 +561,14 @@ class AgentManager {
                             painting: '🎨 Ngắm tranh...',
                             fridge: '🍽️ Lấy đồ ăn!',
                             counter: '🍳 Pha đồ ăn!',
+                            // Outdoor / Elevator / Rooftop
+                            parasol: '☂️ Ngồi dưới ô che nắng!',
+                            bbq: '🍖 Nướng BBQ thôi!',
+                            pond: '🐟 Ngắm cá thư giãn~',
+                            elevator: '🛗 Đi thang máy!',
+                            telescope: '🔭 Ngắm sao đêm nay!',
+                            helipad: '🚁 Check bãi đáp!',
+                            antenna: '📡 Check sóng phát!',
                         };
                         const speechText = roamSpeech[point.type] || `${point.emoji} ${point.label}`;
 

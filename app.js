@@ -1306,7 +1306,7 @@
         game.roomCatalog.forEach(room => {
             const isUnlocked = game.isRoomUnlocked(room.id);
             const canUnlock = game.canUnlockRoom(room.id);
-            const levelOk = game.companyLevel >= room.level;
+            const levelOk = true; // Level check removed
 
             const card = document.createElement('div');
             card.className = 'room-card' + (isUnlocked ? ' unlocked' : '') + (canUnlock ? ' available' : '');
@@ -1319,7 +1319,6 @@
                 <div class="room-card-size">${room.w}×${room.h} tiles</div>
                 <div class="room-card-footer">
                     ${isUnlocked ? '<span class="room-status unlocked">✅ Đã mở</span>' :
-                      !levelOk ? `<span class="room-status locked">🔒 Cần Level ${room.level}</span>` :
                       `<span class="room-cost">${room.cost}Ⓒ</span>
                        <button class="room-buy-btn" data-id="${room.id}" ${canUnlock ? '' : 'disabled'}>
                            ${game.coins >= room.cost ? '🔓 Mở khóa' : '💰 Thiếu coin'}

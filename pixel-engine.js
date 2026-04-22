@@ -205,8 +205,8 @@ class PixelEngine {
         this.interactionFx = [];
         this._unlockedRooms = unlockedRooms || [0, 1];
 
-        const leftOrder = [0, 1, 6, 7, 8];
-        const rightOrder = [2, 3, 4, 5, 9, 10];
+        const leftOrder = [0, 1, 6, 7, 8, 12, 13];
+        const rightOrder = [2, 3, 4, 5, 9, 10, 11];
         const leftRooms = leftOrder.filter(id => this._unlockedRooms.includes(id));
         const rightRooms = rightOrder.filter(id => this._unlockedRooms.includes(id));
 
@@ -216,6 +216,7 @@ class PixelEngine {
             3:{w:18,h:12,f:'carpet'}, 4:{w:15,h:7,f:'carpet'}, 5:{w:12,h:8,f:'tile'},
             6:{w:12,h:8,f:'wood'}, 7:{w:14,h:8,f:'wood'}, 8:{w:12,h:8,f:'carpet'},
             9:{w:14,h:8,f:'carpet'}, 10:{w:15,h:10,f:'tile'},
+            11:{w:18,h:12,f:'grass'}, 12:{w:6,h:6,f:'metal'}, 13:{w:18,h:10,f:'concrete'},
         };
 
         const placed = [];
@@ -441,6 +442,72 @@ class PixelEngine {
                     {id:'lab2',type:'cabinet',tx:rx+12,ty:ry+2,emoji:'🧪',label:'Phòng thí nghiệm',effect:'xp'},
                 );
                 break;
+            case 11: // Sân Ngoài Trời — Outdoor space with BBQ, pond, parasols
+                // Trees along top edge
+                f.push({t:'tree',x:(rx+1)*T,y:ry*T},{t:'tree',x:(rx+6)*T,y:ry*T},{t:'tree',x:(rx+11)*T,y:ry*T},{t:'tree',x:(rx+16)*T,y:ry*T});
+                // Parasol seating areas
+                f.push({t:'parasol',x:(rx+2)*T,y:(ry+3)*T},{t:'parasol',x:(rx+8)*T,y:(ry+3)*T},{t:'parasol',x:(rx+14)*T,y:(ry+3)*T});
+                f.push({t:'bench',x:(rx+2)*T,y:(ry+5)*T},{t:'bench',x:(rx+8)*T,y:(ry+5)*T},{t:'bench',x:(rx+14)*T,y:(ry+5)*T});
+                // BBQ area
+                f.push({t:'bbq_grill',x:(rx+3)*T,y:(ry+7)*T},{t:'bbq_grill',x:(rx+6)*T,y:(ry+7)*T});
+                f.push({t:'table_small',x:(rx+4)*T,y:(ry+9)*T},{t:'bench',x:(rx+4)*T,y:(ry+10)*T});
+                // Pond area
+                f.push({t:'pond',x:(rx+10)*T,y:(ry+7)*T});
+                f.push({t:'bench',x:(rx+13)*T,y:(ry+8)*T});
+                // Fountain
+                f.push({t:'fountain',x:(rx+10)*T,y:(ry+2)*T});
+                // Plants scattered
+                for (let i = 0; i < 6; i++) f.push({t:'plant',x:(rx+1+i*3)*T,y:(ry+10)*T});
+                f.push({t:'lamp',x:(rx)*T,y:(ry+6)*T},{t:'lamp',x:(rx+17)*T,y:(ry+6)*T});
+                f.push({t:'cactus',x:(rx+15)*T,y:(ry+10)*T},{t:'cactus',x:(rx+16)*T,y:(ry+10)*T});
+                this.interactionPoints.push(
+                    {id:'outdoor1',type:'parasol',tx:rx+3,ty:ry+4,emoji:'☂️',label:'Ngồi dưới ô',effect:'rest'},
+                    {id:'outdoor2',type:'bbq',tx:rx+4,ty:ry+8,emoji:'🍖',label:'Nướng BBQ',effect:'energy'},
+                    {id:'outdoor3',type:'pond',tx:rx+11,ty:ry+8,emoji:'🐟',label:'Ngắm cá',effect:'mood'},
+                    {id:'outdoor4',type:'plant',tx:rx+11,ty:ry+3,emoji:'⛲',label:'Đài phun nước',effect:'mood'},
+                );
+                break;
+            case 12: // Thang Máy — Elevator shaft with doors and panel
+                // Elevator doors (center)
+                f.push({t:'elevator_door',x:(rx+1)*T,y:(ry+1)*T});
+                // Control panel
+                f.push({t:'elevator_panel',x:(rx+4)*T,y:(ry+1)*T});
+                // Decorations
+                f.push({t:'plant',x:rx*T,y:ry*T},{t:'plant',x:(rx+5)*T,y:ry*T});
+                f.push({t:'lamp',x:rx*T,y:(ry+3)*T},{t:'lamp',x:(rx+5)*T,y:(ry+3)*T});
+                f.push({t:'clock',x:(rx+3)*T,y:ry*T});
+                this.interactionPoints.push(
+                    {id:'elev1',type:'elevator',tx:rx+2,ty:ry+3,emoji:'🛗',label:'Thang máy',effect:'energy'},
+                );
+                break;
+            case 13: // Tầng Thượng — Rooftop terrace with telescope, antenna, helipad
+                // Telescope area (left)
+                f.push({t:'telescope',x:(rx+1)*T,y:(ry+1)*T});
+                f.push({t:'bench',x:(rx+1)*T,y:(ry+3)*T});
+                // Antenna/satellite (right)
+                f.push({t:'antenna',x:(rx+14)*T,y:ry*T},{t:'antenna',x:(rx+16)*T,y:ry*T});
+                // Helipad (center)
+                f.push({t:'helipad',x:(rx+6)*T,y:(ry+3)*T});
+                // Lounge area
+                f.push({t:'parasol',x:(rx+2)*T,y:(ry+5)*T},{t:'parasol',x:(rx+8)*T,y:(ry+5)*T});
+                f.push({t:'sofa',x:(rx+2)*T,y:(ry+7)*T},{t:'sofa',x:(rx+8)*T,y:(ry+7)*T});
+                f.push({t:'table_low',x:(rx+5)*T,y:(ry+7)*T},{t:'table_low',x:(rx+11)*T,y:(ry+7)*T});
+                // BBQ corner
+                f.push({t:'bbq_grill',x:(rx+14)*T,y:(ry+6)*T});
+                f.push({t:'table_small',x:(rx+14)*T,y:(ry+8)*T},{t:'bench',x:(rx+14)*T,y:(ry+9)*T});
+                // Plants & decor
+                f.push({t:'plant',x:rx*T,y:ry*T},{t:'plant',x:(rx+17)*T,y:ry*T});
+                f.push({t:'plant',x:rx*T,y:(ry+8)*T},{t:'plant',x:(rx+17)*T,y:(ry+8)*T});
+                f.push({t:'lamp',x:(rx+4)*T,y:(ry+5)*T},{t:'lamp',x:(rx+10)*T,y:(ry+5)*T},{t:'lamp',x:(rx+16)*T,y:(ry+5)*T});
+                f.push({t:'cactus',x:(rx+12)*T,y:(ry+8)*T},{t:'cactus',x:(rx+13)*T,y:(ry+8)*T});
+                this.interactionPoints.push(
+                    {id:'roof1',type:'telescope',tx:rx+2,ty:ry+2,emoji:'🔭',label:'Kính thiên văn',effect:'xp'},
+                    {id:'roof2',type:'helipad',tx:rx+8,ty:ry+5,emoji:'🚁',label:'Bãi đáp',effect:'mood'},
+                    {id:'roof3',type:'antenna',tx:rx+15,ty:ry+1,emoji:'📡',label:'Ăng-ten',effect:'xp'},
+                    {id:'roof4',type:'parasol',tx:rx+3,ty:ry+6,emoji:'☂️',label:'Ngồi ngắm cảnh',effect:'rest'},
+                    {id:'roof5',type:'bbq',tx:rx+15,ty:ry+7,emoji:'🍖',label:'BBQ Rooftop',effect:'energy'},
+                );
+                break;
         }
     }
 
@@ -461,7 +528,10 @@ class PixelEngine {
         const floorMap = {
             'wood': 'floor_0',
             'tile': 'floor_1',
-            'carpet': 'floor_3'
+            'carpet': 'floor_3',
+            'grass': 'floor_4',
+            'metal': 'floor_5',
+            'concrete': 'floor_6'
         };
         for (let y = 0; y < this.MH; y++) {
             for (let x = 0; x < this.MW; x++) {
@@ -482,7 +552,7 @@ class PixelEngine {
                         Math.ceil(T * this.scale)
                     );
                 } else {
-                    this.px(px, py, T, T, fl === 'wood' ? '#a0794a' : fl === 'tile' ? '#e8e0d0' : '#4a6a8a');
+                    this.px(px, py, T, T, fl === 'wood' ? '#a0794a' : fl === 'tile' ? '#e8e0d0' : fl === 'grass' ? '#4a7c3f' : fl === 'metal' ? '#7a7a8a' : fl === 'concrete' ? '#8a8a8a' : '#4a6a8a');
                 }
             }
         }
@@ -622,6 +692,16 @@ class PixelEngine {
             case 'flask': this.drawFlask(x, y); break;
             case 'fountain': this.drawFountain(x, y); break;
             case 'tree': this.drawTree(x, y); break;
+            // New areas furniture
+            case 'parasol': this.drawParasol(x, y); break;
+            case 'bbq_grill': this.drawBBQ(x, y); break;
+            case 'pond': this.drawPond(x, y); break;
+            case 'elevator_door': this.drawElevatorDoor(x, y); break;
+            case 'elevator_panel': this.drawElevatorPanel(x, y); break;
+            case 'telescope': this.drawTelescope(x, y); break;
+            case 'antenna': this.drawAntenna(x, y); break;
+            case 'helipad': this.drawHelipad(x, y); break;
+            case 'bench_outdoor': this.drawBenchOutdoor(x, y); break;
         }
     }
 
@@ -1200,6 +1280,246 @@ class PixelEngine {
         this.px(x + 3, y + 5, 12, 1, '#8b5a1a');
     }
 
+    // === NEW AREAS FURNITURE ===
+
+    drawParasol(x, y) {
+        const T = this.T;
+        // Pole
+        this.px(x + 7, y + 6, 2, T + 2, '#8B6914');
+        this.px(x + 6, y + T + 7, 4, 2, '#7a5a10');
+        // Umbrella canopy (animated slight sway)
+        const sw = Math.sin(this.elapsed * 0.012 + x) * 0.5;
+        this.px(x - 2 + sw, y, 20, 3, '#e74c3c');
+        this.px(x + sw, y + 1, 16, 2, '#c0392b');
+        this.px(x + 2 + sw, y + 3, 12, 1, '#a93226');
+        // Stripe pattern
+        this.px(x + 2 + sw, y, 3, 3, '#f5f5f5');
+        this.px(x + 8 + sw, y, 3, 3, '#f5f5f5');
+        this.px(x + 14 + sw, y, 3, 3, '#f5f5f5');
+        // Shadow
+        this.ctx.globalAlpha = 0.15;
+        this.px(x - 1, y + T + 8, 18, 4, '#000');
+        this.ctx.globalAlpha = 1;
+    }
+
+    drawBBQ(x, y) {
+        const T = this.T;
+        // Legs
+        this.px(x + 2, y + T - 2, 2, 4, '#555');
+        this.px(x + 10, y + T - 2, 2, 4, '#555');
+        // Body
+        this.px(x, y + 4, 14, T - 6, '#2c2c2c');
+        this.px(x + 1, y + 5, 12, T - 8, '#3a3a3a');
+        // Grill lines
+        for (let i = 0; i < 5; i++) {
+            this.px(x + 2, y + 6 + i * 2, 10, 1, '#555');
+        }
+        // Food on grill (animated sizzle)
+        const sizzle = Math.floor(this.elapsed * 0.06) % 3;
+        this.px(x + 3, y + 6, 2, 2, '#c0392b');  // steak
+        this.px(x + 6, y + 7, 3, 1, '#f39c12');  // sausage
+        this.px(x + 9, y + 6, 2, 2, '#e67e22');  // chicken
+        // Smoke (animated)
+        if (sizzle !== 2) {
+            this.ctx.globalAlpha = 0.3;
+            this.px(x + 3 + sizzle, y + 1, 2, 4, '#ccc');
+            this.px(x + 7 - sizzle, y - 1, 2, 5, '#bbb');
+            this.px(x + 10, y + 2 - sizzle, 1, 3, '#aaa');
+            this.ctx.globalAlpha = 1;
+        }
+        // Handle
+        this.px(x + 13, y + 6, 3, 2, '#777');
+        this.px(x + 14, y + 5, 2, 1, '#888');
+    }
+
+    drawPond(x, y) {
+        const T = this.T;
+        const w = T * 3, h = T * 2;
+        // Pond border (stones)
+        this.px(x + 2, y + 1, w - 4, h - 2, '#7f8c8d');
+        this.px(x + 1, y + 3, w - 2, h - 6, '#7f8c8d');
+        // Water
+        this.px(x + 3, y + 3, w - 6, h - 6, '#2980b9');
+        this.px(x + 4, y + 4, w - 8, h - 8, '#3498db');
+        // Lily pads
+        this.px(x + 5, y + 5, 3, 2, '#27ae60');
+        this.px(x + w - 10, y + h - 7, 3, 2, '#2ecc71');
+        // Animated ripples
+        const rip = Math.floor(this.elapsed * 0.04) % 4;
+        this.ctx.globalAlpha = 0.3;
+        this.px(x + 8 + rip, y + 6, 4, 1, '#85c1e9');
+        this.px(x + 12 - rip, y + h - 6, 3, 1, '#aed6f1');
+        this.ctx.globalAlpha = 1;
+        // Fish (animated swimming)
+        const fishX = (Math.floor(this.elapsed * 0.03) % (w - 12)) + 4;
+        this.px(x + fishX, y + h - 8, 3, 1, '#f39c12');
+        this.px(x + fishX + 3, y + h - 9, 1, 1, '#e67e22');
+        // Second fish opposite direction
+        const fishX2 = w - 6 - (Math.floor(this.elapsed * 0.025) % (w - 12));
+        this.px(x + fishX2, y + 7, 3, 1, '#e74c3c');
+        this.px(x + fishX2 - 1, y + 6, 1, 1, '#c0392b');
+    }
+
+    drawElevatorDoor(x, y) {
+        const T = this.T;
+        const w = T * 2.5, h = T * 3;
+        // Frame
+        this.px(x, y, w, h, '#4a4a5a');
+        this.px(x + 1, y + 1, w - 2, h - 2, '#5a5a6a');
+        // Doors (two panels)
+        const halfW = (w - 6) / 2;
+        // Animated door opening/closing
+        const doorPhase = Math.floor(this.elapsed * 0.015) % 80;
+        let gap = 0;
+        if (doorPhase < 10) gap = doorPhase * 0.5;
+        else if (doorPhase < 20) gap = 5;
+        else if (doorPhase < 30) gap = 5 - (doorPhase - 20) * 0.5;
+        // Left door
+        this.px(x + 3 - gap, y + 3, halfW, h - 6, '#8a8a9a');
+        this.px(x + 4 - gap, y + 4, halfW - 2, h - 8, '#9a9aaa');
+        // Right door
+        this.px(x + 3 + halfW + gap, y + 3, halfW, h - 6, '#8a8a9a');
+        this.px(x + 4 + halfW + gap, y + 4, halfW - 2, h - 8, '#9a9aaa');
+        // Center line
+        if (gap < 1) {
+            this.px(x + w / 2 - 1, y + 3, 2, h - 6, '#6a6a7a');
+        }
+        // Door handles
+        this.px(x + w / 2 - 4, y + h / 2, 2, 4, '#c0c0d0');
+        this.px(x + w / 2 + 2, y + h / 2, 2, 4, '#c0c0d0');
+        // Top indicator (floor number)
+        this.px(x + w / 2 - 4, y + 1, 8, 3, '#1a1a2e');
+        // LED indicator (animated)
+        const ledColor = doorPhase < 20 ? '#2ecc71' : '#e74c3c';
+        this.px(x + w / 2 - 2, y + 2, 4, 1, ledColor);
+        // Arrow indicators
+        const arrowUp = Math.floor(this.elapsed * 0.02) % 2;
+        this.px(x + w / 2 - 1, y - 1, 2, 1, arrowUp ? '#4ecdc4' : '#333');
+    }
+
+    drawElevatorPanel(x, y) {
+        const T = this.T;
+        // Wall-mounted panel
+        this.px(x, y, 8, 16, '#4a4a5a');
+        this.px(x + 1, y + 1, 6, 14, '#5a5a6a');
+        // Floor buttons (3 rows)
+        const buttonColors = ['#2ecc71', '#f39c12', '#e74c3c'];
+        for (let i = 0; i < 3; i++) {
+            const by = y + 3 + i * 4;
+            this.px(x + 2, by, 4, 3, '#333');
+            // Active button (animated)
+            const active = Math.floor(this.elapsed * 0.02) % 3 === i;
+            this.px(x + 3, by + 1, 2, 1, active ? buttonColors[i] : '#555');
+        }
+        // Screen at top
+        this.px(x + 2, y + 1, 4, 2, '#1a1a2e');
+        const floorNum = Math.floor(this.elapsed * 0.01) % 3 + 1;
+        this.px(x + 3, y + 1, 2, 1, '#4ecdc4');
+    }
+
+    drawTelescope(x, y) {
+        const T = this.T;
+        // Tripod legs
+        this.px(x + 3, y + 12, 2, 6, '#666');
+        this.px(x + 9, y + 12, 2, 6, '#666');
+        this.px(x + 6, y + 14, 2, 4, '#666');
+        // Tripod center hub
+        this.px(x + 4, y + 11, 6, 3, '#555');
+        // Telescope tube (angled)
+        this.px(x + 2, y + 3, 10, 4, '#7f8c8d');
+        this.px(x + 3, y + 4, 8, 2, '#95a5a6');
+        // Objective lens
+        this.px(x, y + 3, 3, 4, '#2c3e50');
+        this.px(x + 1, y + 4, 1, 2, '#87ceeb');
+        // Eyepiece
+        this.px(x + 11, y + 4, 3, 2, '#2c3e50');
+        // Finder scope
+        this.px(x + 5, y + 1, 4, 2, '#555');
+        this.px(x + 6, y, 2, 2, '#444');
+        this.px(x + 6, y, 1, 1, '#87ceeb');
+        // Star sparkle near lens (animated)
+        if (Math.floor(this.elapsed * 0.04) % 3 === 0) {
+            this.px(x - 2, y + 2, 1, 1, '#ffd93d');
+            this.px(x - 1, y + 5, 1, 1, '#ffd93d');
+        }
+    }
+
+    drawAntenna(x, y) {
+        const T = this.T;
+        // Main pole
+        this.px(x + 6, y + 2, 2, T + 10, '#7f8c8d');
+        this.px(x + 7, y + 3, 1, T + 8, '#95a5a6');
+        // Cross bars
+        this.px(x + 2, y + 4, 10, 2, '#6a6a7a');
+        this.px(x + 3, y + 8, 8, 2, '#6a6a7a');
+        this.px(x + 4, y + 12, 6, 1, '#6a6a7a');
+        // Dish elements on bars
+        this.px(x + 1, y + 3, 3, 3, '#bdc3c7');
+        this.px(x + 10, y + 3, 3, 3, '#bdc3c7');
+        this.px(x + 2, y + 7, 2, 2, '#95a5a6');
+        this.px(x + 10, y + 7, 2, 2, '#95a5a6');
+        // Top beacon light (animated blink)
+        const beacon = Math.floor(this.elapsed * 0.06) % 4;
+        const beaconColor = beacon === 0 ? '#e74c3c' : beacon === 2 ? '#ff6b6b' : '#551111';
+        this.px(x + 6, y, 2, 2, beaconColor);
+        // Signal waves (animated)
+        if (beacon < 2) {
+            this.ctx.globalAlpha = 0.2;
+            this.px(x + 3, y - 1, 1, 1, '#4ecdc4');
+            this.px(x + 11, y - 1, 1, 1, '#4ecdc4');
+            this.px(x + 1, y + 1, 1, 1, '#4ecdc4');
+            this.px(x + 13, y + 1, 1, 1, '#4ecdc4');
+            this.ctx.globalAlpha = 1;
+        }
+        // Base plate
+        this.px(x + 3, y + T + 11, 8, 2, '#555');
+    }
+
+    drawHelipad(x, y) {
+        const T = this.T;
+        const size = T * 4;
+        // Concrete pad
+        this.px(x, y, size, size, '#6a6a6a');
+        this.px(x + 2, y + 2, size - 4, size - 4, '#7a7a7a');
+        // Circle border
+        const cx = x + size / 2, cy = y + size / 2, r = size / 2 - 4;
+        // Draw octagon approximation of circle
+        this.px(x + 8, y + 2, size - 16, 2, '#f1c40f');
+        this.px(x + 8, y + size - 4, size - 16, 2, '#f1c40f');
+        this.px(x + 2, y + 8, 2, size - 16, '#f1c40f');
+        this.px(x + size - 4, y + 8, 2, size - 16, '#f1c40f');
+        // Diagonal corners
+        this.px(x + 4, y + 4, 4, 4, '#f1c40f');
+        this.px(x + size - 8, y + 4, 4, 4, '#f1c40f');
+        this.px(x + 4, y + size - 8, 4, 4, '#f1c40f');
+        this.px(x + size - 8, y + size - 8, 4, 4, '#f1c40f');
+        // "H" letter in center
+        const hx = x + size / 2 - 6, hy = y + size / 2 - 6;
+        this.px(hx, hy, 3, 12, '#f5f5f5');
+        this.px(hx + 9, hy, 3, 12, '#f5f5f5');
+        this.px(hx + 3, hy + 5, 6, 2, '#f5f5f5');
+        // Landing lights (animated)
+        const lightPhase = Math.floor(this.elapsed * 0.04) % 4;
+        const lc = ['#e74c3c', '#f39c12', '#2ecc71', '#3498db'];
+        this.px(x + 2, y + 2, 2, 2, lc[lightPhase]);
+        this.px(x + size - 4, y + 2, 2, 2, lc[(lightPhase + 1) % 4]);
+        this.px(x + 2, y + size - 4, 2, 2, lc[(lightPhase + 2) % 4]);
+        this.px(x + size - 4, y + size - 4, 2, 2, lc[(lightPhase + 3) % 4]);
+    }
+
+    drawBenchOutdoor(x, y) {
+        const T = this.T;
+        // Stone/concrete bench
+        this.px(x, y + 4, T * 2, 6, '#95a5a6');
+        this.px(x + 1, y + 5, T * 2 - 2, 4, '#bdc3c7');
+        // Legs
+        this.px(x + 2, y + 10, 3, 4, '#7f8c8d');
+        this.px(x + T * 2 - 5, y + 10, 3, 4, '#7f8c8d');
+        // Backrest
+        this.px(x, y, T * 2, 4, '#7f8c8d');
+        this.px(x + 1, y + 1, T * 2 - 2, 2, '#95a5a6');
+    }
+
     // === CHARACTERS ===
     drawCharSitting(sp, deskX, deskY) {
         const T = this.T, x = deskX + T * 0.3, y = deskY - T * 0.6;
@@ -1460,7 +1780,7 @@ class PixelEngine {
         const c = this.mmCtx, mw = this.mmCanvas.width, mh = this.mmCanvas.height;
         const sx = mw / (this.MW * this.T), sy = mh / (this.MH * this.T);
         c.fillStyle = '#0a0e1a'; c.fillRect(0, 0, mw, mh);
-        const floorCols = { wood: '#8c6838', tile: '#d5d0c0', carpet: '#456585' };
+        const floorCols = { wood: '#8c6838', tile: '#d5d0c0', carpet: '#456585', grass: '#4a7c3f', metal: '#6a6a7a', concrete: '#7a7a7a' };
         for (let y = 0; y < this.MH; y++) for (let x = 0; x < this.MW; x++) {
             if (this.map[y][x]) { c.fillStyle = floorCols[this.map[y][x]]; c.fillRect(x * this.T * sx, y * this.T * sy, this.T * sx + 1, this.T * sy + 1); }
         }
