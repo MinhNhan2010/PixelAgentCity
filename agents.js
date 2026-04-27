@@ -866,6 +866,86 @@ class AgentManager {
     clearStorage() {
         localStorage.removeItem('pixelAgentData');
     }
+
+    // === AUTO-CHAT SYSTEM ===
+    _chatCooldown = 0;
+    _chatPools = {
+        idle: [
+            '🍵 Nghỉ chút đã~', '🎵 *Ngồi hát*', '📱 Check mail nào...', '💭 Hôm nay làm gì nhỉ?',
+            '☕ Cần thêm cà phê!', '🌟 Cảm thấy tốt!', '😴 Buồn ngủ quá...', '🎮 Chơi game chút!',
+            '📖 Đọc sách nào~', '🤔 Hmm...', '💪 Sẵn sàng làm việc!', '🏃 Đi dạo chút!',
+        ],
+        working: [
+            '💻 Code chạy rồi!', '🐛 Bug ở đâu ra?!', '📝 Commit xong!', '⚡ Deploy thôi!',
+            '🔥 Feature mới ngon!', '✅ Test passed!', '🤯 Logic phức tạp...', '💡 Eureka!',
+            '🚀 Push code!', '📊 Analyzing...', '🛡️ Security check...', '📱 UI looking good!',
+        ],
+        happy: [
+            '🎉 Tuyệt vời!', '😄 Mood 100%!', '🌟 Great day!', '💖 Love this team!',
+            '🎊 Celebration!', '✨ Feeling awesome!', '🏆 Productive day!',
+        ],
+        tired: [
+            '😩 Kiệt sức rồi...', '🔋 Sắp hết pin...', '😵 Cần nghỉ ngơi...', '💤 Zzz...',
+            '🥱 Buồn ngủ quá...', '☕ Cà phê đâu?',
+        ],
+        dialogue: [
+            ['Hey {0}! Khỏe không?', 'Khỏe! Đang {task} nè!'],
+            ['Bro {0}, review giúp PR!', 'Ok để xem!'],
+            ['{0} ơi, có bug kìa!', 'Để fix ngay!'],
+            ['Coffee break không {0}?', 'Đi thôi! ☕'],
+            ['Code của {0} ngon quá!', 'Thanks! 😊'],
+            ['Pair programming không?', 'Sure! Let\'s go! 🤝'],
+        ],
+    };
+
+    autoChat() {
+        if (this._chatCooldown > 0) { this._chatCooldown--; return; }
+        if (this.agents.size === 0) return;
+
+        // Random interval 30-60 ticks (15-30 seconds)
+        this._chatCooldown = 30 + Math.floor(Math.random() * 30);
+
+        const agents = Array.from(this.agents.values());
+        const agent = agents[Math.floor(Math.random() * agents.length)];
+        if (!agent || agent._isPlayingPoker || agent._isPlayingBilliard || agent._isPlayingSlot || agent._isTrading) return;
+
+        // Pick message based on state
+        let pool;
+        if (agent.energy < 30) pool = this._chatPools.tired;
+        else if (agent.mood > 85) pool = this._chatPools.happy;
+        else if (agent.status === 'working' || agent.status === 'thinking') pool = this._chatPools.working;
+        else pool = this._chatPools.idle;
+
+        const msg = pool[Math.floor(Math.random() * pool.length)];
+
+        // Show speech bubble via engine
+        if (this.engine && this.engine.showSpeechBubble) {
+            this.engine.showSpeechBubble(agent.id, msg, 3500);
+        }
+
+        // 30% chance: nearby agent responds (dialogue)
+        if (Math.random() < 0.3 && agents.length >= 2) {
+            const other = agents.filter(a => a.id !== agent.id && !a._isPlayingPoker && !a._isPlayingBilliard);
+            if (other.length > 0) {
+                const partner = other[Math.floor(Math.random() * other.length)];
+                const dialogues = this._chatPools.dialogue;
+                const pair = dialogues[Math.floor(Math.random() * dialogues.length)];
+
+                const taskDesc = partner.status === 'working' ? 'code' : 'chill';
+                const q = pair[0].replace('{0}', partner.name.split('-')[0]);
+                const a2 = pair[1].replace('{task}', taskDesc);
+
+                if (this.engine && this.engine.showSpeechBubble) {
+                    this.engine.showSpeechBubble(agent.id, q, 3000);
+                    setTimeout(() => {
+                        if (this.engine && this.engine.showSpeechBubble) {
+                            this.engine.showSpeechBubble(partner.id, a2, 3000);
+                        }
+                    }, 2000);
+                }
+            }
+        }
+    }
 }
 
 window.AgentManager = AgentManager;

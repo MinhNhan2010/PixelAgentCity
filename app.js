@@ -9,6 +9,13 @@
 
     let engine, manager, editor, chatbox, game;
 
+    // Shared constants
+    const ROLE_EMOJIS = {
+        coder: '💻', tester: '🧪', reviewer: '📝', designer: '🎨',
+        devops: '🔧', researcher: '🔬', analyst: '📊', security: '🔒',
+        backend: '⚙️', mobile: '📱', writer: '✍️'
+    };
+
     // ============ START SCREEN ============
     function initStartScreen() {
         // Animated particles
@@ -252,6 +259,32 @@
 
         setInterval(updateClock, 1000);
         createParticles();
+
+        // === NEW: Achievement System ===
+        initAchievements();
+
+        // === NEW: Notification Center ===
+        initNotificationCenter();
+
+        // === NEW: Settings Panel ===
+        initSettingsPanel();
+
+        // === NEW: Keyboard Shortcuts ===
+        initKeyboardShortcuts();
+
+        // === NEW: Auto-Chat hook (in simulation tick) ===
+        setInterval(() => {
+            if (!game.isPaused && !game.isGameOver && game.started && _autoChatEnabled) {
+                manager.autoChat();
+            }
+        }, 500);
+
+        // === NEW: Achievement check every 5s ===
+        setInterval(() => {
+            if (game.started && !game.isGameOver && _achievements) {
+                _achievements.check(game, manager);
+            }
+        }, 5000);
     }
 
     function createStarterAgents() {
@@ -324,6 +357,7 @@
         manager.onPokerRequest = (players) => {
             if (_pokerGame) return; // Already playing
             _pokerPlayers = players;
+            game._pokerPlayed = true; // Achievement tracking
 
             // === COIN STAKE SYSTEM ===
             const STAKE_PER_PLAYER = 20;
@@ -343,15 +377,11 @@
             players.forEach(p => { if (p._pokerStaked === undefined) p._pokerStaked = 0; });
 
             if (totalStake > 0) {
-                manager.addLog('System', `🎰 Poker stake: -${STAKE_PER_PLAYER}Ⓒ/người. Tổng pool: ${totalStake}Ⓒ`, 'warning');
+                manager.addLog('system', `🎰 Poker stake: -${STAKE_PER_PLAYER}Ⓒ/người. Tổng pool: ${totalStake}Ⓒ`, 'warning');
                 showToast(`🎰 Poker stake pool: ${totalStake}Ⓒ`, 'warning');
             }
 
-            const roleEmojis = {
-                coder: '💻', tester: '🧪', reviewer: '📝', designer: '🎨',
-                devops: '🔧', researcher: '🔬', analyst: '📊', security: '🔒',
-                backend: '⚙️', mobile: '📱', writer: '✍️'
-            };
+            const roleEmojis = ROLE_EMOJIS;
 
             _pokerGame = new PokerGame({ stepDelay: 1200 });
 
@@ -369,7 +399,7 @@
             _pokerGame.onPhaseChange = (phase) => {
                 _pokerUI?.render(_pokerGame.getState());
                 if (phase === 'showdown') {
-                    manager.addLog('System', '🃏 Poker: Showdown!', 'info');
+                    manager.addLog('system', '🃏 Poker: Showdown!', 'info');
                 }
             };
             _pokerGame.onHandComplete = (gameRef) => {
@@ -386,7 +416,7 @@
                     }
                 }
                 if (gameRef.phase === 'finished') {
-                    manager.addLog('System', '🃏 Kết thúc phiên poker!', 'info');
+                    manager.addLog('system', '🃏 Kết thúc phiên poker!', 'info');
                 }
             };
             _pokerGame.onGameLog = () => {};  // suppress console spam
@@ -475,6 +505,7 @@
         manager.onBilliardRequest = (players) => {
             if (_billiardGame) return; // Already playing
             _billiardPlayers = players;
+            game._billiardPlayed = true; // Achievement tracking
 
             // === COIN STAKE SYSTEM ===
             const STAKE_PER_PLAYER = 15;
@@ -489,15 +520,11 @@
             });
 
             if (totalStake > 0) {
-                manager.addLog('System', `🎱 Billiard stake: -${STAKE_PER_PLAYER}Ⓒ/người. Tổng pool: ${totalStake}Ⓒ`, 'warning');
+                manager.addLog('system', `🎱 Billiard stake: -${STAKE_PER_PLAYER}Ⓒ/người. Tổng pool: ${totalStake}Ⓒ`, 'warning');
                 showToast(`🎱 Billiard stake pool: ${totalStake}Ⓒ`, 'warning');
             }
 
-            const roleEmojis = {
-                coder: '💻', tester: '🧪', reviewer: '📝', designer: '🎨',
-                devops: '🔧', researcher: '🔬', analyst: '📊', security: '🔒',
-                backend: '⚙️', mobile: '📱', writer: '✍️'
-            };
+            const roleEmojis = ROLE_EMOJIS;
 
             _billiardGame = new BilliardGame({ stepDelay: 2200 });
 
@@ -594,8 +621,9 @@
             // Handle results
             _slotUI.onResultCallback = (result) => {
                 if (result.win) {
+                    game._slotWon = true; // Achievement tracking
                     game.earn(result.payout, 'Slot Machine win');
-                    manager.addLog('System', `🎰 Slot: ${result.name} +${result.payout}Ⓒ`, 'success');
+                    manager.addLog('system', `🎰 Slot: ${result.name} +${result.payout}Ⓒ`, 'success');
                     if (result.isJackpot) {
                         showToast(`🎰🎰🎰 MEGA JACKPOT! +${result.payout}Ⓒ`, 'success');
                         engine.spawnInteractionFx(27, 22, '💰');
@@ -606,7 +634,7 @@
                         if (p.mood !== undefined) p.mood = Math.min(100, p.mood + 5);
                     });
                 } else {
-                    manager.addLog('System', `🎰 Slot: Thua -${result.bet}Ⓒ`, 'info');
+                    manager.addLog('system', `🎰 Slot: Thua -${result.bet}Ⓒ`, 'info');
                     _slotPlayers.forEach(p => {
                         if (p.mood !== undefined) p.mood = Math.max(30, p.mood - 2);
                     });
@@ -625,7 +653,7 @@
                 }
                 const stats = _slotGame.getStats();
                 if (stats.totalSpins > 0) {
-                    manager.addLog('System', `🎰 Session: ${stats.totalSpins} spins, Won: ${stats.totalWon}Ⓒ, Lost: ${stats.totalLost}Ⓒ`, 'info');
+                    manager.addLog('system', `🎰 Session: ${stats.totalSpins} spins, Won: ${stats.totalWon}Ⓒ, Lost: ${stats.totalLost}Ⓒ`, 'info');
                 }
                 _slotGame = null;
                 _slotUI = null;
@@ -694,8 +722,9 @@
                 }
                 const trade = _goldSystem.buy(ounces, game.coins);
                 if (trade) {
+                    game._goldTraded = true; // Achievement tracking
                     game.spend(trade.costCoins, `Buy Gold: ${ounces} oz`);
-                    manager.addLog('System', `📈 Mua ${ounces} oz vàng @ $${trade.price.toFixed(2)} (-${trade.costCoins}Ⓒ)`, 'info');
+                    manager.addLog('system', `📈 Mua ${ounces} oz vàng @ $${trade.price.toFixed(2)} (-${trade.costCoins}Ⓒ)`, 'info');
                     showToast(`📈 Mua ${ounces} oz vàng!`, 'success');
                     _goldUI.setBalance(game.coins);
                     refreshHUD();
@@ -711,7 +740,7 @@
                 if (trade) {
                     game.earn(trade.revenueCoins, `Sell Gold: ${trade.ounces.toFixed(4)} oz`);
                     const profitText = trade.profit >= 0 ? `+${trade.profit}Ⓒ` : `${trade.profit}Ⓒ`;
-                    manager.addLog('System', `📉 Bán ${trade.ounces.toFixed(4)} oz vàng @ $${trade.price.toFixed(2)} (${profitText})`, trade.profit >= 0 ? 'success' : 'warning');
+                    manager.addLog('system', `📉 Bán ${trade.ounces.toFixed(4)} oz vàng @ $${trade.price.toFixed(2)} (${profitText})`, trade.profit >= 0 ? 'success' : 'warning');
                     showToast(`📉 Bán vàng! P&L: ${profitText}`, trade.profit >= 0 ? 'success' : 'warning');
                     _goldUI.setBalance(game.coins);
                     refreshHUD();
@@ -733,7 +762,7 @@
                 if (trade) {
                     game.earn(trade.revenueCoins, `Sell All Gold`);
                     const profitText = trade.profit >= 0 ? `+${trade.profit}Ⓒ` : `${trade.profit}Ⓒ`;
-                    manager.addLog('System', `🏧 Bán toàn bộ ${trade.ounces.toFixed(4)} oz vàng (${profitText})`, trade.profit >= 0 ? 'success' : 'warning');
+                    manager.addLog('system', `🏧 Bán toàn bộ ${trade.ounces.toFixed(4)} oz vàng (${profitText})`, trade.profit >= 0 ? 'success' : 'warning');
                     showToast(`🏧 Bán hết vàng! P&L: ${profitText}`, trade.profit >= 0 ? 'success' : 'warning');
                     _goldUI.setBalance(game.coins);
                     refreshHUD();
@@ -958,7 +987,7 @@
     function refreshRoleSelect() {
         const sel = document.getElementById('agentRole');
         if (!sel) return;
-        const emoji = { coder:'💻', reviewer:'🔍', tester:'🧪', designer:'🎨', devops:'⚙️', researcher:'🔬', analyst:'📊', security:'🛡️', backend:'🗄️', mobile:'📱', writer:'✍️' };
+        const emoji = ROLE_EMOJIS;
         sel.innerHTML = '';
         Object.keys(game.hiringCosts).forEach(role => {
             const unlocked = game.isRoleUnlocked(role);
@@ -1050,9 +1079,7 @@
         document.getElementById('btnSpeed').onclick = () => {
             const speeds = [1, 2, 3];
             game.gameSpeed = speeds[(speeds.indexOf(game.gameSpeed) + 1) % speeds.length];
-            const btn = document.getElementById('btnSpeed');
-            btn.textContent = `▶ ${game.gameSpeed}x`;
-            btn.classList.toggle('active', game.gameSpeed > 1);
+            updateSpeedDisplay();
             game.sfx.click();
         };
 
@@ -1077,9 +1104,7 @@
         document.getElementById('btnCloseLevelUp').onclick = () =>
             document.getElementById('levelUpOverlay').classList.remove('show');
 
-        document.getElementById('btnSettings').onclick = () => {
-            if (confirm('⚠️ Reset toàn bộ game data?')) { localStorage.clear(); location.reload(); }
-        };
+        // Settings button handled by initSettingsPanel()
         const clearLogs = () => { manager.logs = []; refreshLogs(); };
         document.getElementById('btnClearLogs')?.addEventListener('click', clearLogs);
         document.getElementById('btnFullscreen')?.addEventListener('click', () => {
@@ -1215,18 +1240,7 @@
     }
 
     // ============ STATS ============
-    function refreshStats() {
-        const grid = document.getElementById('statsGrid');
-        if (!grid) return;
-        const agents = Array.from(manager.agents.values());
-        grid.innerHTML = `
-            <div class="stat-card"><div class="stat-value">${game.formatCoins(game.totalEarned)}</div><div class="stat-label">Total Earned</div></div>
-            <div class="stat-card"><div class="stat-value">${game.formatCoins(game.totalSpent)}</div><div class="stat-label">Total Spent</div></div>
-            <div class="stat-card"><div class="stat-value">${game.completedContracts}</div><div class="stat-label">Contracts ✅</div></div>
-            <div class="stat-card"><div class="stat-value">${game.failedContracts}</div><div class="stat-label">Failed ❌</div></div>
-            <div class="stat-card"><div class="stat-value">${agents.length}</div><div class="stat-label">Agents</div></div>
-            <div class="stat-card"><div class="stat-value">${manager.tasks.filter(t=>t.status==='completed').length}</div><div class="stat-label">Tasks Done</div></div>`;
-    }
+    // refreshStats() moved to Enhanced Stats section below
 
     function refreshLogs() {
         const el = document.getElementById('logConsole');
@@ -1253,6 +1267,11 @@
             t.style.opacity = '0'; t.style.transform = 'translateX(100%)'; t.style.transition = 'all 0.3s';
             setTimeout(() => t.remove(), 300);
         }, 4000);
+
+        // Also push to notification center (silent — no extra SFX from toast)
+        if (typeof addNotification === 'function') {
+            addNotification(msg, icons[type] || 'ℹ️', type, true);
+        }
     }
     window.showToast = showToast;
 
@@ -1371,6 +1390,381 @@
         if (btn) btn.addEventListener('click', openRoomShop);
         const closeBtn = document.getElementById('closeRoomShop');
         if (closeBtn) closeBtn.addEventListener('click', closeRoomShop);
+    }
+
+    // ============ SPEED DISPLAY HELPER ============
+    function updateSpeedDisplay() {
+        const btn = document.getElementById('btnSpeed');
+        if (!btn) return;
+        const arrows = { 1: '▶', 2: '▶▶', 3: '▶▶▶' };
+        btn.textContent = `${arrows[game.gameSpeed] || '▶'} ${game.gameSpeed}x`;
+        btn.classList.toggle('active', game.gameSpeed > 1);
+    }
+
+    // ============ ACHIEVEMENT SYSTEM ============
+    let _achievements = null;
+    let _autoChatEnabled = true;
+    let _lastNotifSfxTime = 0; // debounce for notification SFX
+
+    function initAchievements() {
+        _achievements = new AchievementManager();
+
+        // On unlock: show special toast + sound
+        _achievements.onUnlock((ach) => {
+            game.sfx.achievement();
+            showAchievementToast(ach);
+            addNotification(`🏆 Thành tựu: ${ach.title}`, ach.icon, 'achievement');
+
+            // Update badge
+            const badge = document.getElementById('achBadge');
+            if (badge) {
+                badge.style.display = 'flex';
+                badge.textContent = _achievements.getUnlockedCount();
+            }
+        });
+
+        // Wire buttons
+        const btnAch = document.getElementById('btnAchievements');
+        if (btnAch) btnAch.addEventListener('click', openAchievements);
+        const closeAch = document.getElementById('closeAchievements');
+        if (closeAch) closeAch.addEventListener('click', () => {
+            document.getElementById('achievementOverlay').classList.remove('active');
+        });
+    }
+
+    function showAchievementToast(ach) {
+        const el = document.createElement('div');
+        el.className = 'ach-toast';
+        el.innerHTML = `
+            <div class="ach-toast-icon">${ach.icon}</div>
+            <div class="ach-toast-content">
+                <div class="ach-toast-label">🏆 Achievement Unlocked!</div>
+                <div class="ach-toast-title">${ach.title}</div>
+            </div>
+        `;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 4200);
+    }
+
+    function openAchievements() {
+        const overlay = document.getElementById('achievementOverlay');
+        if (!overlay || !_achievements) return;
+        overlay.classList.add('active');
+        renderAchievements();
+    }
+
+    function renderAchievements() {
+        const grid = document.getElementById('achGrid');
+        const progressEl = document.getElementById('achProgress');
+        const fillEl = document.getElementById('achProgressFill');
+        if (!grid || !_achievements) return;
+
+        const all = _achievements.getAll();
+        const pct = _achievements.getProgress();
+        if (progressEl) progressEl.textContent = `${_achievements.getUnlockedCount()} / ${_achievements.getTotalCount()} (${pct}%)`;
+        if (fillEl) fillEl.style.width = pct + '%';
+
+        grid.innerHTML = all.map(a => `
+            <div class="ach-card ${a.unlocked ? 'unlocked' : 'locked'}">
+                <div class="ach-icon">${a.icon}</div>
+                <div class="ach-info">
+                    <div class="ach-title">${a.unlocked ? a.title : '???'}</div>
+                    <div class="ach-desc">${a.desc}</div>
+                </div>
+                ${a.unlocked ? '<div class="ach-check">✅</div>' : ''}
+            </div>
+        `).join('');
+    }
+
+    // ============ NOTIFICATION CENTER ============
+    let _notifications = [];
+    let _notifUnread = 0;
+
+    function initNotificationCenter() {
+        const btn = document.getElementById('btnNotifCenter');
+        const panel = document.getElementById('notifCenter');
+        const clearBtn = document.getElementById('notifClearAll');
+
+        if (btn) btn.addEventListener('click', () => {
+            if (!panel) return;
+            const isOpen = panel.style.display !== 'none';
+            panel.style.display = isOpen ? 'none' : 'flex';
+            if (!isOpen) {
+                _notifUnread = 0;
+                updateNotifBadge();
+                renderNotifications();
+            }
+        });
+
+        if (clearBtn) clearBtn.addEventListener('click', () => {
+            _notifications = [];
+            _notifUnread = 0;
+            updateNotifBadge();
+            renderNotifications();
+        });
+
+        // Close when clicking outside
+        document.addEventListener('click', (e) => {
+            if (panel && panel.style.display !== 'none') {
+                if (!panel.contains(e.target) && !e.target.closest('#btnNotifCenter')) {
+                    panel.style.display = 'none';
+                }
+            }
+        });
+    }
+
+    /** Add a notification to the center. Pass silent=true to skip SFX (e.g. from showToast). */
+    function addNotification(msg, icon = 'ℹ️', category = 'info', silent = false) {
+        const now = new Date();
+        const ts = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        _notifications.unshift({ msg, icon, category, time: ts, unread: true });
+        if (_notifications.length > 50) _notifications = _notifications.slice(0, 50);
+        _notifUnread++;
+        updateNotifBadge();
+        // Debounced SFX: skip if silent or played < 3s ago
+        if (!silent && game?.sfx?.notification) {
+            const t = Date.now();
+            if (t - _lastNotifSfxTime > 3000) {
+                game.sfx.notification();
+                _lastNotifSfxTime = t;
+            }
+        }
+    }
+
+    function updateNotifBadge() {
+        const badge = document.getElementById('notifBadge');
+        if (badge) {
+            badge.style.display = _notifUnread > 0 ? 'flex' : 'none';
+            badge.textContent = _notifUnread > 9 ? '9+' : _notifUnread;
+        }
+    }
+
+    function renderNotifications() {
+        const list = document.getElementById('notifList');
+        if (!list) return;
+        if (_notifications.length === 0) {
+            list.innerHTML = '<div class="notif-empty">🔔 Chưa có thông báo nào</div>';
+            return;
+        }
+        list.innerHTML = _notifications.map(n => `
+            <div class="notif-item ${n.unread ? 'unread' : ''}">
+                <div class="notif-icon">${n.icon}</div>
+                <div class="notif-content">
+                    <div class="notif-msg">${n.msg}</div>
+                    <div class="notif-time">${n.time}</div>
+                </div>
+            </div>
+        `).join('');
+        // Mark all as read
+        _notifications.forEach(n => n.unread = false);
+    }
+
+    // ============ SETTINGS PANEL ============
+    /** Initialize settings modal with persistence via localStorage. */
+    function initSettingsPanel() {
+        const settingsOverlay = document.getElementById('settingsOverlay');
+        const achOverlay = document.getElementById('achievementOverlay');
+
+        // Settings button → open modal
+        const btnSettings = document.getElementById('btnSettings');
+        if (btnSettings) btnSettings.addEventListener('click', () => {
+            settingsOverlay?.classList.add('active');
+        });
+        const closeSettings = document.getElementById('closeSettings');
+        if (closeSettings) closeSettings.addEventListener('click', () => {
+            settingsOverlay?.classList.remove('active');
+        });
+
+        // Click overlay background to close (settings + achievements)
+        [settingsOverlay, achOverlay].forEach(ov => {
+            if (!ov) return;
+            ov.addEventListener('click', (e) => {
+                if (e.target === ov) ov.classList.remove('active');
+            });
+        });
+
+        // --- Restore persisted settings ---
+        const savedVol = localStorage.getItem('pac_sfxVol');
+        const savedChat = localStorage.getItem('pac_autoChat');
+        const savedBgm = localStorage.getItem('pac_bgm');
+        if (savedVol !== null) {
+            const v = parseInt(savedVol);
+            game?.sfx?.setVolume?.(v / 100);
+        }
+        if (savedChat !== null) _autoChatEnabled = savedChat === '1';
+        // BGM auto-start deferred until user interacts (browser policy)
+
+        // SFX volume slider
+        const volSlider = document.getElementById('settingSfxVol');
+        const volVal = document.getElementById('settingSfxVolVal');
+        if (volSlider) {
+            if (savedVol !== null) {
+                volSlider.value = savedVol;
+                if (volVal) volVal.textContent = savedVol + '%';
+            }
+            volSlider.addEventListener('input', () => {
+                const v = parseInt(volSlider.value);
+                if (volVal) volVal.textContent = v + '%';
+                game?.sfx?.setVolume?.(v / 100);
+                localStorage.setItem('pac_sfxVol', v);
+            });
+        }
+
+        // BGM toggle — label shows current state
+        const bgmBtn = document.getElementById('settingBgmToggle');
+        if (bgmBtn) {
+            // Set initial label
+            bgmBtn.textContent = '🎵 BẬT BGM';
+            bgmBtn.addEventListener('click', () => {
+                if (!game?.sfx) return;
+                const playing = game.sfx.toggleBGM();
+                bgmBtn.textContent = playing ? '🎵 BGM: BẬT' : '🎵 BGM: TẮT';
+                bgmBtn.style.borderColor = playing ? 'var(--accent-success)' : '';
+                localStorage.setItem('pac_bgm', playing ? '1' : '0');
+            });
+        }
+
+        // Auto-Chat toggle — label shows current state
+        const chatBtn = document.getElementById('settingChatToggle');
+        if (chatBtn) {
+            chatBtn.textContent = _autoChatEnabled ? '💬 Chat: BẬT' : '💬 Chat: TẮT';
+            chatBtn.style.borderColor = _autoChatEnabled ? 'var(--accent-success)' : '';
+            chatBtn.addEventListener('click', () => {
+                _autoChatEnabled = !_autoChatEnabled;
+                chatBtn.textContent = _autoChatEnabled ? '💬 Chat: BẬT' : '💬 Chat: TẮT';
+                chatBtn.style.borderColor = _autoChatEnabled ? 'var(--accent-success)' : '';
+                localStorage.setItem('pac_autoChat', _autoChatEnabled ? '1' : '0');
+            });
+        }
+    }
+
+    // ============ KEYBOARD SHORTCUTS ============
+    function initKeyboardShortcuts() {
+        const shortcutOverlay = document.getElementById('shortcutOverlay');
+        const btnShortcuts = document.getElementById('btnShortcuts');
+
+        if (btnShortcuts) btnShortcuts.addEventListener('click', () => {
+            if (shortcutOverlay) shortcutOverlay.style.display = 'flex';
+        });
+
+        document.addEventListener('keydown', (e) => {
+            // Don't fire if typing in input/textarea
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            if (!game || !game.started) return;
+
+            const key = e.key.toLowerCase();
+
+            // Shortcut overlay — close on any key
+            if (shortcutOverlay && shortcutOverlay.style.display !== 'none') {
+                shortcutOverlay.style.display = 'none';
+                return;
+            }
+
+            switch (key) {
+                case ' ': // Space = pause/resume
+                    e.preventDefault();
+                    document.getElementById('btnPauseGame')?.click();
+                    break;
+                case '1':
+                    game.gameSpeed = 1;
+                    updateSpeedDisplay();
+                    break;
+                case '2':
+                    game.gameSpeed = 2;
+                    updateSpeedDisplay();
+                    break;
+                case '3':
+                    game.gameSpeed = 3;
+                    updateSpeedDisplay();
+                    break;
+                case 'c':
+                    document.getElementById('btnContracts')?.click();
+                    break;
+                case 'h':
+                    document.getElementById('btnAddAgent')?.click();
+                    break;
+                case 's':
+                    document.querySelector('[data-tab="stats"]')?.click();
+                    break;
+                case 'a':
+                    openAchievements();
+                    break;
+                case 'n':
+                    document.getElementById('btnNotifCenter')?.click();
+                    break;
+                case 'l':
+                    document.querySelector('[data-tab="layout"]')?.click();
+                    break;
+                case 'm':
+                    document.getElementById('settingBgmToggle')?.click();
+                    break;
+                case 'escape':
+                    // Close all modals (with null safety)
+                    document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+                    document.getElementById('notifCenter')?.style.setProperty('display', 'none');
+                    break;
+                case '?':
+                case '/':
+                    if (shortcutOverlay) shortcutOverlay.style.display = 'flex';
+                    break;
+            }
+        });
+    }
+
+    // ============ ENHANCED STATS ============
+
+    function refreshStats() {
+        const grid = document.getElementById('statsGrid');
+        if (!grid) return;
+        const agents = Array.from(manager.agents.values());
+
+        // Calculate net profit
+        const netProfit = game.totalEarned - game.totalSpent;
+        const profitColor = netProfit >= 0 ? 'var(--accent-success)' : 'var(--accent-tertiary)';
+        const profitSign = netProfit >= 0 ? '+' : '';
+
+        grid.innerHTML = `
+            <div class="stat-card"><div class="stat-value">${game.formatCoins(game.totalEarned)}</div><div class="stat-label">Tổng Thu</div></div>
+            <div class="stat-card"><div class="stat-value">${game.formatCoins(game.totalSpent)}</div><div class="stat-label">Tổng Chi</div></div>
+            <div class="stat-card"><div class="stat-value" style="color:${profitColor}">${profitSign}${game.formatCoins(Math.abs(netProfit))}</div><div class="stat-label">Lợi Nhuận</div></div>
+            <div class="stat-card"><div class="stat-value">${game.completedContracts}</div><div class="stat-label">Hợp Đồng ✅</div></div>
+            <div class="stat-card"><div class="stat-value">${game.failedContracts}</div><div class="stat-label">Thất Bại ❌</div></div>
+            <div class="stat-card"><div class="stat-value">${agents.length}</div><div class="stat-label">Agents</div></div>
+            <div class="stat-card"><div class="stat-value">${manager.tasks.filter(t=>t.status==='completed').length}</div><div class="stat-label">Tasks Done</div></div>
+            <div class="stat-card"><div class="stat-value">${_achievements ? _achievements.getUnlockedCount() + '/' + _achievements.getTotalCount() : '-'}</div><div class="stat-label">Thành Tựu 🏆</div></div>
+            <div class="stat-card"><div class="stat-value">${game.day}</div><div class="stat-label">Ngày</div></div>
+        `;
+
+        // Mini productivity chart
+        if (manager.performanceHistory.length > 2) {
+            const chartHtml = '<div class="mini-chart">' +
+                manager.performanceHistory.slice(-20).map(p =>
+                    `<div class="mini-bar" style="height:${Math.max(2, p.productivity)}%" data-tooltip="${Math.round(p.productivity)}%"></div>`
+                ).join('') +
+            '</div>';
+            grid.insertAdjacentHTML('beforeend',
+                `<div class="stat-card" style="grid-column:span 2"><div class="stat-label">📊 Năng Suất</div>${chartHtml}</div>`
+            );
+        }
+
+        // Agent Leaderboard
+        if (agents.length > 0) {
+            const sorted = [...agents].sort((a, b) => b.tasksCompleted - a.tasksCompleted).slice(0, 5);
+            const rankEmojis = ['🥇', '🥈', '🥉', '4', '5'];
+            const rows = sorted.map((a, i) =>
+                `<div class="leader-row">
+                    <span class="leader-rank">${rankEmojis[i] || i+1}</span>
+                    <span class="leader-name">${a.name}</span>
+                    <span class="leader-stat">Lv.${a.level} • ${a.tasksCompleted} tasks</span>
+                </div>`
+            ).join('');
+            grid.insertAdjacentHTML('beforeend',
+                `<div class="stat-card" style="grid-column:span 2">
+                    <div class="stats-leaderboard-title">🏆 Bảng Xếp Hạng</div>
+                    ${rows}
+                </div>`
+            );
+        }
     }
 
     // ============ BOOT ============

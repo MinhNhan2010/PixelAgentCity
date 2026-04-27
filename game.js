@@ -54,6 +54,53 @@ class SoundFX {
     hire() {
         this._beep(523, 0.06); setTimeout(() => this._beep(659, 0.06), 60); setTimeout(() => this._beep(784, 0.12), 120);
     }
+    achievement() {
+        [784, 988, 1175, 1319].forEach((f, i) => setTimeout(() => this._beep(f, 0.12, 'square', 0.2), i * 80));
+        setTimeout(() => this._beep(1568, 0.25, 'triangle', 0.15), 340);
+    }
+    notification() {
+        this._beep(660, 0.05, 'triangle', 0.12); setTimeout(() => this._beep(880, 0.08, 'triangle', 0.1), 80);
+    }
+    chat() {
+        this._beep(520, 0.03, 'triangle', 0.08);
+    }
+    setVolume(v) {
+        this.volume = Math.max(0, Math.min(1, v));
+    }
+    // === BGM (simple chiptune arpeggio loop) ===
+    _bgmNode = null;
+    _bgmGain = null;
+    _bgmPlaying = false;
+    bgmVolume = 0.08;
+    startBGM() {
+        if (!this.ctx || this._bgmPlaying) return;
+        this._bgmPlaying = true;
+        const notes = [261, 329, 392, 523, 392, 329]; // C4 E4 G4 C5 G4 E4
+        let i = 0;
+        const playNote = () => {
+            if (!this._bgmPlaying || !this.ctx) return;
+            const o = this.ctx.createOscillator();
+            const g = this.ctx.createGain();
+            o.type = 'triangle';
+            o.frequency.value = notes[i % notes.length];
+            g.gain.setValueAtTime(this.bgmVolume, this.ctx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.35);
+            o.connect(g); g.connect(this.ctx.destination);
+            o.start(); o.stop(this.ctx.currentTime + 0.4);
+            i++;
+            this._bgmTimer = setTimeout(playNote, 400);
+        };
+        playNote();
+    }
+    stopBGM() {
+        this._bgmPlaying = false;
+        if (this._bgmTimer) clearTimeout(this._bgmTimer);
+    }
+    toggleBGM() {
+        if (this._bgmPlaying) this.stopBGM();
+        else this.startBGM();
+        return this._bgmPlaying;
+    }
 }
 
 // ============ GAME STATE ============
@@ -91,6 +138,12 @@ class GameState {
         this.started = false;
         this.isGameOver = false;
         this.showingDayTransition = false;
+
+        // Minigame tracking (for achievements)
+        this._pokerPlayed = false;
+        this._billiardPlayed = false;
+        this._slotWon = false;
+        this._goldTraded = false;
 
         // Coin animations queue
         this.coinPopups = []; // { amount, x, y, life }

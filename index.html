@@ -175,8 +175,17 @@
             </div>
         </div>
         <div class="header-right">
-            <button class="btn-pixel" id="btnAddAgent" title="Tuyển Agent mới">
+            <button class="btn-pixel" id="btnAddAgent" title="Tuyển Agent mới [H]">
                 <span>+ HIRE</span>
+            </button>
+            <button class="btn-pixel btn-icon" id="btnAchievements" title="Thành tựu [A]">
+                <span>🏆</span><span class="notif-badge" id="achBadge" style="display:none">0</span>
+            </button>
+            <button class="btn-pixel btn-icon" id="btnNotifCenter" title="Thông báo [N]">
+                <span>🔔</span><span class="notif-badge" id="notifBadge" style="display:none">0</span>
+            </button>
+            <button class="btn-pixel btn-icon" id="btnShortcuts" title="Phím tắt [?]">
+                <span>⌨️</span>
             </button>
             <button class="btn-pixel btn-secondary" id="btnSettings" title="Cài đặt">
                 <span>⚙️</span>
@@ -459,12 +468,86 @@
         </div>
     </div>
 
+    <!-- ========== NOTIFICATION CENTER ========== -->
+    <div class="notif-center" id="notifCenter" style="display:none">
+        <div class="notif-header">
+            <h3>🔔 Thông Báo</h3>
+            <button class="notif-clear" id="notifClearAll">Xóa hết</button>
+        </div>
+        <div class="notif-list" id="notifList"></div>
+    </div>
+
+    <!-- ========== ACHIEVEMENT MODAL ========== -->
+    <div class="modal-overlay" id="achievementOverlay">
+        <div class="modal pixel-border" style="max-width:600px">
+            <div class="modal-header">
+                <h2>🏆 Thành Tựu <span id="achProgress" style="font-size:12px;color:var(--text-muted)"></span></h2>
+                <button class="modal-close" id="closeAchievements">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="ach-progress-bar"><div class="ach-progress-fill" id="achProgressFill"></div></div>
+                <div class="ach-grid" id="achGrid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== SETTINGS MODAL ========== -->
+    <div class="modal-overlay" id="settingsOverlay">
+        <div class="modal pixel-border" style="max-width:440px">
+            <div class="modal-header">
+                <h2>⚙️ Cài Đặt</h2>
+                <button class="modal-close" id="closeSettings">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-group">
+                    <label class="settings-label">🔊 Âm Lượng SFX</label>
+                    <input type="range" id="settingSfxVol" min="0" max="100" value="30" class="settings-range">
+                    <span id="settingSfxVolVal" class="settings-val">30%</span>
+                </div>
+                <div class="settings-group">
+                    <label class="settings-label">🎵 Nhạc Nền (BGM)</label>
+                    <button class="btn-pixel btn-sm" id="settingBgmToggle">🎵 BẬT BGM</button>
+                </div>
+                <div class="settings-group">
+                    <label class="settings-label">💬 Agent Auto-Chat</label>
+                    <button class="btn-pixel btn-sm" id="settingChatToggle">💬 BẬT</button>
+                </div>
+                <div class="settings-group">
+                    <label class="settings-label">💾 Auto-Save (30s)</label>
+                    <span class="settings-val" style="color:var(--accent-success)">✅ Luôn bật</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== KEYBOARD SHORTCUT HELP ========== -->
+    <div class="shortcut-overlay" id="shortcutOverlay" style="display:none">
+        <div class="shortcut-panel">
+            <div class="shortcut-title">⌨️ Phím Tắt</div>
+            <div class="shortcut-grid">
+                <div class="sk"><kbd>Space</kbd> Pause / Resume</div>
+                <div class="sk"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> Tốc độ 1x/2x/3x</div>
+                <div class="sk"><kbd>C</kbd> Contracts</div>
+                <div class="sk"><kbd>H</kbd> Hire Agent</div>
+                <div class="sk"><kbd>S</kbd> Stats</div>
+                <div class="sk"><kbd>A</kbd> Achievements</div>
+                <div class="sk"><kbd>N</kbd> Notifications</div>
+                <div class="sk"><kbd>L</kbd> Layout Editor</div>
+                <div class="sk"><kbd>M</kbd> Toggle BGM</div>
+                <div class="sk"><kbd>Esc</kbd> Đóng modal</div>
+                <div class="sk"><kbd>?</kbd> Hiện phím tắt</div>
+            </div>
+            <div class="shortcut-hint">Nhấn phím bất kỳ để đóng</div>
+        </div>
+    </div>
+
     <script src="billiards.js"></script>
     <script src="billiards-ui.js"></script>
     <script src="slot-machine.js"></script>
     <script src="slot-machine-ui.js"></script>
     <script src="gold-trading.js"></script>
     <script src="gold-trading-ui.js"></script>
+    <script src="achievements.js"></script>
     <script src="app.js"></script>
     <script>
         // Mobile bottom-sheet panel toggle
