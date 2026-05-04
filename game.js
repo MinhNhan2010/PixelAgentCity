@@ -186,26 +186,26 @@ class GameState {
         this.hiringCosts = {
             coder: 100, reviewer: 150, tester: 120, designer: 160,
             devops: 200, researcher: 220, analyst: 180, security: 250,
-            backend: 200, mobile: 200, writer: 130,
+            backend: 200, mobile: 200, writer: 130, farmer: 80,
         };
 
         this.salaries = {
             coder: 15, reviewer: 18, tester: 14, designer: 20,
             devops: 25, researcher: 28, analyst: 22, security: 30,
-            backend: 25, mobile: 22, writer: 12,
+            backend: 25, mobile: 22, writer: 12, farmer: 10,
         };
 
         this.roleUnlockLevel = {
             coder: 1, tester: 1,
             reviewer: 2, designer: 2,
-            devops: 3, researcher: 3,
+            devops: 3, researcher: 3, farmer: 3,
             analyst: 4, security: 4,
             backend: 5, mobile: 5, writer: 5,
         };
 
         this.levelMilestones = [
             { level: 2, xp: 100,  title: 'Small Studio',     unlock: 'Reviewer, Designer' },
-            { level: 3, xp: 300,  title: 'Growing Team',     unlock: 'DevOps, Researcher' },
+            { level: 3, xp: 300,  title: 'Growing Team',     unlock: 'DevOps, Researcher, Farmer' },
             { level: 4, xp: 600,  title: 'Established Firm', unlock: 'Analyst, Security' },
             { level: 5, xp: 1000, title: 'Pro Agency',       unlock: 'Backend, Mobile, Writer' },
             { level: 6, xp: 1500, title: 'Tech Company',     unlock: 'Hard contracts' },

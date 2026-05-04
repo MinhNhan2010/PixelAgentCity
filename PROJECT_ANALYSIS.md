@@ -1,177 +1,303 @@
-# Project Analysis: PixelAgent City
+# Phân Tích Đề Tài: PixelAgent City
 
-## 1. Overview
+## 1. Tổng Quan
 
-**Project name:** PixelAgent City
+**Tên đề tài:** PixelAgent City — Xây dựng game mô phỏng quản lý studio AI trên nền tảng web
 
-**Suggested report title:** Xây dựng game mô phỏng quản lý studio AI trên nền tảng web
+**Quy mô dự án:**
 
-PixelAgent City là một game web mô phỏng quản lý theo phong cách pixel-art. Người chơi vào vai nhà quản lý một studio AI, thực hiện các hoạt động chính như tuyển agent, nhận contract, phân chia công việc, quan sát hiệu suất làm việc, bố trí văn phòng và phát triển công ty qua nhiều cấp độ.
+| Thống kê | Giá trị |
+|---|---|
+| Tổng số file mã nguồn | 21 file |
+| Tổng dung lượng code | ~610 KB |
+| File lớn nhất | `styles.css` (213 KB), `pixel-engine.js` (134 KB), `app.js` (103 KB) |
+| Số module chính | 13 module |
+| Ngôn ngữ | JavaScript ES6+, HTML5, CSS3 |
+| Công nghệ render | HTML5 Canvas API |
+| Âm thanh | Web Audio API (chiptune) |
+| Lưu trữ | localStorage |
 
-Về bản chất, đề tài kết hợp ba hướng chính:
+PixelAgent City là một game web mô phỏng quản lý theo phong cách pixel-art. Người chơi vào vai nhà quản lý một studio AI, thực hiện tuyển agent, nhận contract, phân chia công việc, bố trí văn phòng, nghiên cứu công nghệ, trồng trọt và tham gia các hoạt động giải trí.
 
-- Game mô phỏng quản lý
-- Giao diện tương tác trực quan 2D
-- Giả lập hành vi cộng tác của các AI agents
+Đề tài kết hợp **bốn hướng chính:**
+1. Game mô phỏng quản lý (Simulation/Tycoon)
+2. Giao diện tương tác trực quan 2D pixel-art
+3. Giả lập hành vi cộng tác của các AI agents
+4. Hệ thống mini-game và hoạt động phụ trợ
 
-Đây là một đề tài phù hợp để làm đồ án hoặc sản phẩm showcase vì có gameplay rõ ràng, giao diện dễ demo và logic hệ thống được tách thành các module khá hợp lý.
+---
 
-## 2. Main Goal And Meaning
+## 2. Mục Tiêu Và Ý Nghĩa
 
-Mục tiêu của đề tài là xây dựng một ứng dụng web có khả năng mô phỏng quy trình vận hành của một studio AI ở mức độ đơn giản nhưng trực quan. Thông qua đó, dự án thể hiện các nội dung kỹ thuật và ý tưởng sản phẩm sau:
+### Mục tiêu kỹ thuật
+- Mô phỏng luồng vận hành: tuyển người → nhận việc → xử lý task → nhận tiền → nâng cấp
+- Xây dựng game state có tính tiến trình, thắng/thua và mở khóa nội dung
+- Trình bày văn phòng AI dưới dạng không gian 2D pixel tăng tính nhập vai
+- Giả lập hành vi agent theo 11 role khác nhau (coder, tester, reviewer, designer, devops, researcher, analyst, security, backend, mobile, writer)
+- Tích hợp nhiều hệ thống phụ trợ: nghiên cứu công nghệ, nông trại, giao dịch vàng, mini-game
 
-- Mô phỏng luồng vận hành "tuyển người -> nhận việc -> xử lý task -> nhận tiền -> nâng cấp"
-- Xây dựng hệ thống game state có tính tiến trình, thắng thua và mở khóa nội dung
-- Trình bày văn phòng AI dưới dạng không gian 2D pixel để tăng tính nhập vai
-- Giả lập hành vi agent theo role như coder, tester, reviewer, designer, devops
-- Tạo trải nghiệm tương tác thêm thông qua chatbox và layout editor
+### Ý nghĩa học thuật
+- Phân tích và thiết kế hệ thống phần mềm theo module
+- Quản lý trạng thái (State Management) trong ứng dụng tương tác
+- Mô phỏng đối tượng và quy trình công việc (Agent-based Simulation)
+- Thiết kế giao diện web có tính trực quan và khả năng thao tác
+- Áp dụng các mô hình toán học: Geometric Brownian Motion (giá vàng), Weighted Random (thời tiết, slot machine), Hand Evaluation (poker)
 
-Về ý nghĩa học thuật, đề tài cho thấy khả năng phân tách bài toán thành các thành phần rõ ràng: quản lý trạng thái, mô phỏng agent, render bản đồ, xử lý giao diện và lưu dữ liệu cục bộ.
+---
 
-## 3. Core Modules
+## 3. Kiến Trúc Hệ Thống
 
-### 3.1. `GameState` in `game.js`
+```
+┌─────────────────────────────────────────────────────┐
+│                    index.html                        │
+│              (Cấu trúc DOM + Modal)                  │
+├─────────────────────────────────────────────────────┤
+│                     app.js                           │
+│        (Điều phối tổng, kết nối callback)            │
+├───────┬───────┬──────────┬──────────┬───────────────┤
+│GameSt.│Agent  │PixelEng. │LayoutEd. │  AgentChat.   │
+│game.js│agents │pixel-eng │layout-ed │  chatbox.js   │
+├───────┴───────┴──────────┴──────────┴───────────────┤
+│    TechTree  │  FarmMgr  │ GoldTrading │ Achievem.   │
+│  tech-tree   │  farm.js  │ gold-trad.  │ achievem.   │
+├──────────────┴──────────┴─────────────┴─────────────┤
+│  PokerGame  │ BilliardGame │ SlotMachine             │
+│  poker.js   │ billiards.js │ slot-machine.js         │
+│  poker-ui   │ billiards-ui │ slot-machine-ui         │
+├─────────────┴──────────────┴────────────────────────┤
+│                   styles.css                         │
+│              (Toàn bộ giao diện)                     │
+└─────────────────────────────────────────────────────┘
+```
 
-Module này là trung tâm điều phối gameplay. Thành phần này quản lý:
+---
 
-- Hệ thống kinh tế: coins, tổng thu, tổng chi, chi phí tuyển dụng, lương hằng ngày
-- Chu kỳ ngày đêm và tốc độ game
-- Reputation, company level, XP và điều kiện chiến thắng
-- Contract có các thuộc tính reward, deadline, roles bắt buộc, số task cần hoàn thành
-- Save/load trạng thái bằng `localStorage`
+## 4. Các Module Cốt Lõi
 
-Có thể xem đây là lớp điều khiển tiến trình game và các quy tắc kinh doanh của studio AI.
+### 4.1. GameState (`game.js` — 31 KB, 694 dòng)
 
-### 3.2. `AgentManager` in `agents.js`
+Module trung tâm điều phối gameplay:
+- **Kinh tế:** coins, tổng thu/chi, chi phí tuyển dụng, lương hằng ngày
+- **Chu kỳ thời gian:** ngày đêm, tốc độ game (1x–4x)
+- **Tiến trình:** reputation, company level, XP, điều kiện chiến thắng (IPO)
+- **Contract:** reward, deadline, roles bắt buộc, số task cần hoàn thành
+- **Persistence:** save/load toàn bộ trạng thái bằng `localStorage`
 
-Module này phụ trách logic agent và task. Các chức năng nổi bật gồm:
+### 4.2. AgentManager (`agents.js` — 52 KB, ~1500 dòng)
 
-- Tạo và quản lý danh sách agents
-- Tạo task, gán task, đánh dấu hoàn thành task
-- Mô phỏng quá trình làm việc dựa trên skill, mood, energy và role
-- Hỗ trợ review flow, pair programming, mentoring
-- Phát sinh sự kiện ngẫu nhiên trong văn phòng
+Module phụ trách logic agent và task:
+- Quản lý danh sách 11 loại agent với skill, mood, energy, level
+- Tạo task, gán task, theo dõi tiến độ và đánh dấu hoàn thành
+- Mô phỏng quy trình: working → review → pair programming → mentoring
+- Phát sinh sự kiện ngẫu nhiên (random events) trong văn phòng
 - Ghi nhật ký hoạt động và thống kê hiệu suất
 
-Đây là phần thể hiện rõ nhất ý tưởng "AI office simulation", dù AI hiện tại mới được giả lập theo rule-based logic.
+### 4.3. PixelEngine (`pixel-engine.js` — 134 KB, ~3500 dòng)
 
-### 3.3. `PixelEngine` in `pixel-engine.js`
+Module render engine 2D — lớn nhất dự án:
+- Vẽ bản đồ văn phòng theo tile system
+- Camera: pan, zoom, minimap
+- Quản lý furniture, sprite, vị trí agent
+- Hỗ trợ 3 scene: indoor (văn phòng), outdoor (sân), rooftop
+- Hiệu ứng tương tác: speech bubble, animation, particle
+- Click agent trên canvas để mở chatbox
 
-Module này đảm nhiệm việc hiển thị không gian văn phòng 2D:
+### 4.4. LayoutEditor (`layout-editor.js` — 39 KB, 845 dòng)
 
-- Vẽ bản đồ văn phòng theo tile
-- Điều khiển camera, zoom, minimap
-- Quản lý furniture, vị trí agent và sprite
-- Hiển thị hiệu ứng tương tác trong không gian
-- Hỗ trợ click agent trên canvas
+Cho phép người chơi tùy biến không gian văn phòng:
+- 5 công cụ: Select, Furniture, Erase, Floor Paint, Wall
+- Catalog nội thất 30+ loại chia 5 nhóm (Bàn Ghế, Sofa, Tủ Kệ, Thiết Bị, Trang Trí)
+- Hệ thống collision detection (AABB)
+- Undo/Redo stack (tối đa 100 bước)
+- Auto-save, Export/Import JSON
 
-Thành phần này giúp đề tài có tính trực quan cao và tạo điểm nhấn rõ cho sản phẩm.
+### 4.5. AgentChatbox (`chatbox.js` — 35 KB, 770 dòng)
 
-### 3.4. `LayoutEditor` in `layout-editor.js`
+Mô phỏng giao tiếp với agent:
+- Drag-drop agent vào khung chat hoặc click trên bản đồ
+- Quick Ask theo role (4 nút mỗi role)
+- Phản hồi tự động theo role, trạng thái và context
+- Lịch sử chat per-agent, typing indicator
+- Panel có thể drag, minimize, resize
 
-Layout editor cho phép người chơi:
+---
 
-- Đặt nội thất
-- Xóa vật thể
-- Tô màu sàn
-- Lưu và tải bố cục
-- Undo/redo thao tác
+## 5. Các Module Mở Rộng
 
-Tính năng này làm đề tài vượt qua mức demo game đơn giản, vì người dùng có thêm quyền tùy biến môi trường làm việc.
+### 5.1. TechTree (`tech-tree.js` — 11 KB, 299 dòng)
 
-### 3.5. `AgentChatbox` in `chatbox.js`
+Hệ thống nghiên cứu công nghệ 3 nhánh × 4 tầng = **12 công nghệ:**
 
-Chatbox là thành phần mô phỏng giao tiếp với agent:
+| Nhánh | Tier 1–4 | Hiệu ứng |
+|---|---|---|
+| Engineering | Fast Compile → Code Review Bot → CI/CD → Quantum Computing | Task speed +15%→+50% |
+| AI Research | Smart Assign → Mood Prediction → Neural Optimizer → AGI Prototype | Quality, mood, XP bonus |
+| Management | Overtime → Remote Work → Team Building → IPO Express | Teamwork, XP reduction |
 
-- Kéo thả agent vào khung chat
-- Gửi tin nhắn cho agent
-- Nhận phản hồi theo role và trạng thái công việc
-- Tạo cảm giác tương tác với một đội ngũ AI trong văn phòng
+- Mỗi tech có cost, thời gian nghiên cứu, điều kiện tiên quyết
+- Researcher agent tăng tốc nghiên cứu (+25%/agent)
+- Hệ thống bonus tích lũy ảnh hưởng toàn bộ gameplay
 
-Mặc dù chưa kết nối AI thật, module này vẫn tăng giá trị trình bày và trải nghiệm người dùng.
+### 5.2. FarmManager (`farm.js` — 22 KB, 532 dòng)
 
-### 3.6. `app.js` and `index.html`
+Hệ thống nông trại hoàn chỉnh:
+- **12 loại cây** chia 4 nhóm: Rau củ, Trái cây, Hoa, Thảo dược
+- **8 công thức nấu ăn** tạo buff cho agent (energy, mood, XP)
+- **12 ô đất** với chu trình: trồng → tưới → thu hoạch → bán/nấu
+- **5 loại thời tiết** (sunny, rainy, cloudy, stormy, hot) ảnh hưởng tăng trưởng
+- Agent có thể được gán nhiệm vụ tưới nước tự động
 
-Hai thành phần này phối hợp để:
+### 5.3. GoldTrading (`gold-trading.js` — 14 KB, 373 dòng)
 
-- Khởi tạo game
-- Điều phối start screen, HUD, modal, tab giao diện
-- Kết nối callback giữa `GameState`, `AgentManager`, `PixelEngine`, `LayoutEditor` và `AgentChatbox`
-- Xử lý tuyển agent, nhận contract, refresh danh sách task, logs và thống kê
+Hệ thống giao dịch vàng mô phỏng thị trường tài chính:
+- **Real-time price fetch** từ API thực (fawazahmed0, Frankfurter)
+- **Geometric Brownian Motion** cho biến động giá mô phỏng
+- Biểu đồ nến (Candlestick chart), 60 candles tối đa
+- Hệ thống Buy/Sell với P&L tracking (realized + unrealized)
+- **14 sự kiện thị trường** ngẫu nhiên ảnh hưởng giá (bull/bear)
+- Mean reversion và trend momentum
 
-## 4. Main User Flow
+### 5.4. AchievementManager (`achievements.js` — 7 KB, 129 dòng)
 
-Lượt chơi có thể mô tả ngắn gọn như sau:
+Hệ thống thành tựu **22 achievement** chia 5 nhóm:
+- Economy (4): từ 100Ⓒ đến 50,000Ⓒ
+- Contracts (5): từ 1 đến 30 contract, bao gồm "Hoàn Hảo" (0 fail)
+- Agents (5): từ 3 đến 10 agent, level 5, đa dạng role
+- Company (6): level 3→10, reputation 5.0, 30 ngày
+- Minigames (4): chơi poker, billiards, slot, gold trading
 
-1. Người chơi bắt đầu game mới.
-2. Hệ thống tạo studio ban đầu với một số starter agents.
-3. Người chơi mở bảng contract và nhận hợp đồng phù hợp.
-4. Mỗi contract sinh ra nhiều task cần được hoàn thành.
-5. Agent thực hiện task theo role, mood, energy và có thể phát sinh review hoặc sự kiện ngẫu nhiên.
-6. Khi contract hoàn thành, người chơi nhận tiền, uy tín và XP công ty.
-7. Khi lên level, người chơi mở khóa role mới và contract khó hơn.
-8. Nếu hết tiền thì game over; nếu đạt mốc cao nhất thì chiến thắng.
+### 5.5. PokerGame (`poker.js` — 24 KB, 662 dòng)
 
-Đây là gameplay loop khá đầy đủ cho một game mô phỏng quản lý mini.
+Texas Hold'em Poker hoàn chỉnh:
+- Deck 52 lá, hand evaluation đầy đủ 10 loại (High Card → Royal Flush)
+- Combinatorial evaluation: chọn best 5 từ 7 lá
+- **AI betting personality** theo role: aggression, bluffRate, tightness
+- Phase flow: preflop → flop → turn → river → showdown
+- Blind system, pot management, all-in logic
+- Tối đa 6 người chơi (agent)
 
-## 5. Strengths Of The Topic
+### 5.6. BilliardGame (`billiards.js` — 21 KB, 609 dòng)
 
-Những điểm mạnh nổi bật của đề tài:
+8-Ball Pool với physics engine:
+- **2D physics:** velocity, friction, cushion bounce, ball-ball collision
+- 15 bi + cue ball, 6 pocket, standard rack
+- **AI aiming:** tìm target tốt nhất, tính góc tiếp xúc, error range theo personality
+- Luật 8-ball: solids/stripes assignment, foul detection
+- 11 personality theo role: accuracy, power, style
 
-- Có ý tưởng sáng tạo: đưa mô hình văn phòng AI vào một game pixel-art
-- Cấu trúc code tách module khá rõ, dễ phân tích trong báo cáo
-- Có kết hợp gameplay, UI, mô phỏng agent và tùy biến không gian
-- Chạy bằng front-end thuần, dễ demo nhanh mà không cần backend
-- Có cơ chế progression gồm contract, reputation, level và unlock role
-- Có thêm chatbox và layout editor, giúp sản phẩm phong phú hơn một game mẫu đơn giản
+### 5.7. SlotMachine (`slot-machine.js` — 7 KB, 197 dòng)
 
-## 6. Technical Limitations
+Máy đánh bạc 3 reel:
+- 7 symbol với weighted distribution (Cherry 25% → Jackpot 2%)
+- Bảng thưởng: Triple match (3x–50x), Two-of-a-kind (1.5x–5x)
+- 4 mức cược: 10, 25, 50, 100 coins
+- Staggered reveal animation, auto-spin mode
 
-Bên cạnh điểm mạnh, dự án vẫn có những hạn chế kỹ thuật cần nêu trung thực trong báo cáo:
+---
 
-- Agent hiện tại là mô phỏng logic, chưa tích hợp AI thời gian thực hoặc mô hình ngôn ngữ thật
-- Dữ liệu đang lưu bằng `localStorage`, nên chỉ phù hợp cho sử dụng cá nhân trên một trình duyệt
-- Chưa có backend, database hoặc đồng bộ nhiều người dùng
-- Một số chuỗi giao diện đang bị lỗi encoding tiếng Việt và cần được chuẩn hóa trước khi nộp chính thức
-- Giao diện HTML hiện có dấu hiệu lặp `id` như `footerBar` và `btnClearLogs`, có thể gây xung đột DOM
+## 6. Luồng Chơi Chính (Gameplay Loop)
 
-Những hạn chế này không làm mất giá trị đề tài, nhưng là các điểm nên nêu rõ để tăng tính thực tế và tính học thuật cho báo cáo.
+```
+Bắt đầu → Tuyển Agent → Nhận Contract → Gán Task → Agent làm việc
+    ↓                                                      ↓
+Nâng level ← Nhận XP + Tiền ← Hoàn thành Contract ← Review/Complete
+    ↓
+Mở khóa: Role mới, Contract khó hơn, Tech Tree, Farm, Mini-games
+    ↓
+Mục tiêu cuối: Company Level 10 → IPO → Chiến thắng!
+```
 
-## 7. Academic And Practical Value
+**Các hoạt động song song:**
+- Nghiên cứu công nghệ (Tech Tree) → bonus vĩnh viễn
+- Trồng trọt (Farm) → thu nhập phụ + buff agent
+- Giao dịch vàng → đầu cơ kiếm lợi nhuận
+- Mini-games (Poker, Billiards, Slot) → giải trí + achievement
+- Tùy biến văn phòng (Layout Editor) → tăng mood/energy agent
 
-### Giá trị học thuật
+---
 
-Đề tài phù hợp để trình bày các nội dung:
+## 7. Các Kỹ Thuật Nổi Bật
 
-- Phân tích và thiết kế hệ thống
-- Quản lý trạng thái trong ứng dụng tương tác
-- Mô phỏng đối tượng và quy trình công việc
-- Thiết kế giao diện web có tính trực quan và khả năng thao tác
-- Tích hợp gameplay với thành phần quản trị và thống kê
+### 7.1. Mô phỏng Agent (Rule-based AI)
+- Mỗi agent có: mood, energy, skill, level, role → ảnh hưởng hiệu suất
+- Hành vi: working → resting → socializing → playing games
+- Random events: bug outbreak, coffee break, pair programming
 
-### Giá trị thực tiễn
+### 7.2. Physics Engine (Billiards)
+- Euler integration cho vị trí bi
+- AABB + circle collision detection
+- Elastic collision response (equal mass)
+- Friction decay, cushion bounce coefficient
 
-Đề tài có thể phát triển tiếp theo các hướng:
+### 7.3. Financial Simulation (Gold Trading)
+- Geometric Brownian Motion: `price = price × (drift + noise)`
+- Mean reversion towards equilibrium price
+- Trend momentum, market event influence
+- Candlestick data aggregation
 
-- Tích hợp AI thật cho chat agent
-- Bổ sung backend và tài khoản người dùng
-- Đồng bộ save game trên cloud
-- Mở rộng contract, furniture, bản đồ và role
-- Thêm bảng xếp hạng, achievement hoặc hệ thống nhiệm vụ
+### 7.4. Combinatorial Algorithm (Poker)
+- C(7,5) = 21 combinations per hand evaluation
+- Backtracking algorithm cho combination generation
+- Hand ranking: flush/straight detection, group counting
 
-## 8. Conclusion
+### 7.5. Tile-based Rendering (PixelEngine)
+- Isometric-style 2D rendering trên HTML5 Canvas
+- Camera system: pan/zoom/minimap
+- Sprite-based furniture và character rendering
+- Layered rendering: floor → furniture → agents → effects
 
-PixelAgent City là một đề tài tốt vì kết hợp được tính sáng tạo, tính thực hành và khả năng demo. Sản phẩm không chỉ là một giao diện đẹp mà còn có vòng chơi rõ ràng, cấu trúc logic tương đối đầy đủ và nhiều thành phần mô phỏng có giá trị trình bày.
+---
 
-Nếu viết kết luận ngắn cho báo cáo, có thể dùng ý sau:
+## 8. Điểm Mạnh
 
-> Đề tài PixelAgent City đã xây dựng một hệ thống game web mô phỏng quản lý studio AI theo phong cách pixel-art, trong đó người chơi có thể tuyển agent, nhận contract, bố trí văn phòng và phát triển công ty qua từng giai đoạn. Đề tài có giá trị cả về mặt học thuật lẫn sản phẩm, đồng thời mở ra khả năng mở rộng thành một hệ thống quản lý agent thông minh trong tương lai.
+1. **Ý tưởng sáng tạo:** Kết hợp mô hình văn phòng AI với game pixel-art tycoon
+2. **Quy mô lớn:** 13 module, 610KB code, nhiều hệ thống đan xen
+3. **Cấu trúc module rõ ràng:** Mỗi class có trách nhiệm riêng, dễ phân tích
+4. **Gameplay phong phú:** Không chỉ quản lý mà còn có farm, trading, mini-games
+5. **Front-end thuần:** Chạy trực tiếp trên trình duyệt, dễ demo
+6. **Persistence hoàn chỉnh:** Save/load tất cả module qua localStorage
+7. **Kỹ thuật đa dạng:** Canvas 2D, physics, financial modeling, AI decision
+8. **Tính tương tác cao:** Chatbox, layout editor, drag-drop, keyboard shortcuts
+9. **Achievement system:** Tạo động lực khám phá toàn bộ nội dung
 
-## 9. Suggested Presentation Script
+---
 
-Nếu cần trình bày nhanh, có thể tóm tắt bằng bốn ý:
+## 9. Hạn Chế Kỹ Thuật
 
-- PixelAgent City là game web mô phỏng quản lý một studio AI
-- Hệ thống gồm các module quản lý game state, agent, văn phòng, chatbox và layout editor
-- Điểm nổi bật là gameplay loop rõ ràng và giao diện pixel trực quan
-- Hạn chế hiện tại là chưa có AI thật, backend thật và cần sửa một số vấn đề giao diện/encoding
+1. **AI mô phỏng:** Agent hoạt động theo rule-based logic, chưa tích hợp LLM thực tế
+2. **Lưu trữ cục bộ:** localStorage không đồng bộ đa thiết bị, giới hạn ~5MB
+3. **Không có backend:** Không có database, authentication hay multiplayer
+4. **CSS monolithic:** 1 file `styles.css` 213KB, khó bảo trì
+5. **Không có bundler:** Load nhiều script riêng lẻ, không tree-shaking
+6. **Không có test:** Chưa có unit test hoặc integration test
+7. **Encoding:** Một số chuỗi tiếng Việt cần chuẩn hóa
+
+---
+
+## 10. Hướng Phát Triển
+
+| Hướng | Mô tả |
+|---|---|
+| Tích hợp AI thật | Kết nối API LLM (Gemini/GPT) vào AgentChatbox |
+| Backend | Node.js/Express + MongoDB cho save game cloud |
+| Multiplayer | So sánh thành tích, bảng xếp hạng |
+| Module hóa CSS | Tách styles.css thành component-level CSS |
+| Bundler | Vite/Webpack để tối ưu loading |
+| Testing | Jest cho unit test các module logic |
+| Mobile responsive | Tối ưu touch controls cho tablet |
+
+---
+
+## 11. Kết Luận
+
+PixelAgent City là một đề tài có quy mô lớn và chiều sâu kỹ thuật đáng kể. Với 13 module, 610KB mã nguồn và nhiều hệ thống game mechanics đan xen, dự án thể hiện khả năng phân tích bài toán, thiết kế kiến trúc phần mềm và triển khai các thuật toán đa dạng (từ physics simulation đến financial modeling). Sản phẩm chạy hoàn toàn trên front-end, dễ demo và có gameplay loop rõ ràng từ startup đến IPO.
+
+> **Tóm tắt 1 câu:** PixelAgent City là game web mô phỏng quản lý studio AI phong cách pixel-art, tích hợp 13 module bao gồm quản lý agent, nghiên cứu công nghệ, nông trại, giao dịch vàng và mini-games, chạy hoàn toàn trên trình duyệt với HTML5 Canvas.
+
+## 12. Gợi Ý Trình Bày
+
+**4 ý chính khi thuyết trình:**
+1. PixelAgent City là game web mô phỏng quản lý studio AI với 13 module
+2. Kỹ thuật: Canvas 2D rendering, physics engine, financial simulation, combinatorial algorithms
+3. Điểm nổi bật: gameplay loop rõ ràng, nhiều hệ thống phụ trợ, giao diện pixel trực quan
+4. Hạn chế: chưa có AI thật, backend, và cần tối ưu codebase

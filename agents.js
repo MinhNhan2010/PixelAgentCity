@@ -37,6 +37,7 @@ class AgentManager {
             backend:    { speedMul: 1.1, moodDecay: 0.07, energyDrain: 0.06, xpMul: 1.0, emoji: '⚙️', name: 'Backend',   behaviors: ['writing','deploying','testing'] },
             mobile:     { speedMul: 1.0, moodDecay: 0.06, energyDrain: 0.05, xpMul: 1.0, emoji: '📱', name: 'Mobile',    behaviors: ['writing','testing','thinking'] },
             writer:     { speedMul: 0.8, moodDecay: 0.03, energyDrain: 0.03, xpMul: 0.7, emoji: '✍️', name: 'Writer',    behaviors: ['writing','reading','thinking'] },
+            farmer:     { speedMul: 0.7, moodDecay: 0.02, energyDrain: 0.03, xpMul: 0.8, emoji: '🌾', name: 'Farmer',    behaviors: ['farming','watering','harvesting'] },
         };
 
         // Behavior message pools
@@ -47,6 +48,9 @@ class AgentManager {
             testing:       ['Running tests...','Checking coverage...','Validating output...','E2E testing...','Load testing...','Integration testing...'],
             deploying:     ['Building project...','Deploying to staging...','Updating configs...','Running CI/CD...','Docker build...','K8s rollout...'],
             collaborating: ['Pair programming...','Code review with team...','Sharing knowledge...','Asking for help...','Mentoring junior...','Team standup...'],
+            farming:       ['🌱 Đang gieo hạt...','🌿 Chăm sóc cây trồng...','🧑‍🌾 Kiểm tra vườn rau...','🌾 Nhổ cỏ dại...','🪴 Bón phân cho cây...','🌻 Ngắm vườn hoa...'],
+            watering:      ['💧 Đang tưới nước...','🚿 Tưới cây rau...','💦 Kiểm tra độ ẩm đất...','🌧️ Hứng nước mưa...'],
+            harvesting:    ['🌾 Thu hoạch rau củ...','🍅 Hái cà chua chín...','🥕 Nhổ cà rốt...','🍓 Hái dâu tây...','🎃 Thu hoạch bí ngô...'],
         };
 
         // Random events pool
@@ -57,6 +61,10 @@ class AgentManager {
             { id: 'milestone',  weight: 12, emoji: '🎉', title: 'Milestone đạt được!',       message: 'Team hoàn thành milestone quan trọng!', effect: 'mood_boost' },
             { id: 'idea',       weight: 15, emoji: '💡', title: 'Ý tưởng mới!',             message: 'Có ý tưởng tuyệt vời cho feature mới!', effect: 'create_task' },
             { id: 'review',     weight: 20, emoji: '📝', title: 'Code Review Request',       message: 'Cần review code trước khi merge.', effect: 'review_flow' },
+            // Farming events
+            { id: 'good_harvest', weight: 12, emoji: '🌾', title: 'Mùa thu hoạch tốt!',      message: 'Cây trồng phát triển nhanh hơn bình thường!', effect: 'farm_boost' },
+            { id: 'pest_attack',  weight: 8,  emoji: '🐛', title: 'Sâu bệnh tấn công!',      message: 'Sâu bọ phá hoại vườn rau!', effect: 'farm_damage' },
+            { id: 'rain_blessing',weight: 10, emoji: '🌧️', title: 'Mưa lành!',               message: 'Cơn mưa bất ngờ tưới mát vườn cây!', effect: 'farm_rain' },
         ];
     }
 
@@ -558,8 +566,41 @@ class AgentManager {
                     }
                 }
 
+                // === FARMING: Random chance for agents to go farm ===
+                if (!agent._isRoaming && !agent._isPlayingPoker && !agent._isPlayingBilliard
+                    && !agent._isPlayingSlot && !agent._isTrading && !agent._isFarming
+                    && Math.random() < (agent.role === 'farmer' ? 0.015 : 0.003)) {
+                    if (this.onFarmRequest) {
+                        agent._isFarming = true;
+                        const actionType = Math.random() < 0.5 ? 'water' : 'harvest';
+                        const farmMsg = actionType === 'water' ? '💧 Đi tưới cây nào!' : '🌾 Đi thu hoạch!';
+                        this.addLog(agent.name, `🌱 ${farmMsg}`, 'info');
+                        if (this.engine) {
+                            // Farm area coordinates (outdoor room)
+                            const farmTX = 3 + Math.floor(Math.random() * 12);
+                            const farmTY = 32 + Math.floor(Math.random() * 4);
+                            const success = this.engine.sendAgentTo(agent.id, farmTX, farmTY, () => {
+                                this.engine.showSpeechBubble(agent.id, farmMsg, 3000);
+                                this.engine.spawnInteractionFx(farmTX, farmTY, actionType === 'water' ? '💧' : '🌾');
+                                this.onFarmRequest(agent, actionType);
+                                // Return after farming
+                                setTimeout(() => {
+                                    agent._isFarming = false;
+                                    if (this.engine) this.engine.sendAgentToDesk(agent.id);
+                                }, 3000 + Math.random() * 3000);
+                            });
+                            if (!success) {
+                                agent._isFarming = false;
+                            }
+                        } else {
+                            this.onFarmRequest(agent, actionType);
+                            agent._isFarming = false;
+                        }
+                    }
+                }
+
                 // === FREE ROAMING: Visit furniture/interaction points ===
-                if (this.engine && !agent._isRoaming && Math.random() < 0.006) {
+                if (this.engine && !agent._isRoaming && !agent._isFarming && Math.random() < 0.006) {
                     const point = this.engine.getRandomInteraction();
                     if (point) {
                         agent._isRoaming = true;
@@ -730,6 +771,41 @@ class AgentManager {
                     const task = inProgress[Math.floor(Math.random() * inProgress.length)];
                     task.needsReview = true;
                     this.addLog('System', `📝 Task "${task.title}" cần review trước khi merge`, 'info');
+                }
+                break;
+            }
+
+            // === FARM EVENTS ===
+            case 'farm_boost': {
+                const fm = window._farmManager;
+                if (fm) {
+                    fm.plots.forEach(p => {
+                        if (p.state === 'growing' && p.growthStage < 3) p.growthStage = Math.min(3, p.growthStage + 1);
+                        if (p.growthStage >= 3) p.state = 'ready';
+                    });
+                }
+                break;
+            }
+
+            case 'farm_damage': {
+                const fm2 = window._farmManager;
+                if (fm2) {
+                    const growing = fm2.plots.filter(p => p.state === 'growing');
+                    if (growing.length > 0) {
+                        const victim = growing[Math.floor(Math.random() * growing.length)];
+                        victim.growthStage = Math.max(0, victim.growthStage - 1);
+                    }
+                }
+                break;
+            }
+
+            case 'farm_rain': {
+                const fm3 = window._farmManager;
+                if (fm3) {
+                    fm3.plots.forEach(p => {
+                        if (p.state === 'growing') p.watered = true;
+                    });
+                    fm3.weather = 'rainy';
                 }
                 break;
             }

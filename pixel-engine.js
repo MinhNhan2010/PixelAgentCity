@@ -214,7 +214,7 @@ class PixelEngine {
             3:{w:18,h:12,f:'carpet'}, 4:{w:15,h:7,f:'carpet'}, 5:{w:12,h:8,f:'tile'},
             6:{w:12,h:8,f:'wood'}, 7:{w:14,h:8,f:'wood'}, 8:{w:12,h:8,f:'carpet'},
             9:{w:14,h:8,f:'carpet'}, 10:{w:15,h:10,f:'tile'},
-            11:{w:18,h:12,f:'grass'}, 12:{w:6,h:6,f:'metal'}, 13:{w:20,h:10,f:'concrete'},
+            11:{w:18,h:20,f:'grass'}, 12:{w:6,h:6,f:'metal'}, 13:{w:20,h:10,f:'concrete'},
         };
 
         // ═══ SCENE: INDOOR (Building) ═══
@@ -645,28 +645,41 @@ class PixelEngine {
                 f.push({t:'parasol',x:(rx+2)*T,y:(ry+4)*T},{t:'parasol',x:(rx+8)*T,y:(ry+4)*T},{t:'parasol',x:(rx+14)*T,y:(ry+4)*T});
                 f.push({t:'bench',x:(rx+2)*T,y:(ry+6)*T},{t:'bench',x:(rx+8)*T,y:(ry+6)*T},{t:'bench',x:(rx+14)*T,y:(ry+6)*T});
                 // BBQ area
-                f.push({t:'bbq_grill',x:(rx+3)*T,y:(ry+7)*T},{t:'bbq_grill',x:(rx+6)*T,y:(ry+7)*T});
+                f.push({t:'bbq_grill',x:(rx+3)*T,y:(ry+7)*T});
                 f.push({t:'table_small',x:(rx+4)*T,y:(ry+9)*T},{t:'bench',x:(rx+4)*T,y:(ry+10)*T});
                 // Pond area
                 f.push({t:'pond',x:(rx+10)*T,y:(ry+7)*T});
                 f.push({t:'bench',x:(rx+13)*T,y:(ry+8)*T});
                 // Fountain
                 f.push({t:'fountain',x:(rx+14)*T,y:(ry+3)*T});
-                // Cactus
-                f.push({t:'cactus',x:(rx+15)*T,y:(ry+10)*T},{t:'cactus',x:(rx+16)*T,y:(ry+10)*T});
                 // Street lamps
                 f.push({t:'street_lamp',x:(rx)*T,y:(ry+6)*T},{t:'street_lamp',x:(rx+17)*T,y:(ry+6)*T});
                 // === ANIMALS ===
-                // Birds (different colors)
                 f.push({t:'animal_bird',x:(rx+3)*T,y:(ry+5)*T,birdColor:'#e67e22',bellyColor:'#fdebd0'});
                 f.push({t:'animal_bird',x:(rx+9)*T,y:(ry+6)*T,birdColor:'#3498db',bellyColor:'#d6eaf8'});
-                f.push({t:'animal_bird',x:(rx+15)*T,y:(ry+4)*T,birdColor:'#e74c3c',bellyColor:'#fadbd8'});
-                // Cats
                 f.push({t:'animal_cat',x:(rx+5)*T,y:(ry+8)*T,catColor:'#f39c12',stripeColor:'#d68910'});
-                f.push({t:'animal_cat',x:(rx+12)*T,y:(ry+9)*T,catColor:'#2c3e50',stripeColor:'#1a252f'});
-                // Dog
                 f.push({t:'animal_dog',x:(rx+8)*T,y:(ry+9)*T,dogColor:'#8B4513',lightColor:'#d4a76a'});
-                // Interaction points
+
+                // === NÔNG TRẠI (FARM) ===
+                // Farm sign
+                f.push({t:'farm_sign',x:(rx+8)*T,y:(ry+10)*T});
+                // Water well
+                f.push({t:'water_well',x:(rx+16)*T,y:(ry+10)*T});
+                // Scarecrow
+                f.push({t:'scarecrow',x:(rx)*T,y:(ry+11)*T});
+                // Compost bin
+                f.push({t:'compost_bin',x:(rx+17)*T,y:(ry+11)*T});
+
+                // 12 Farm plots (3 rows x 4 columns) — plotId stored for FarmManager
+                for (let row = 0; row < 3; row++) {
+                    for (let col = 0; col < 4; col++) {
+                        const plotX = rx + 1 + col * 4;
+                        const plotY = ry + 11 + row * 3;
+                        f.push({t:'farm_plot', x:plotX*T, y:plotY*T, plotId: row*4+col, w:3, h:2});
+                    }
+                }
+
+                // Interaction points (original + farm)
                 this.interactionPoints.push(
                     {id:'outdoor1',type:'parasol',tx:rx+3,ty:ry+5,emoji:'☂️',label:'Ngồi dưới ô',effect:'rest'},
                     {id:'outdoor2',type:'bbq',tx:rx+4,ty:ry+8,emoji:'🍖',label:'Nướng BBQ',effect:'energy'},
@@ -675,6 +688,12 @@ class PixelEngine {
                     {id:'outdoor5',type:'car',tx:rx+3,ty:ry+2,emoji:'🚗',label:'Bãi đỗ xe',effect:'mood'},
                     {id:'outdoor6',type:'animal',tx:rx+9,ty:ry+7,emoji:'🐕',label:'Chơi với thú cưng',effect:'mood'},
                     {id:'outdoor7',type:'fruit',tx:rx+4,ty:ry+1,emoji:'🍎',label:'Hái trái cây',effect:'energy'},
+                    // Farm interaction points
+                    {id:'farm1',type:'farm_plot',tx:rx+3,ty:ry+12,emoji:'🌱',label:'Luống rau 1',effect:'farm'},
+                    {id:'farm2',type:'farm_plot',tx:rx+7,ty:ry+12,emoji:'🌱',label:'Luống rau 2',effect:'farm'},
+                    {id:'farm3',type:'farm_plot',tx:rx+11,ty:ry+12,emoji:'🌱',label:'Luống rau 3',effect:'farm'},
+                    {id:'farm4',type:'farm_plot',tx:rx+15,ty:ry+12,emoji:'🌱',label:'Luống rau 4',effect:'farm'},
+                    {id:'well1',type:'water_well',tx:rx+16,ty:ry+11,emoji:'💧',label:'Giếng nước',effect:'energy'},
                 );
                 break;
             case 12: // Thang Máy — Elevator shaft with doors and panel
@@ -939,6 +958,12 @@ class PixelEngine {
             case 'animal_dog': this.drawAnimalDog(f); break;
             // Street furniture
             case 'street_lamp': this.drawStreetLamp(x, y); break;
+            // Farm objects
+            case 'farm_plot': this.drawFarmPlot(f); break;
+            case 'farm_sign': this.drawFarmSign(x, y); break;
+            case 'scarecrow': this.drawScarecrow(x, y); break;
+            case 'water_well': this.drawWaterWell(x, y); break;
+            case 'compost_bin': this.drawCompostBin(x, y); break;
         }
     }
 
@@ -2712,6 +2737,190 @@ class PixelEngine {
         
         if (this._postRender) this._postRender();
         requestAnimationFrame((t) => this.render(t));
+    }
+    // ============================
+    // === FARM DRAW METHODS ===
+    // ============================
+
+    drawFarmPlot(f) {
+        const T = this.T, x = f.x, y = f.y;
+        const w = (f.w || 3) * T, h = (f.h || 2) * T;
+
+        // Soil base
+        this.px(x, y, w, h, '#5a3e28');
+        this.px(x+1, y+1, w-2, h-2, '#6b4a30');
+
+        // Soil rows (furrows)
+        for (let i = 0; i < 4; i++) {
+            const fy = y + 3 + i * (h / 5);
+            this.px(x + 2, fy, w - 4, 2, '#4a3020');
+            this.px(x + 2, fy + 2, w - 4, 1, '#7a5a3a');
+        }
+
+        // Small fence around plot
+        this.px(x, y, w, 1, '#8B6914');
+        this.px(x, y+h-1, w, 1, '#8B6914');
+        this.px(x, y, 1, h, '#8B6914');
+        this.px(x+w-1, y, 1, h, '#8B6914');
+        // Fence posts
+        this.px(x, y-2, 2, 3, '#5c3d2e');
+        this.px(x+w-2, y-2, 2, 3, '#5c3d2e');
+
+        // Get farm data from window._farmManager if available
+        const fm = window._farmManager;
+        if (fm && f.plotId !== undefined) {
+            const plot = fm.plots[f.plotId];
+            if (plot && plot.state !== 'empty') {
+                const seed = fm.seedCatalog.find(s => s.id === plot.seedId);
+                const color = seed?.color || '#27ae60';
+                const cx = x + w/2;
+                const cy = y + h/2;
+
+                switch (plot.growthStage) {
+                    case 0: // Seed - small dots
+                        for (let i = 0; i < 3; i++) {
+                            this.px(x + 8 + i * 10, y + h/2, 3, 2, '#8B6914');
+                        }
+                        break;
+                    case 1: // Sprout - small green shoots
+                        for (let i = 0; i < 3; i++) {
+                            const sx = x + 8 + i * 10;
+                            const sy = y + h/2;
+                            this.px(sx+1, sy-4, 1, 4, '#2ecc71');
+                            this.px(sx, sy-5, 3, 2, '#27ae60');
+                        }
+                        break;
+                    case 2: // Growing - medium plants
+                        for (let i = 0; i < 3; i++) {
+                            const sx = x + 7 + i * 10;
+                            const sy = y + h/2;
+                            this.px(sx+1, sy-8, 2, 8, '#1a8c3a');
+                            this.px(sx-1, sy-8, 5, 3, color);
+                            this.px(sx, sy-6, 4, 2, '#2ecc71');
+                        }
+                        break;
+                    case 3: // Ready - full grown with fruit (animated)
+                        const sway = Math.sin(this.elapsed * 0.02 + f.plotId) * 1;
+                        for (let i = 0; i < 3; i++) {
+                            const sx = x + 7 + i * 10;
+                            const sy = y + h/2;
+                            this.px(sx+1, sy-10, 2, 10, '#1a6b2a');
+                            this.px(sx-1 + sway, sy-12, 6, 4, color);
+                            this.px(sx + sway, sy-10, 4, 3, '#2ecc71');
+                            // Fruit/flower dot
+                            this.px(sx+1 + sway, sy-13, 3, 3, seed?.color || '#e74c3c');
+                            this.px(sx+2 + sway, sy-14, 1, 1, '#fff');
+                        }
+                        // Ready glow
+                        if (Math.floor(this.elapsed * 0.04) % 2) {
+                            this.px(x+1, y+h-3, w-2, 2, 'rgba(255,217,61,0.25)');
+                        }
+                        break;
+                }
+
+                // Watered indicator
+                if (plot.watered) {
+                    this.px(x+2, y+2, 4, 2, 'rgba(52,152,219,0.5)');
+                    this.px(x+4, y+1, 2, 1, 'rgba(52,152,219,0.3)');
+                }
+            }
+        }
+    }
+
+    drawFarmSign(x, y) {
+        const T = this.T;
+        // Wooden post
+        this.px(x + 5, y + 4, 3, T - 4, '#5c3d2e');
+        this.px(x + 6, y + 4, 1, T - 4, '#7a5a3a');
+        // Sign board
+        this.px(x, y, T, 6, '#8B6914');
+        this.px(x+1, y+1, T-2, 4, '#a0794a');
+        // "FARM" text (pixel dots)
+        // F
+        this.px(x+2, y+2, 1, 3, '#1a1a2e');
+        this.px(x+3, y+2, 2, 1, '#1a1a2e');
+        this.px(x+3, y+3, 1, 1, '#1a1a2e');
+        // A
+        this.px(x+6, y+2, 1, 3, '#1a1a2e');
+        this.px(x+8, y+2, 1, 3, '#1a1a2e');
+        this.px(x+7, y+2, 1, 1, '#1a1a2e');
+        this.px(x+7, y+3, 1, 1, '#1a1a2e');
+        // R
+        this.px(x+10, y+2, 1, 3, '#1a1a2e');
+        this.px(x+11, y+2, 1, 1, '#1a1a2e');
+        this.px(x+11, y+3, 1, 1, '#1a1a2e');
+        this.px(x+12, y+4, 1, 1, '#1a1a2e');
+        // Plant emoji decoration
+        const sway = Math.sin(this.elapsed * 0.015) * 0.5;
+        this.px(x - 2 + sway, y - 2, 3, 3, '#27ae60');
+        this.px(x + T + sway, y - 2, 3, 3, '#2ecc71');
+    }
+
+    drawScarecrow(x, y) {
+        const T = this.T;
+        const sway = Math.sin(this.elapsed * 0.01 + 1) * 1.5;
+        // Pole
+        this.px(x + 6, y + 5, 2, T - 5, '#5c3d2e');
+        // Cross bar
+        this.px(x + 1, y + 6 + sway * 0.3, 12, 2, '#6b4f3a');
+        // Head (hat + face)
+        this.px(x + 3, y + 1, 8, 2, '#d4a76a'); // hat brim
+        this.px(x + 4, y - 1, 6, 2, '#8B6914'); // hat top
+        this.px(x + 5, y + 3, 4, 3, '#fdebd0'); // face
+        this.px(x + 5, y + 3, 1, 1, '#1a1a2e'); // left eye
+        this.px(x + 8, y + 3, 1, 1, '#1a1a2e'); // right eye
+        this.px(x + 6, y + 5, 2, 1, '#e74c3c'); // mouth
+        // Shirt
+        this.px(x + 4, y + 8, 6, 4, '#3498db');
+        this.px(x + 5, y + 9, 4, 2, '#2980b9');
+        // Arms (fabric hanging) with sway
+        this.px(x + sway, y + 7, 4, 3, '#e67e22');
+        this.px(x + 10 - sway, y + 7, 4, 3, '#e67e22');
+        // Straw poking out
+        this.px(x + 1 + sway, y + 9, 2, 1, '#f1c40f');
+        this.px(x + 11 - sway, y + 9, 2, 1, '#f1c40f');
+    }
+
+    drawWaterWell(x, y) {
+        const T = this.T;
+        // Stone base (circular-ish)
+        this.px(x + 1, y + T - 8, T - 2, 8, '#7f8c8d');
+        this.px(x + 2, y + T - 9, T - 4, 1, '#95a5a6');
+        this.px(x, y + T - 7, T, 6, '#6b7b8d');
+        // Water inside
+        const waterShimmer = Math.sin(this.elapsed * 0.03) * 0.5;
+        this.px(x + 3, y + T - 6, T - 6, 4, '#2980b9');
+        this.px(x + 4 + waterShimmer, y + T - 5, T - 8, 2, '#3498db');
+        // Wooden frame above
+        this.px(x + 1, y + T - 12, 2, 5, '#5c3d2e');
+        this.px(x + T - 3, y + T - 12, 2, 5, '#5c3d2e');
+        // Roof beam
+        this.px(x, y + T - 13, T, 2, '#8B6914');
+        this.px(x + 2, y + T - 14, T - 4, 1, '#a0794a');
+        // Bucket (hanging)
+        const bucketY = y + T - 10 + Math.sin(this.elapsed * 0.02) * 1;
+        this.px(x + T/2 - 2, y + T - 12, 1, 3, '#4a3020'); // rope
+        this.px(x + T/2 - 3, bucketY, 4, 3, '#7a5a3a');
+    }
+
+    drawCompostBin(x, y) {
+        const T = this.T;
+        // Wooden bin
+        this.px(x, y + 2, T, T - 2, '#5c3d2e');
+        this.px(x + 1, y + 3, T - 2, T - 4, '#6b4f3a');
+        // Slats
+        for (let i = 0; i < 3; i++) {
+            this.px(x, y + 4 + i * 4, T, 1, '#4a3020');
+        }
+        // Compost inside (visible from top)
+        this.px(x + 2, y + 1, T - 4, 3, '#3d2610');
+        this.px(x + 3, y + 1, 2, 1, '#27ae60'); // green bits
+        this.px(x + 7, y + 2, 2, 1, '#8B6914'); // brown bits
+        // Steam/decomposition particles
+        if (Math.floor(this.elapsed * 0.02) % 3 === 0) {
+            this.px(x + 4, y - 1, 2, 1, 'rgba(255,255,255,0.2)');
+            this.px(x + 8, y - 2, 1, 1, 'rgba(255,255,255,0.15)');
+        }
     }
 }
 

@@ -237,6 +237,23 @@
             </button>
         </div>
         <div class="hud-section">
+            <button class="hud-btn hud-btn-research" id="btnTechTree" title="Cây Công Nghệ [R]">
+                🔬 Research <span class="hud-badge hud-research-badge" id="hudResearchBadge" style="display:none">0</span>
+            </button>
+        </div>
+        <div class="hud-section">
+            <button class="hud-btn hud-btn-farm" id="btnFarm" title="Nông Trại [F]">
+                🌾 Farm
+            </button>
+        </div>
+        <div class="hud-section hud-research-progress" id="hudResearchWrap" style="display:none">
+            <span class="hud-research-icon" id="hudResearchIcon">🔬</span>
+            <div class="hud-research-bar">
+                <div class="hud-research-fill" id="hudResearchFill"></div>
+            </div>
+            <span class="hud-research-text" id="hudResearchText">0%</span>
+        </div>
+        <div class="hud-section">
             <button class="hud-btn hud-btn-expand" id="btnRoomShop" title="Mở rộng văn phòng">
                 🏗️ Mở rộng
             </button>
@@ -447,6 +464,61 @@
     <!-- Gold Trading Overlay -->
     <div class="gold-overlay" id="goldTradeOverlay"></div>
 
+    <!-- ========== FARM OVERLAY ========== -->
+    <div class="farm-overlay" id="farmOverlay" style="display:none">
+        <div class="farm-panel pixel-border">
+            <div class="overlay-header">
+                <h3>🌾 Nông Trại PixelAgent</h3>
+                <div class="farm-weather" id="farmWeather">☀️ Nắng đẹp</div>
+                <button class="overlay-close" id="closeFarm">✕</button>
+            </div>
+
+            <div class="farm-stats-bar">
+                <span>📦 Kho: <strong id="farmProduceCount">0</strong></span>
+                <span>🌱 Trồng: <strong id="farmPlantedCount">0</strong>/12</span>
+                <span>✅ Sẵn sàng: <strong id="farmReadyCount">0</strong></span>
+            </div>
+
+            <div class="farm-tabs">
+                <button class="farm-tab active" data-tab="plots">🌿 Luống đất</button>
+                <button class="farm-tab" data-tab="seeds">🌱 Hạt giống</button>
+                <button class="farm-tab" data-tab="cooking">🍳 Nấu ăn</button>
+                <button class="farm-tab" data-tab="inventory">📦 Kho</button>
+            </div>
+
+            <div class="farm-tab-content">
+                <!-- Plots Tab -->
+                <div class="farm-tab-pane active" id="farmPlotsPane">
+                    <div class="farm-actions" style="margin-bottom:8px">
+                        <button class="btn-pixel btn-sm" id="btnWaterAll">💧 Tưới tất cả</button>
+                        <button class="btn-pixel btn-sm btn-success" id="btnHarvestAll">🌾 Thu hoạch tất cả</button>
+                    </div>
+                    <div class="farm-grid" id="farmGrid"></div>
+                </div>
+
+                <!-- Seeds Tab -->
+                <div class="farm-tab-pane" id="farmSeedsPane">
+                    <p class="farm-hint">Chọn hạt giống → chuyển sang tab Luống đất → bấm "Trồng" vào ô trống</p>
+                    <div class="seed-grid" id="seedGrid"></div>
+                </div>
+
+                <!-- Cooking Tab -->
+                <div class="farm-tab-pane" id="farmCookingPane">
+                    <div class="recipe-grid" id="recipeGrid"></div>
+                </div>
+
+                <!-- Inventory Tab -->
+                <div class="farm-tab-pane" id="farmInventoryPane">
+                    <div class="farm-inventory" id="farmInventory"></div>
+                    <div class="farm-actions" style="margin-top:8px">
+                        <button class="btn-pixel btn-sm btn-warning" id="btnSellAll">💰 Bán tất cả</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
     <script src="game.js"></script>
     <script src="pixel-engine.js"></script>
     <script src="agents.js"></script>
@@ -491,6 +563,48 @@
         </div>
     </div>
 
+    <!-- ========== TECH TREE MODAL ========== -->
+    <div class="modal-overlay" id="techTreeOverlay">
+        <div class="modal pixel-border tech-tree-modal">
+            <div class="modal-header">
+                <h2>🔬 Cây Công Nghệ <span id="techUnlockedCount" style="font-size:12px;color:var(--text-muted)"></span></h2>
+                <button class="modal-close" id="closeTechTree">&times;</button>
+            </div>
+            <div class="modal-body tech-tree-body">
+                <div class="tech-tree-info">
+                    <span id="techResearchStatus" class="tech-research-status">Không có nghiên cứu</span>
+                    <span id="techResearchSpeed" class="tech-research-speed">⚡ 1.0x</span>
+                </div>
+                <div class="tech-tree-branches">
+                    <!-- Engineering Branch -->
+                    <div class="tech-branch" data-branch="engineering">
+                        <div class="tech-branch-header">
+                            <span class="tech-branch-icon">🔧</span>
+                            <span class="tech-branch-name">Engineering</span>
+                        </div>
+                        <div class="tech-branch-nodes" id="techBranch-engineering"></div>
+                    </div>
+                    <!-- AI Research Branch -->
+                    <div class="tech-branch" data-branch="ai_research">
+                        <div class="tech-branch-header">
+                            <span class="tech-branch-icon">🧠</span>
+                            <span class="tech-branch-name">AI Research</span>
+                        </div>
+                        <div class="tech-branch-nodes" id="techBranch-ai_research"></div>
+                    </div>
+                    <!-- Management Branch -->
+                    <div class="tech-branch" data-branch="management">
+                        <div class="tech-branch-header">
+                            <span class="tech-branch-icon">🏢</span>
+                            <span class="tech-branch-name">Management</span>
+                        </div>
+                        <div class="tech-branch-nodes" id="techBranch-management"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ========== SETTINGS MODAL ========== -->
     <div class="modal-overlay" id="settingsOverlay">
         <div class="modal pixel-border" style="max-width:440px">
@@ -520,6 +634,8 @@
         </div>
     </div>
 
+
+
     <!-- ========== KEYBOARD SHORTCUT HELP ========== -->
     <div class="shortcut-overlay" id="shortcutOverlay" style="display:none">
         <div class="shortcut-panel">
@@ -533,6 +649,7 @@
                 <div class="sk"><kbd>A</kbd> Achievements</div>
                 <div class="sk"><kbd>N</kbd> Notifications</div>
                 <div class="sk"><kbd>L</kbd> Layout Editor</div>
+                <div class="sk"><kbd>F</kbd> Nông Trại</div>
                 <div class="sk"><kbd>M</kbd> Toggle BGM</div>
                 <div class="sk"><kbd>Esc</kbd> Đóng modal</div>
                 <div class="sk"><kbd>?</kbd> Hiện phím tắt</div>
@@ -547,7 +664,9 @@
     <script src="slot-machine-ui.js"></script>
     <script src="gold-trading.js"></script>
     <script src="gold-trading-ui.js"></script>
+    <script src="tech-tree.js"></script>
     <script src="achievements.js"></script>
+    <script src="farm.js"></script>
     <script src="app.js"></script>
     <script>
         // Mobile bottom-sheet panel toggle

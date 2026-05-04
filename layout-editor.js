@@ -399,18 +399,6 @@ class LayoutEditor {
         }
     }
 
-    // === FLOOR PAINTING ===
-    _legacyPaintFloor(tx, ty) {
-        if (tx < 0 || ty < 0 || tx >= this.engine.MW || ty >= this.engine.MH) return;
-        const old = this.engine.map[ty][tx];
-        const newFl = this.floorType === 'erase' ? null : this.floorType;
-        if (old === newFl) return;
-        
-        this.engine.map[ty][tx] = newFl;
-        this.pushUndo({ type: 'floor', tx, ty, old, new: this.engine.map[ty][tx] });
-        this.setStatus(`Sàn tại (${tx}, ${ty})`);
-    }
-
     // === COLLISION DETECTION ===
     checkCollision(tx, ty, type, excludeIndex = -1) {
         const item = this.findCatalogItem(type);
@@ -518,47 +506,6 @@ class LayoutEditor {
         this.setStatus('Không tìm thấy đồ vật');
     }
 
-    // === SELECT / MOVE ===
-    _legacySelectFurnitureAt(wx, wy) {
-        const T = this.engine.T;
-        for (let i = this.engine.furniture.length - 1; i >= 0; i--) {
-            const f = this.engine.furniture[i];
-            const item = this.findCatalogItem(f.t);
-            const fw = (item?.w || 1) * T, fh = (item?.h || 1) * T;
-            if (wx >= f.x && wx <= f.x + fw && wy >= f.y && wy <= f.y + fh) {
-                this.selectedPlaced = i;
-                this.setStatus(`Đã chọn: ${item?.name || f.t} — Click vị trí mới để di chuyển`);
-                // Switch to move mode temporarily
-                this._moveMode = true;
-                const vp = document.getElementById('officeViewport');
-                const moveHandler = (e2) => {
-                    if (!this._moveMode) return;
-                    const mx = (e2.offsetX - this.engine.camera.x) / this.engine.scale;
-                    const my = (e2.offsetY - this.engine.camera.y) / this.engine.scale;
-                    const ntx = Math.floor(mx / T);
-                    const nty = Math.floor(my / T);
-                    
-                    if (ntx < 0 || nty < 0 || ntx >= this.engine.MW || nty >= this.engine.MH || !this.engine.map[nty][ntx]) {
-                        this.setStatus('⚠️ Vị trí không hợp lệ!');
-                        this._moveMode = false;
-                        vp.removeEventListener('click', moveHandler);
-                        return;
-                    }
-                    
-                    const oldX = f.x, oldY = f.y;
-                    f.x = ntx * T;
-                    f.y = nty * T;
-                    this.pushUndo({ type: 'move', index: i, oldX, oldY, newX: f.x, newY: f.y });
-                    this.setStatus(`Di chuyển đến (${ntx}, ${nty})`);
-                    this._moveMode = false;
-                    vp.removeEventListener('click', moveHandler);
-                };
-                setTimeout(() => vp.addEventListener('click', moveHandler, { once: true }), 100);
-                return;
-            }
-        }
-    }
-
     findCatalogItem(id) {
         for (const items of Object.values(this.furnitureCatalog)) {
             const found = items.find(i => i.id === id);
@@ -607,56 +554,6 @@ class LayoutEditor {
             this.engine.furniture[action.index].y = action.newY;
         }
         this.setStatus('↪ Đã làm lại');
-        this.notifyOfficeChanged();
-    }
-
-    // === SAVE / LOAD ===
-    _legacySaveLayout() {
-        const data = {
-            map: this.engine.map,
-            furniture: this.engine.furniture.map(f => ({ ...f })),
-            deskSlots: this.engine.deskSlots.map(s => ({ ...s })),
-        };
-        const json = JSON.stringify(data);
-        localStorage.setItem('pixelAgentLayout', json);
-        // Also download as file
-        const blob = new Blob([json], { type: 'application/json' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `pixel-agent-layout-${Date.now()}.json`;
-        a.click();
-        this.setStatus('💾 Đã lưu layout!');
-    }
-
-    _legacyLoadLayout() {
-        // Try localStorage first
-        const saved = localStorage.getItem('pixelAgentLayout');
-        if (saved) {
-            this._applyLayout(JSON.parse(saved));
-            this.setStatus('📂 Đã tải layout từ bộ nhớ!');
-            return;
-        }
-        // File input fallback
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json';
-        input.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                this._applyLayout(JSON.parse(ev.target.result));
-                this.setStatus('📂 Đã tải layout từ file!');
-            };
-            reader.readAsText(file);
-        });
-        input.click();
-    }
-
-    _legacyApplyLayout(data) {
-        if (data.map) this.engine.map = data.map;
-        if (data.furniture) this.engine.furniture = data.furniture;
-        if (data.deskSlots) this.engine.deskSlots = data.deskSlots;
         this.notifyOfficeChanged();
     }
 

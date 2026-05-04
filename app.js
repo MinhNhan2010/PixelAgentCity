@@ -7,13 +7,13 @@
 
     let _gameStartTime = null;
 
-    let engine, manager, editor, chatbox, game;
+    let engine, manager, editor, chatbox, game, techTree, farmManager;
 
     // Shared constants
     const ROLE_EMOJIS = {
         coder: '💻', tester: '🧪', reviewer: '📝', designer: '🎨',
         devops: '🔧', researcher: '🔬', analyst: '📊', security: '🔒',
-        backend: '⚙️', mobile: '📱', writer: '✍️'
+        backend: '⚙️', mobile: '📱', writer: '✍️', farmer: '🌾'
     };
 
     // ============ START SCREEN ============
@@ -109,6 +109,8 @@
         localStorage.removeItem('pixelAgentData');
         localStorage.removeItem('pixelAgentLayout');
         localStorage.removeItem('pixelAgentGameState');
+        localStorage.removeItem('pixelAgentTechTree');
+        localStorage.removeItem('pixelAgentFarm');
 
         game = new GameState();
         game.startNewGame();
@@ -160,6 +162,14 @@
         // AgentManager takes engine reference
         manager = new AgentManager(engine);
 
+        // Tech Tree
+        techTree = new TechTree(game);
+        window._agentManager = manager; // for TechTree researcher counting
+
+        // Farm Manager
+        farmManager = new FarmManager(game);
+        window._farmManager = farmManager; // for pixel-engine plot rendering
+
         // LayoutEditor takes engine reference
         editor = new LayoutEditor(engine);
         editor.loadSavedLayout(true);
@@ -181,6 +191,16 @@
             if (!loaded || manager.agents.size === 0) {
                 createStarterAgents();
             }
+            // Load tech tree data
+            try {
+                const ttRaw = localStorage.getItem('pixelAgentTechTree');
+                if (ttRaw) techTree.loadData(JSON.parse(ttRaw));
+            } catch(e) { console.warn('TechTree load failed:', e); }
+            // Load farm data
+            try {
+                const farmRaw = localStorage.getItem('pixelAgentFarm');
+                if (farmRaw) farmManager.loadData(JSON.parse(farmRaw));
+            } catch(e) { console.warn('Farm load failed:', e); }
         }
 
         bindUIEvents();
@@ -240,6 +260,10 @@
                 game.updateSalaryCache(Array.from(manager.agents.values()));
                 game.saveGame(manager);
                 manager.saveToStorage();
+                // Save tech tree
+                try { localStorage.setItem('pixelAgentTechTree', JSON.stringify(techTree.saveData())); } catch(e) { console.warn('TechTree auto-save failed:', e); }
+                // Save farm
+                try { localStorage.setItem('pixelAgentFarm', JSON.stringify(farmManager.saveData())); } catch(e) { console.warn('Farm auto-save failed:', e); }
             }
         }, 30000);
 
@@ -263,6 +287,9 @@
         // === NEW: Achievement System ===
         initAchievements();
 
+        // === NEW: Tech Tree System ===
+        initTechTreeUI();
+
         // === NEW: Notification Center ===
         initNotificationCenter();
 
@@ -271,6 +298,32 @@
 
         // === NEW: Keyboard Shortcuts ===
         initKeyboardShortcuts();
+
+        // === NEW: Farm System ===
+        initFarmUI();
+        // Agent farm callback
+        manager.onFarmRequest = (agent, actionType) => {
+            if (!farmManager) return;
+            if (actionType === 'water') {
+                const plot = farmManager.plots.find(p => p.state === 'growing' && !p.watered);
+                if (plot) {
+                    farmManager.waterPlot(plot.id);
+                    manager.addLog(agent.name, `💧 Đã tưới luống ${plot.id + 1}`, 'info');
+                    agent.mood = Math.min(100, (agent.mood || 70) + 3);
+                }
+            } else if (actionType === 'harvest') {
+                const plot = farmManager.plots.find(p => p.state === 'ready');
+                if (plot) {
+                    const result = farmManager.harvestPlot(plot.id);
+                    if (result) {
+                        manager.addLog(agent.name, `🌾 Thu hoạch ${result.name} x${result.qty}!`, 'success');
+                        showToast(`🌾 ${agent.name} thu hoạch ${result.name}!`, 'success');
+                        agent.mood = Math.min(100, (agent.mood || 70) + 5);
+                        manager.gainXP(agent.id, 2);
+                    }
+                }
+            }
+        };
 
         // === NEW: Auto-Chat hook (in simulation tick) ===
         setInterval(() => {
@@ -306,6 +359,17 @@
 
         game.onDayEnd = (day, salary) => {
             manager.addLog('system', `📅 Ngày ${day} bắt đầu! Lương đã trả: -${salary}Ⓒ`, 'warning');
+            // Tick tech tree research
+            if (techTree) techTree.tickResearch();
+            // Tick farm growth + weather
+            if (farmManager) {
+                const farmReport = farmManager.tickDay();
+                if (farmReport && farmReport.readyCount > 0) {
+                    showToast(`🌾 ${farmReport.readyCount} luống đã sẵn sàng thu hoạch!`, 'success');
+                    manager.addLog('system', `🌾 ${farmReport.readyCount} cây đã chín! Thời tiết: ${farmReport.weather}`, 'info');
+                }
+                updateFarmWeatherDisplay();
+            }
             refreshHUD();
         };
 
@@ -833,6 +897,23 @@
         }
         const xpFill = document.getElementById('hudXpFill');
         if (xpFill) xpFill.style.width = game.getXPProgress() + '%';
+
+        // Tech Tree HUD
+        if (techTree) {
+            const researchWrap = document.getElementById('hudResearchWrap');
+            const researchFill = document.getElementById('hudResearchFill');
+            const researchText = document.getElementById('hudResearchText');
+            const researchIcon = document.getElementById('hudResearchIcon');
+            if (techTree.currentResearch) {
+                const tech = techTree.getTech(techTree.currentResearch);
+                if (researchWrap) researchWrap.style.display = 'flex';
+                if (researchFill) researchFill.style.width = Math.floor(techTree.researchProgress) + '%';
+                if (researchText) researchText.textContent = Math.floor(techTree.researchProgress) + '%';
+                if (researchIcon) researchIcon.textContent = tech ? tech.icon : '🔬';
+            } else {
+                if (researchWrap) researchWrap.style.display = 'none';
+            }
+        }
     }
 
     function setText(id, val) {
@@ -1074,6 +1155,13 @@
 
         document.getElementById('btnContracts').onclick = openContractBoard;
         document.getElementById('closeContracts').onclick = () => document.getElementById('modalContracts').classList.remove('active');
+
+        // Tech Tree button
+        document.getElementById('btnTechTree')?.addEventListener('click', () => openTechTreeModal());
+        document.getElementById('closeTechTree')?.addEventListener('click', () => document.getElementById('techTreeOverlay')?.classList.remove('active'));
+
+        // Farm button
+        document.getElementById('btnFarm')?.addEventListener('click', () => toggleFarmOverlay());
 
         // Speed button cycle 1x→2x→3x→1x
         document.getElementById('btnSpeed').onclick = () => {
@@ -1638,6 +1726,126 @@
         }
     }
 
+    // ============ TECH TREE UI ============
+    function initTechTreeUI() {
+        if (!techTree) return;
+
+        techTree.onTechUnlocked = (tech) => {
+            showToast(`🔬 Đã nghiên cứu xong: ${tech.icon} ${tech.name}!`, 'success');
+            manager.addLog('system', `🔬 Công nghệ mới: ${tech.icon} ${tech.name} — ${tech.desc}`, 'success');
+            refreshHUD();
+            // Refresh modal if open
+            if (document.getElementById('techTreeOverlay')?.classList.contains('active')) {
+                renderTechTreeNodes();
+            }
+        };
+
+        techTree.onResearchUpdate = (techId, progress) => {
+            refreshHUD();
+        };
+    }
+
+    function openTechTreeModal() {
+        if (!techTree) return;
+        const overlay = document.getElementById('techTreeOverlay');
+        if (!overlay) return;
+        overlay.classList.add('active');
+        game?.sfx?.click?.();
+        renderTechTreeNodes();
+    }
+
+    function renderTechTreeNodes() {
+        if (!techTree) return;
+
+        // Update header
+        const countEl = document.getElementById('techUnlockedCount');
+        if (countEl) countEl.textContent = `(${techTree.unlocked.length}/${techTree.techs.length})`;
+
+        const statusEl = document.getElementById('techResearchStatus');
+        if (statusEl) statusEl.textContent = techTree.getProgressText();
+
+        const speedEl = document.getElementById('techResearchSpeed');
+        if (speedEl) {
+            techTree._updateResearchSpeed();
+            speedEl.textContent = `⚡ ${techTree.researchSpeed.toFixed(1)}x`;
+        }
+
+        // Render each branch
+        ['engineering', 'ai_research', 'management'].forEach(branchName => {
+            const container = document.getElementById(`techBranch-${branchName}`);
+            if (!container) return;
+            container.innerHTML = '';
+
+            const techs = techTree.getBranch(branchName);
+            techs.forEach((tech, idx) => {
+                // Connector between nodes
+                if (idx > 0) {
+                    const connector = document.createElement('div');
+                    connector.className = 'tech-node-connector';
+                    if (techTree.isUnlocked(techs[idx - 1].id)) connector.classList.add('active');
+                    connector.textContent = '→';
+                    container.appendChild(connector);
+                }
+
+                const node = document.createElement('div');
+                node.className = 'tech-node';
+
+                // Determine state
+                const isUnlocked = techTree.isUnlocked(tech.id);
+                const isResearching = techTree.currentResearch === tech.id;
+                const canResearch = techTree.canResearch(tech.id);
+                const prereqsMet = tech.requires.every(r => techTree.isUnlocked(r));
+
+                if (isUnlocked) node.classList.add('unlocked');
+                else if (isResearching) node.classList.add('researching');
+                else if (canResearch) node.classList.add('available');
+                else node.classList.add('locked');
+
+                node.innerHTML = `
+                    <div class="tech-node-icon">${tech.icon}</div>
+                    <div class="tech-node-name">${tech.name}</div>
+                    <div class="tech-node-desc">${tech.desc}</div>
+                    <div class="tech-node-cost">${isUnlocked ? '✅ Đã mở' : isResearching ? `⏳ ${Math.floor(techTree.researchProgress)}%` : `💰 ${tech.cost}Ⓒ · ${tech.researchDays}d`}</div>
+                    ${isResearching ? `<div class="tech-node-progress"><div class="tech-node-progress-fill" style="width:${Math.floor(techTree.researchProgress)}%"></div></div>` : ''}
+                    ${!isUnlocked && !isResearching && prereqsMet ? `<button class="tech-node-btn" data-tech="${tech.id}" ${canResearch ? '' : 'disabled'}>🔬 Nghiên cứu</button>` : ''}
+                    ${isResearching ? `<button class="tech-node-btn" data-cancel="${tech.id}" style="border-color:var(--accent-tertiary);color:var(--accent-tertiary)">✕ Hủy</button>` : ''}
+                `;
+
+                container.appendChild(node);
+            });
+        });
+
+        // Bind research buttons
+        document.querySelectorAll('.tech-node-btn[data-tech]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const techId = btn.dataset.tech;
+                if (techTree.startResearch(techId)) {
+                    showToast(`🔬 Bắt đầu nghiên cứu: ${techTree.getTech(techId).name}`, 'info');
+                    manager.addLog('system', `🔬 Bắt đầu R&D: ${techTree.getTech(techId).icon} ${techTree.getTech(techId).name}`, 'info');
+                    renderTechTreeNodes();
+                    refreshHUD();
+                } else {
+                    const tech = techTree.getTech(techId);
+                    if (tech && !game.canAfford(tech.cost)) {
+                        showToast(`💸 Không đủ tiền! Cần ${tech.cost}Ⓒ`, 'error');
+                    }
+                }
+            });
+        });
+
+        // Bind cancel buttons
+        document.querySelectorAll('.tech-node-btn[data-cancel]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                techTree.cancelResearch();
+                showToast('🔬 Đã hủy nghiên cứu (hoàn 50% chi phí)', 'warning');
+                renderTechTreeNodes();
+                refreshHUD();
+            });
+        });
+    }
+
     // ============ KEYBOARD SHORTCUTS ============
     function initKeyboardShortcuts() {
         const shortcutOverlay = document.getElementById('shortcutOverlay');
@@ -1698,10 +1906,17 @@
                 case 'm':
                     document.getElementById('settingBgmToggle')?.click();
                     break;
+                case 'r':
+                    openTechTreeModal();
+                    break;
+                case 'f':
+                    toggleFarmOverlay();
+                    break;
                 case 'escape':
                     // Close all modals (with null safety)
                     document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
                     document.getElementById('notifCenter')?.style.setProperty('display', 'none');
+                    document.getElementById('farmOverlay')?.style.setProperty('display', 'none');
                     break;
                 case '?':
                 case '/':
@@ -1766,6 +1981,233 @@
             );
         }
     }
+
+    // ============ FARM UI SYSTEM ============
+
+    let _selectedSeedId = null;
+
+    function toggleFarmOverlay() {
+        const el = document.getElementById('farmOverlay');
+        if (!el) return;
+        const visible = el.style.display !== 'none';
+        el.style.display = visible ? 'none' : 'flex';
+        if (!visible) refreshFarmUI();
+    }
+
+    function initFarmUI() {
+        // Close button
+        document.getElementById('closeFarm')?.addEventListener('click', () => {
+            document.getElementById('farmOverlay').style.display = 'none';
+        });
+        // Click overlay backdrop to close
+        document.getElementById('farmOverlay')?.addEventListener('click', (e) => {
+            if (e.target.id === 'farmOverlay') e.target.style.display = 'none';
+        });
+
+        // Tab switching
+        document.querySelectorAll('.farm-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.farm-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.farm-tab-pane').forEach(p => p.classList.remove('active'));
+                tab.classList.add('active');
+                const paneId = 'farm' + tab.dataset.tab.charAt(0).toUpperCase() + tab.dataset.tab.slice(1) + 'Pane';
+                document.getElementById(paneId)?.classList.add('active');
+                refreshFarmUI();
+            });
+        });
+
+        // Water All
+        document.getElementById('btnWaterAll')?.addEventListener('click', () => {
+            if (!farmManager) return;
+            let count = 0;
+            farmManager.plots.forEach(p => {
+                if ((p.state === 'planted' || p.state === 'growing') && !p.watered) { farmManager.waterPlot(p.id); count++; }
+            });
+            if (count > 0) showToast(`💧 Đã tưới ${count} luống!`, 'info');
+            refreshFarmUI();
+        });
+
+        // Harvest All
+        document.getElementById('btnHarvestAll')?.addEventListener('click', () => {
+            if (!farmManager) return;
+            let count = 0;
+            farmManager.plots.forEach(p => {
+                if (p.state === 'ready') { farmManager.harvestPlot(p.id); count++; }
+            });
+            if (count > 0) showToast(`🌾 Thu hoạch ${count} luống!`, 'success');
+            refreshFarmUI();
+        });
+
+        // Sell All
+        document.getElementById('btnSellAll')?.addEventListener('click', () => {
+            if (!farmManager) return;
+            const total = farmManager.sellAllProduce();
+            if (total > 0) {
+                game.earn(total, 'Farm produce sold');
+                showToast(`💰 Bán sản phẩm: +${total}Ⓒ`, 'success');
+                manager.addLog('system', `💰 Bán toàn bộ nông sản: +${total}Ⓒ`, 'success');
+            } else {
+                showToast('📦 Kho trống!', 'warning');
+            }
+            refreshFarmUI();
+        });
+    }
+
+    function updateFarmWeatherDisplay() {
+        if (!farmManager) return;
+        const weatherEmojis = { sunny: '☀️', rainy: '🌧️', cloudy: '☁️', stormy: '⛈️', hot: '🔥' };
+        const weatherNames = { sunny: 'Nắng đẹp', rainy: 'Mưa', cloudy: 'Nhiều mây', stormy: 'Bão', hot: 'Nóng' };
+        const w = farmManager.weather;
+        const el = document.getElementById('farmWeather');
+        if (el) el.textContent = `${weatherEmojis[w] || '☀️'} ${weatherNames[w] || w}`;
+    }
+
+    function refreshFarmUI() {
+        if (!farmManager) return;
+        updateFarmWeatherDisplay();
+
+        // Stats bar
+        const totalProduce = Object.values(farmManager.inventory).reduce((s, v) => s + v, 0);
+        const plantedCount = farmManager.plots.filter(p => p.state !== 'empty').length;
+        const readyCount = farmManager.plots.filter(p => p.state === 'ready').length;
+        setText('farmProduceCount', totalProduce);
+        setText('farmPlantedCount', plantedCount);
+        setText('farmReadyCount', readyCount);
+
+        renderFarmPlots();
+        renderSeedShop();
+        renderRecipes();
+        renderFarmInventory();
+    }
+
+    function renderFarmPlots() {
+        const grid = document.getElementById('farmGrid');
+        if (!grid || !farmManager) return;
+        grid.innerHTML = farmManager.plots.map(plot => {
+            const seed = farmManager.seedCatalog.find(s => s.id === plot.seedId);
+            const stateClass = plot.state === 'empty' ? 'empty' : plot.state === 'ready' ? 'ready' : 'growing';
+            const growPct = plot.growthStage >= 3 ? 100 : Math.round((plot.growthStage / 3) * 100);
+            const stageIcons = ['🟤', '🌱', '🌿', '🌾'];
+            return `<div class="farm-plot-card ${stateClass}" data-plot="${plot.id}">
+                <div class="plot-header">
+                    <span class="plot-id">#${plot.id + 1}</span>
+                    <span class="plot-status">${plot.watered ? '💧' : ''}</span>
+                </div>
+                <div class="plot-crop-icon">${seed ? (stageIcons[plot.growthStage] || '🌱') : ''}</div>
+                <div class="plot-crop-name">${seed ? seed.name : 'Trống'}</div>
+                ${plot.state !== 'empty' ? `<div class="plot-growth-bar"><div class="plot-growth-fill ${plot.state === 'ready' ? 'ready' : ''}" style="width:${growPct}%"></div></div>` : ''}
+                <div class="plot-actions">
+                    ${plot.state === 'empty' && _selectedSeedId ? `<button class="plot-btn" onclick="window._farmPlant(${plot.id})">🌱 Trồng</button>` : ''}
+                    ${plot.state === 'empty' && !_selectedSeedId ? `<button class="plot-btn" onclick="document.querySelector('.farm-tab[data-tab=seeds]')?.click()">🛒 Chọn giống</button>` : ''}
+                    ${(plot.state === 'planted' || plot.state === 'growing') && !plot.watered ? `<button class="plot-btn" onclick="window._farmWater(${plot.id})">💧 Tưới</button>` : ''}
+                    ${plot.state === 'ready' ? `<button class="plot-btn harvest" onclick="window._farmHarvest(${plot.id})">🌾 Hái</button>` : ''}
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function renderSeedShop() {
+        const grid = document.getElementById('seedGrid');
+        if (!grid || !farmManager) return;
+        grid.innerHTML = farmManager.seedCatalog.map(seed => {
+            const selected = _selectedSeedId === seed.id;
+            return `<div class="seed-card ${selected ? 'selected' : ''}" onclick="window._farmSelectSeed('${seed.id}')">
+                <div class="seed-icon">${seed.icon}</div>
+                <div class="seed-name"><span class="seed-color-dot" style="background:${seed.color}"></span>${seed.name}</div>
+                <div class="seed-price">${seed.cost}Ⓒ</div>
+                <div class="seed-time">⏱️ ${seed.growDays} ngày</div>
+            </div>`;
+        }).join('');
+    }
+
+    function renderRecipes() {
+        const grid = document.getElementById('recipeGrid');
+        if (!grid || !farmManager) return;
+        grid.innerHTML = farmManager.recipesUI.map(recipe => {
+            const canCook = farmManager.canCook(recipe.id);
+            const ingText = recipe.ingredients.map(ing => {
+                const seed = farmManager.seedCatalog.find(s => s.id === ing.id);
+                const have = farmManager.inventory[ing.id] || 0;
+                const enough = have >= ing.qty;
+                return `<span style="color:${enough ? '#78e08f' : '#ff6b6b'}">${seed?.icon || '?'}x${ing.qty}</span>`;
+            }).join(' ');
+            return `<div class="recipe-card ${canCook ? 'can-cook' : ''}" onclick="window._farmCook('${recipe.id}')">
+                <div class="recipe-header">
+                    <span class="recipe-icon">${recipe.icon}</span>
+                    <span class="recipe-name">${recipe.name}</span>
+                </div>
+                <div class="recipe-ingredients">${ingText}</div>
+                <span class="recipe-effect">⚡+${recipe.energyBoost || 0} 😊+${recipe.moodBoost || 0}</span>
+                <span class="recipe-price">💰 ${recipe.sellPrice}Ⓒ</span>
+            </div>`;
+        }).join('');
+    }
+
+    function renderFarmInventory() {
+        const el = document.getElementById('farmInventory');
+        if (!el || !farmManager) return;
+        const items = Object.entries(farmManager.inventory).filter(([, v]) => v > 0);
+        if (items.length === 0) {
+            el.innerHTML = '<div class="farm-empty"><div class="farm-empty-icon">📦</div>Kho trống</div>';
+            return;
+        }
+        el.innerHTML = items.map(([id, count]) => {
+            const seed = farmManager.seedCatalog.find(s => s.id === id);
+            const recipe = farmManager.recipes.find(r => r.id === id);
+            const item = seed || recipe;
+            return `<div class="inv-item">
+                <div class="inv-icon">${item?.icon || '📦'}</div>
+                <div class="inv-name">${item?.name || id}</div>
+                <div class="inv-count">x${count}</div>
+                <div class="inv-sell-price">${(item?.sellPrice || seed?.sellPrice || 0)}Ⓒ</div>
+            </div>`;
+        }).join('');
+    }
+
+    // Global farm action handlers (called from onclick in rendered HTML)
+    window._farmSelectSeed = (seedId) => {
+        _selectedSeedId = (_selectedSeedId === seedId) ? null : seedId;
+        refreshFarmUI();
+    };
+    window._farmPlant = (plotId) => {
+        if (!farmManager || !_selectedSeedId) return;
+        const seed = farmManager.seedCatalog.find(s => s.id === _selectedSeedId);
+        if (!seed) return;
+        if (!game.canAfford(seed.cost)) { showToast('💰 Không đủ tiền mua hạt giống!', 'warning'); return; }
+        if (farmManager.plantSeed(plotId, _selectedSeedId)) {
+            game.spend(seed.cost, `Buy seed: ${seed.name}`);
+            showToast(`🌱 Trồng ${seed.name} ở luống ${plotId + 1}!`, 'success');
+        }
+        refreshFarmUI();
+    };
+    window._farmWater = (plotId) => {
+        if (!farmManager) return;
+        farmManager.waterPlot(plotId);
+        refreshFarmUI();
+    };
+    window._farmHarvest = (plotId) => {
+        if (!farmManager) return;
+        const result = farmManager.harvestPlot(plotId);
+        if (result) showToast(`🌾 Thu hoạch ${result.name} x${result.qty}!`, 'success');
+        refreshFarmUI();
+    };
+    window._farmCook = (recipeId) => {
+        if (!farmManager) return;
+        const result = farmManager.cook(recipeId);
+        if (result.ok) {
+            const r = result.recipe;
+            showToast(`🍳 Nấu ${r.name} thành công!`, 'success');
+            // Boost all agents based on recipe effect
+            Array.from(manager.agents.values()).forEach(a => {
+                if (r.effect === 'energy' || r.effect === 'all') a.energy = Math.min(100, a.energy + r.value);
+                if (r.effect === 'mood' || r.effect === 'all') a.mood = Math.min(100, a.mood + r.value);
+            });
+            manager.addLog('system', `🍳 ${r.name} đã nấu! Tất cả agent +${r.value} ${r.effect}!`, 'success');
+        } else {
+            showToast(`❌ ${result.msg}`, 'warning');
+        }
+        refreshFarmUI();
+    };
 
     // ============ BOOT ============
     document.addEventListener('DOMContentLoaded', initStartScreen);

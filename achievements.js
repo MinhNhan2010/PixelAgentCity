@@ -64,7 +64,7 @@ class AchievementManager {
                     this.unlocked.add(ach.id);
                     newlyUnlocked.push(ach);
                 }
-            } catch (e) { /* skip broken checks */ }
+            } catch (e) { console.warn(`Achievement check failed [${ach.id}]:`, e); }
         }
         if (newlyUnlocked.length > 0) {
             this.save();
@@ -106,7 +106,7 @@ class AchievementManager {
     save() {
         try {
             localStorage.setItem('pixelAgentAchievements', JSON.stringify([...this.unlocked]));
-        } catch (e) { /* ignore */ }
+        } catch (e) { console.warn('Achievement save failed:', e); }
     }
 
     load() {
@@ -116,7 +116,7 @@ class AchievementManager {
                 const arr = JSON.parse(raw);
                 arr.forEach(id => this.unlocked.add(id));
             }
-        } catch (e) { /* ignore */ }
+        } catch (e) { console.warn('Achievement load failed:', e); }
     }
 
     reset() {
