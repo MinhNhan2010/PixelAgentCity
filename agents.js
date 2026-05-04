@@ -624,6 +624,10 @@ class AgentManager {
                             telescope: '🔭 Ngắm sao đêm nay!',
                             helipad: '🚁 Check bãi đáp!',
                             antenna: '📡 Check sóng phát!',
+                            // Cafe
+                            rest: '☕ Nghỉ ngơi tại quán cafe~',
+                            food: '🧁 Ăn bánh ngọt!',
+                            social: '💬 Chat với bạn bè!',
                         };
                         const speechText = roamSpeech[point.type] || `${point.emoji} ${point.label}`;
 

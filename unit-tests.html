@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>PixelAgent City — Unit Tests</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #0a0e1a; color: #e0e0e0; font-family: 'Inter', sans-serif; padding: 20px; }
+        h1 { color: #4ecdc4; margin-bottom: 20px; }
+        .suite { margin-bottom: 24px; border: 1px solid #1a1f33; border-radius: 8px; overflow: hidden; }
+        .suite-header { background: #131829; padding: 12px 16px; font-weight: 600; font-size: 16px; display: flex; justify-content: space-between; }
+        .test { padding: 8px 16px; border-top: 1px solid #1a1f33; display: flex; align-items: center; gap: 10px; }
+        .test.pass { background: rgba(0, 212, 170, 0.05); }
+        .test.fail { background: rgba(255, 71, 87, 0.1); }
+        .badge { font-size: 12px; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+        .badge.pass { background: #00d4aa; color: #000; }
+        .badge.fail { background: #ff4757; color: #fff; }
+        .test-name { flex: 1; }
+        .test-error { color: #ff6b6b; font-size: 12px; margin-left: 32px; font-family: monospace; }
+        .summary { margin-top: 20px; padding: 16px; background: #131829; border-radius: 8px; font-size: 18px; display: flex; gap: 20px; }
+        .summary .pass-count { color: #00d4aa; }
+        .summary .fail-count { color: #ff4757; }
+        .summary .total-count { color: #ffd93d; }
+    </style>
+</head>
+<body>
+    <h1>🧪 PixelAgent City — Unit Tests</h1>
+    <div id="results"></div>
+    <div id="summary" class="summary"></div>
+
+    <!-- Load game modules -->
+    <script src="error-handler.js"></script>
+    <script src="game.js"></script>
+    <script src="slot-machine.js"></script>
+    <script src="gold-trading.js"></script>
+    <script src="poker.js"></script>
+    <script src="statistics.js"></script>
+
+    <script>
+        // ============ TEST RUNNER ============
+        const TestRunner = {
+            suites: [],
+            currentSuite: null,
+            passed: 0,
+            failed: 0,
+
+            describe(name, fn) {
+                this.currentSuite = { name, tests: [] };
+                fn();
+                this.suites.push(this.currentSuite);
+                this.currentSuite = null;
+            },
+
+            it(name, fn) {
+                try {
+                    fn();
+                    this.currentSuite.tests.push({ name, pass: true });
+                    this.passed++;
+                } catch (e) {
+                    this.currentSuite.tests.push({ name, pass: false, error: e.message });
+                    this.failed++;
+                }
+            },
+
+            assert(condition, msg = 'Assertion failed') {
+                if (!condition) throw new Error(msg);
+            },
+
+            assertEqual(a, b, msg = '') {
+                if (a !== b) throw new Error(`Expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}${msg ? ': ' + msg : ''}`);
+            },
+
+            assertRange(val, min, max, msg = '') {
+                if (val < min || val > max) throw new Error(`Expected ${val} in [${min}, ${max}]${msg ? ': ' + msg : ''}`);
+            },
+
+            render() {
+                const container = document.getElementById('results');
+                this.suites.forEach(suite => {
+                    const passed = suite.tests.filter(t => t.pass).length;
+                    const total = suite.tests.length;
+                    const html = `
+                        <div class="suite">
+                            <div class="suite-header">
+                                <span>${suite.name}</span>
+                                <span class="badge ${passed === total ? 'pass' : 'fail'}">${passed}/${total}</span>
+                            </div>
+                            ${suite.tests.map(t => `
+                                <div class="test ${t.pass ? 'pass' : 'fail'}">
+                                    <span class="badge ${t.pass ? 'pass' : 'fail'}">${t.pass ? '✓' : '✗'}</span>
+                                    <span class="test-name">${t.name}</span>
+                                </div>
+                                ${t.error ? `<div class="test-error">→ ${t.error}</div>` : ''}
+                            `).join('')}
+                        </div>`;
+                    container.innerHTML += html;
+                });
+
+                document.getElementById('summary').innerHTML = `
+                    <span class="total-count">Total: ${this.passed + this.failed}</span>
+                    <span class="pass-count">✓ Passed: ${this.passed}</span>
+                    <span class="fail-count">✗ Failed: ${this.failed}</span>
+                `;
+            }
+        };
+
+        const { describe, it, assert, assertEqual, assertRange } = {
+            describe: TestRunner.describe.bind(TestRunner),
+            it: TestRunner.it.bind(TestRunner),
+            assert: TestRunner.assert.bind(TestRunner),
+            assertEqual: TestRunner.assertEqual.bind(TestRunner),
+            assertRange: TestRunner.assertRange.bind(TestRunner),
+        };
+
+        // ============ TEST SUITES ============
+
+        // --- GAME STATE ---
+        describe('GameState — Economy', () => {
+            it('should initialize with correct default values', () => {
+                const g = new GameState();
+                assert(g.coins >= 0, 'Coins should be >= 0');
+                assertEqual(g.day, 1);
+                assertEqual(g.companyLevel, 1);
+                assertEqual(g.reputation, 3.0);
+            });
+
+            it('should add coins correctly', () => {
+                const g = new GameState();
+                const before = g.coins;
+                g.addCoins(100);
+                assertEqual(g.coins, before + 100);
+            });
+
+            it('should subtract coins correctly', () => {
+                const g = new GameState();
+                g.coins = 500;
+                const result = g.spendCoins(200);
+                assert(result, 'Should return true when enough coins');
+                assertEqual(g.coins, 300);
+            });
+
+            it('should NOT allow spending more than balance', () => {
+                const g = new GameState();
+                g.coins = 50;
+                const result = g.spendCoins(100);
+                assert(!result, 'Should return false when insufficient coins');
+                assertEqual(g.coins, 50, 'Coins should remain unchanged');
+            });
+
+            it('should track totalEarned and totalSpent', () => {
+                const g = new GameState();
+                g.coins = 0;
+                g.totalEarned = 0;
+                g.totalSpent = 0;
+                g.addCoins(500);
+                g.spendCoins(200);
+                assertEqual(g.totalEarned, 500);
+                assertEqual(g.totalSpent, 200);
+            });
+
+            it('should have valid salary config for all roles', () => {
+                const g = new GameState();
+                const roles = ['coder', 'tester', 'reviewer', 'designer', 'devops', 'researcher', 'analyst', 'security', 'backend', 'mobile', 'writer', 'farmer'];
+                roles.forEach(role => {
+                    assert(g.salaries[role] > 0, `Salary for ${role} should be > 0`);
+                    assert(g.hiringCosts[role] > 0, `Hiring cost for ${role} should be > 0`);
+                });
+            });
+        });
+
+        describe('GameState — Day/Night Cycle', () => {
+            it('should have valid DAY_LENGTH', () => {
+                const g = new GameState();
+                assert(g.DAY_LENGTH > 0, 'DAY_LENGTH should be positive');
+            });
+
+            it('should calculate XP progress between 0-100', () => {
+                const g = new GameState();
+                const progress = g.getXPProgress();
+                assertRange(progress, 0, 100, 'XP progress');
+            });
+
+            it('should calculate night overlay alpha between 0-1', () => {
+                const g = new GameState();
+                g.dayTimer = 0;
+                assertRange(g.getNightOverlayAlpha(), 0, 1, 'Alpha at morning');
+                g.dayTimer = g.DAY_LENGTH * 0.9;
+                assertRange(g.getNightOverlayAlpha(), 0, 1, 'Alpha at night');
+            });
+
+            it('should return valid time icons', () => {
+                const g = new GameState();
+                const validIcons = ['🌅', '☀️', '🌇', '🌙'];
+                assert(validIcons.includes(g.getTimeIcon()), 'Should return a valid time icon');
+            });
+        });
+
+        describe('GameState — Contracts', () => {
+            it('should generate valid contracts', () => {
+                const g = new GameState();
+                g.generateContracts(3);
+                assert(g.availableContracts.length > 0, 'Should generate at least 1 contract');
+                g.availableContracts.forEach(c => {
+                    assert(c.title, 'Contract should have title');
+                    assert(c.reward > 0, 'Contract reward should be positive');
+                    assert(c.tasks > 0, 'Contract tasks should be positive');
+                    assert(c.deadline > 0, 'Contract deadline should be positive');
+                });
+            });
+
+            it('should calculate difficulty scaling with level', () => {
+                const g1 = new GameState();
+                g1.companyLevel = 1;
+                g1.generateContracts(3);
+
+                const g5 = new GameState();
+                g5.companyLevel = 5;
+                g5.generateContracts(3);
+
+                // Higher level should generally have higher rewards
+                const avgReward1 = g1.availableContracts.reduce((s, c) => s + c.reward, 0) / g1.availableContracts.length;
+                const avgReward5 = g5.availableContracts.reduce((s, c) => s + c.reward, 0) / g5.availableContracts.length;
+                assert(avgReward5 >= avgReward1, `Level 5 rewards (${avgReward5}) should be >= Level 1 (${avgReward1})`);
+            });
+        });
+
+        // --- SLOT MACHINE ---
+        describe('SlotMachine — RTP & Fairness', () => {
+            it('should have 7 symbols with positive weights', () => {
+                const sm = new SlotMachine();
+                assertEqual(sm.symbols.length, 7);
+                sm.symbols.forEach(s => {
+                    assert(s.weight > 0, `${s.name} weight should be > 0`);
+                    assert(s.emoji, `${s.name} should have emoji`);
+                });
+            });
+
+            it('should have valid payout multipliers', () => {
+                const sm = new SlotMachine();
+                Object.values(sm.payouts).forEach(p => {
+                    assert(p.mul > 0, `Payout multiplier should be positive`);
+                    assert(p.name, `Payout should have name`);
+                });
+            });
+
+            it('should simulate 1000 spins and track stats', () => {
+                const sm = new SlotMachine();
+                sm.currentBet = 10;
+                let totalBet = 0;
+                let totalWin = 0;
+
+                for (let i = 0; i < 1000; i++) {
+                    totalBet += sm.currentBet;
+                    // Directly simulate reel picks
+                    const results = [];
+                    for (let r = 0; r < 3; r++) {
+                        const strip = sm.reelStrips[r];
+                        const idx = Math.floor(Math.random() * strip.length);
+                        results.push(strip[idx]);
+                    }
+                    const ids = results.map(r => r.id);
+                    const key = ids.join('-');
+                    if (sm.payouts[key]) {
+                        totalWin += sm.currentBet * sm.payouts[key].mul;
+                    } else {
+                        const counts = {};
+                        ids.forEach(id => { counts[id] = (counts[id] || 0) + 1; });
+                        const pair = Object.entries(counts).find(([_, c]) => c >= 2);
+                        if (pair) {
+                            const mul = sm.twoOfAKindMul[pair[0]] || 0;
+                            if (mul > 1) totalWin += Math.floor(sm.currentBet * mul);
+                        }
+                    }
+                }
+
+                const rtp = (totalWin / totalBet) * 100;
+                console.log(`[Slot] RTP over 1000 spins: ${rtp.toFixed(1)}%`);
+                // RTP should be documented; this test captures current behavior
+                assert(rtp >= 0, `RTP should be >= 0 (got ${rtp.toFixed(1)}%)`);
+                assert(rtp < 200, `RTP should be < 200% (got ${rtp.toFixed(1)}%)`);
+            });
+
+            it('should track bet options correctly', () => {
+                const sm = new SlotMachine();
+                assertEqual(sm.betOptions.length, 4);
+                sm.betOptions.forEach(b => assert(b > 0, `Bet option should be positive`));
+            });
+        });
+
+        // --- GOLD TRADING ---
+        describe('GoldTrading — Price Simulation', () => {
+            it('should initialize with valid price', () => {
+                const gt = new GoldTrading();
+                assert(gt.currentPrice > 0, 'Price should be positive');
+                assertEqual(gt.goldHeld, 0, 'Should start with 0 gold');
+            });
+
+            it('should update price on tick', () => {
+                const gt = new GoldTrading();
+                const before = gt.currentPrice;
+                gt.tick(1);
+                // Price should change (or very rarely stay same)
+                assert(typeof gt.currentPrice === 'number', 'Price should be number');
+                assert(gt.currentPrice > 0, 'Price should remain positive');
+            });
+
+            it('should track day high/low correctly', () => {
+                const gt = new GoldTrading();
+                for (let i = 0; i < 20; i++) gt.tick(1);
+                assert(gt.dayHigh >= gt.dayLow, 'dayHigh should be >= dayLow');
+                assert(gt.dayHigh >= gt.currentPrice || gt.currentPrice >= gt.dayLow,
+                    'Current price should be within day range');
+            });
+
+            it('should calculate valid cost for ounces', () => {
+                const gt = new GoldTrading();
+                const cost = gt.getCostForOunces(0.01);
+                assert(cost > 0, 'Cost should be positive');
+                assert(typeof cost === 'number', 'Cost should be number');
+            });
+
+            it('should build candles in price history', () => {
+                const gt = new GoldTrading();
+                for (let i = 0; i < 30; i++) gt.tick(1);
+                assert(gt.priceHistory.length > 0, 'Should have price history');
+                gt.priceHistory.forEach(c => {
+                    assert(c.high >= c.low, 'Candle high should be >= low');
+                    assert(c.open > 0, 'Candle open should be positive');
+                    assert(c.close > 0, 'Candle close should be positive');
+                });
+            });
+        });
+
+        // --- POKER ---
+        describe('Poker — Hand Evaluation', () => {
+            it('should create a 52-card deck', () => {
+                const deck = new PokerDeck();
+                const cards = deck.deal(52);
+                assertEqual(cards.length, 52);
+            });
+
+            it('should not have duplicate cards', () => {
+                const deck = new PokerDeck();
+                const cards = deck.deal(52);
+                const keys = cards.map(c => `${c.suit}-${c.rank}`);
+                const unique = new Set(keys);
+                assertEqual(unique.size, 52, 'All 52 cards should be unique');
+            });
+
+            it('should evaluate Royal Flush correctly', () => {
+                const hand = [
+                    { suit: 'hearts', rank: 10, value: 10 },
+                    { suit: 'hearts', rank: 11, value: 11 },
+                    { suit: 'hearts', rank: 12, value: 12 },
+                    { suit: 'hearts', rank: 13, value: 13 },
+                    { suit: 'hearts', rank: 14, value: 14 },
+                ];
+                const result = PokerHandEvaluator.evaluate(hand);
+                assertEqual(result.rank, 9, 'Royal Flush should be rank 9');
+            });
+
+            it('should evaluate Full House correctly', () => {
+                const hand = [
+                    { suit: 'hearts', rank: 10, value: 10 },
+                    { suit: 'diamonds', rank: 10, value: 10 },
+                    { suit: 'clubs', rank: 10, value: 10 },
+                    { suit: 'hearts', rank: 7, value: 7 },
+                    { suit: 'diamonds', rank: 7, value: 7 },
+                ];
+                const result = PokerHandEvaluator.evaluate(hand);
+                assertEqual(result.rank, 6, 'Full House should be rank 6');
+            });
+
+            it('should rank hands in correct order', () => {
+                const highCard = PokerHandEvaluator.evaluate([
+                    { suit: 'hearts', rank: 2, value: 2 },
+                    { suit: 'diamonds', rank: 5, value: 5 },
+                    { suit: 'clubs', rank: 8, value: 8 },
+                    { suit: 'hearts', rank: 10, value: 10 },
+                    { suit: 'spades', rank: 14, value: 14 },
+                ]);
+                const pair = PokerHandEvaluator.evaluate([
+                    { suit: 'hearts', rank: 10, value: 10 },
+                    { suit: 'diamonds', rank: 10, value: 10 },
+                    { suit: 'clubs', rank: 5, value: 5 },
+                    { suit: 'hearts', rank: 8, value: 8 },
+                    { suit: 'spades', rank: 14, value: 14 },
+                ]);
+                assert(pair.rank > highCard.rank, 'Pair should rank higher than High Card');
+            });
+        });
+
+        // --- ERROR HANDLER ---
+        describe('PAC — Error Handler & Utils', () => {
+            it('should have PAC namespace defined', () => {
+                assert(window.PAC, 'PAC namespace should exist');
+                assert(PAC.version, 'PAC.version should exist');
+            });
+
+            it('should log errors correctly', () => {
+                const before = PAC.ErrorHandler.errors.length;
+                PAC.ErrorHandler.log('test', 'Unit test error');
+                assertEqual(PAC.ErrorHandler.errors.length, before + 1);
+            });
+
+            it('PAC.safe should catch errors', () => {
+                const fn = PAC.safe(() => { throw new Error('Test'); }, 'unit-test');
+                const result = fn(); // Should not throw
+                assertEqual(result, null, 'Should return null on error');
+            });
+
+            it('PAC.Storage should read/write safely', () => {
+                PAC.Storage.set('_test_key', { a: 1, b: 'hello' });
+                const val = PAC.Storage.get('_test_key');
+                assertEqual(val.a, 1);
+                assertEqual(val.b, 'hello');
+                PAC.Storage.remove('_test_key');
+                assertEqual(PAC.Storage.get('_test_key'), null);
+            });
+
+            it('PAC.Timer should track intervals', () => {
+                const id = PAC.Timer.setInterval(() => {}, 99999, 'test-interval');
+                const status = PAC.Timer.getStatus();
+                assert(status.activeIntervals > 0, 'Should have active interval');
+                PAC.Timer.clearInterval(id);
+            });
+
+            it('PAC.Perf.debounce should exist and be callable', () => {
+                const fn = PAC.Perf.debounce(() => {}, 100, 'test');
+                assert(typeof fn === 'function', 'Should return a function');
+            });
+        });
+
+        // --- STATISTICS ---
+        describe('StatsDashboard', () => {
+            it('should initialize with empty history', () => {
+                const sd = new StatsDashboard();
+                assertEqual(sd.history.dailyIncome.length, 0);
+                assertEqual(sd.history.agentPerformance.length, 0);
+            });
+
+            it('should save and load data', () => {
+                const sd = new StatsDashboard();
+                sd.history.dailyIncome.push({ day: 1, income: 100, expense: 50, net: 50, coins: 100 });
+                const data = sd.saveData();
+                const sd2 = new StatsDashboard();
+                sd2.loadData(data);
+                assertEqual(sd2.history.dailyIncome.length, 1);
+                assertEqual(sd2.history.dailyIncome[0].net, 50);
+            });
+        });
+
+        // ============ RUN ============
+        TestRunner.render();
+    </script>
+</body>
+</html>

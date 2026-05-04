@@ -7,7 +7,7 @@
 
     let _gameStartTime = null;
 
-    let engine, manager, editor, chatbox, game, techTree, farmManager;
+    let engine, manager, editor, chatbox, game, techTree, farmManager, statsDashboard;
 
     // Shared constants
     const ROLE_EMOJIS = {
@@ -105,6 +105,9 @@
 
     // ============ GAME FLOW ============
     function startNewGame() {
+        // Cleanup previous game world if any
+        cleanupGameWorld();
+
         // Clear all old data
         localStorage.removeItem('pixelAgentData');
         localStorage.removeItem('pixelAgentLayout');
@@ -137,6 +140,9 @@
     }
 
     function showStartScreen() {
+        // Cleanup previous game world
+        cleanupGameWorld();
+
         document.getElementById('startScreen').classList.remove('hidden');
         document.getElementById('gameHeader').style.display = 'none';
         document.getElementById('gameHud').style.display = 'none';
@@ -150,6 +156,33 @@
         const tempGame = new GameState();
         const btn = document.getElementById('btnContinue');
         if (btn) btn.style.display = tempGame.loadGame() ? 'flex' : 'none';
+    }
+
+    // ============ CLEANUP (prevent leaks on restart) ============
+    function cleanupGameWorld() {
+        // Clear all managed timers
+        PAC.Timer.clearAll();
+
+        // Destroy engine (stops animation loop, removes canvas listeners)
+        if (engine && typeof engine.destroy === 'function') {
+            engine.destroy();
+        }
+
+        // Destroy chatbox (removes drag listeners on document)
+        if (chatbox && typeof chatbox.destroy === 'function') {
+            chatbox.destroy();
+        }
+
+        // Nullify references so old closures can be GC'd
+        engine = null;
+        manager = null;
+        editor = null;
+        chatbox = null;
+        techTree = null;
+        farmManager = null;
+        statsDashboard = null;
+        window._agentManager = null;
+        window._farmManager = null;
     }
 
     // ============ WORLD INIT ============
@@ -231,41 +264,62 @@
         }
         requestAnimationFrame(loop);
 
-        // Simulation tick (agent AI)
-        setInterval(() => {
-            if (!game.isPaused && !game.isGameOver && game.started) {
-                for (let i = 0; i < game.gameSpeed; i++) {
-                    manager.simulateTick();
+        // === Statistics Dashboard ===
+        statsDashboard = new StatsDashboard();
+        try {
+            const statsRaw = localStorage.getItem('pixelAgentStats');
+            if (statsRaw) statsDashboard.loadData(JSON.parse(statsRaw));
+        } catch(e) { console.warn('Stats load failed:', e); }
+
+        // Simulation tick (agent AI) — tracked via PAC.Timer
+        PAC.Timer.setInterval(() => {
+            try {
+                if (!game.isPaused && !game.isGameOver && game.started) {
+                    for (let i = 0; i < game.gameSpeed; i++) {
+                        manager.simulateTick();
+                    }
+                    // Sync engine sprites with agent statuses
+                    manager.agents.forEach(a => {
+                        engine.updateAgentStatus(a.id, a.status);
+                    });
                 }
-                // Sync engine sprites with agent statuses
-                manager.agents.forEach(a => {
-                    engine.updateAgentStatus(a.id, a.status);
-                });
+            } catch (e) {
+                PAC.ErrorHandler.log('tick', `simulateTick error: ${e.message}`, e);
             }
-        }, 500);
+        }, 500, 'simulation-tick');
 
         // HUD refresh every second
-        setInterval(() => {
-            if (game.started && !game.isGameOver) {
-                refreshHUD();
-                refreshAgentList();
-                refreshTaskList();
+        PAC.Timer.setInterval(() => {
+            try {
+                if (game.started && !game.isGameOver) {
+                    refreshHUD();
+                    refreshAgentList();
+                    refreshTaskList();
+                }
+            } catch (e) {
+                PAC.ErrorHandler.log('hud', `refreshHUD error: ${e.message}`, e);
             }
-        }, 1000);
+        }, 1000, 'hud-refresh');
 
         // Auto-save every 30s
-        setInterval(() => {
-            if (game.started && !game.isGameOver) {
-                editor?.flushAutoSave?.();
-                game.updateSalaryCache(Array.from(manager.agents.values()));
-                game.saveGame(manager);
-                manager.saveToStorage();
-                // Save tech tree
-                try { localStorage.setItem('pixelAgentTechTree', JSON.stringify(techTree.saveData())); } catch(e) { console.warn('TechTree auto-save failed:', e); }
-                // Save farm
-                try { localStorage.setItem('pixelAgentFarm', JSON.stringify(farmManager.saveData())); } catch(e) { console.warn('Farm auto-save failed:', e); }
+        PAC.Timer.setInterval(() => {
+            try {
+                if (game.started && !game.isGameOver) {
+                    editor?.flushAutoSave?.();
+                    game.updateSalaryCache(Array.from(manager.agents.values()));
+                    game.saveGame(manager);
+                    manager.saveToStorage();
+                    // Save tech tree
+                    try { localStorage.setItem('pixelAgentTechTree', JSON.stringify(techTree.saveData())); } catch(e) { console.warn('TechTree auto-save failed:', e); }
+                    // Save farm
+                    try { localStorage.setItem('pixelAgentFarm', JSON.stringify(farmManager.saveData())); } catch(e) { console.warn('Farm auto-save failed:', e); }
+                    // Save stats
+                    try { localStorage.setItem('pixelAgentStats', JSON.stringify(statsDashboard.saveData())); } catch(e) {}
+                }
+            } catch (e) {
+                PAC.ErrorHandler.log('save', `Auto-save error: ${e.message}`, e);
             }
-        }, 30000);
+        }, 30000, 'auto-save');
 
         window.addEventListener('beforeunload', () => {
             editor?.flushAutoSave?.();
@@ -281,7 +335,7 @@
             updateClock();
         }, 200);
 
-        setInterval(updateClock, 1000);
+        PAC.Timer.setInterval(updateClock, 1000, 'clock-refresh');
         createParticles();
 
         // === NEW: Achievement System ===
@@ -326,18 +380,26 @@
         };
 
         // === NEW: Auto-Chat hook (in simulation tick) ===
-        setInterval(() => {
-            if (!game.isPaused && !game.isGameOver && game.started && _autoChatEnabled) {
-                manager.autoChat();
+        PAC.Timer.setInterval(() => {
+            try {
+                if (!game.isPaused && !game.isGameOver && game.started && _autoChatEnabled) {
+                    manager.autoChat();
+                }
+            } catch (e) {
+                PAC.ErrorHandler.log('chat', `autoChat error: ${e.message}`, e);
             }
-        }, 500);
+        }, 500, 'auto-chat');
 
         // === NEW: Achievement check every 5s ===
-        setInterval(() => {
-            if (game.started && !game.isGameOver && _achievements) {
-                _achievements.check(game, manager);
+        PAC.Timer.setInterval(() => {
+            try {
+                if (game.started && !game.isGameOver && _achievements) {
+                    _achievements.check(game, manager);
+                }
+            } catch (e) {
+                PAC.ErrorHandler.log('achieve', `achievement check error: ${e.message}`, e);
             }
-        }, 5000);
+        }, 5000, 'achievement-check');
     }
 
     function createStarterAgents() {
@@ -369,6 +431,10 @@
                     manager.addLog('system', `🌾 ${farmReport.readyCount} cây đã chín! Thời tiết: ${farmReport.weather}`, 'info');
                 }
                 updateFarmWeatherDisplay();
+            }
+            // Record daily statistics
+            if (statsDashboard) {
+                try { statsDashboard.recordDay(game, manager); } catch(e) {}
             }
             refreshHUD();
         };
@@ -1205,11 +1271,32 @@
         document.querySelectorAll('.toolbar-btn[data-tool]').forEach(btn => {
             btn.addEventListener('click', () => {
                 const tool = btn.dataset.tool;
-                if (tool === 'layout') { editor.toggle(); return; }
+                game.sfx.click();
+
+                // Layout button toggles the editor panel
+                if (tool === 'layout') {
+                    editor.toggle();
+                    btn.classList.toggle('active', editor.active);
+                    return;
+                }
+
+                // If clicking the already-active tool → deactivate it
+                if (btn.classList.contains('active')) {
+                    btn.classList.remove('active');
+                    editor.currentTool = null;
+                    editor.setStatus('Sẵn sàng');
+                    return;
+                }
+
+                // Deactivate all toolbar tool buttons, activate this one
                 document.querySelectorAll('.toolbar-btn[data-tool]').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
+
+                // Open editor panel if not already open
+                if (!editor.active) editor.toggle(true);
+
+                // Activate the tool
                 editor.setTool(tool);
-                if (!editor.active) editor.toggle();
             });
         });
     }
@@ -1219,6 +1306,10 @@
         const list = document.getElementById('agentList');
         if (!list) return;
         const agents = Array.from(manager.agents.values());
+
+        // Update header count badge
+        const countEl = document.getElementById('mpAgentCount');
+        if (countEl) countEl.textContent = agents.length;
 
         if (agents.length === 0) {
             list.innerHTML = `
@@ -1657,6 +1748,7 @@
         const btnSettings = document.getElementById('btnSettings');
         if (btnSettings) btnSettings.addEventListener('click', () => {
             settingsOverlay?.classList.add('active');
+            refreshStatsTab(); // Refresh when opening
         });
         const closeSettings = document.getElementById('closeSettings');
         if (closeSettings) closeSettings.addEventListener('click', () => {
@@ -1668,6 +1760,20 @@
             if (!ov) return;
             ov.addEventListener('click', (e) => {
                 if (e.target === ov) ov.classList.remove('active');
+            });
+        });
+
+        // --- Tab Switching ---
+        document.querySelectorAll('.settings-tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.settings-tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const tab = btn.dataset.tab;
+                document.getElementById('settingsTabSettings').style.display = tab === 'settings' ? '' : 'none';
+                document.getElementById('settingsTabStats').style.display = tab === 'stats' ? '' : 'none';
+                document.getElementById('settingsTabDebug').style.display = tab === 'debug' ? '' : 'none';
+                if (tab === 'stats') refreshStatsTab();
+                if (tab === 'debug') refreshDebugTab();
             });
         });
 
@@ -1724,6 +1830,64 @@
                 localStorage.setItem('pac_autoChat', _autoChatEnabled ? '1' : '0');
             });
         }
+
+        // --- Debug buttons ---
+        const debugClear = document.getElementById('debugClearErrors');
+        if (debugClear) debugClear.addEventListener('click', () => {
+            PAC.ErrorHandler.clearErrors();
+            refreshDebugTab();
+            showToast('🗑️ Đã xóa error log', 'info');
+        });
+        const debugTimer = document.getElementById('debugTimerStatus');
+        if (debugTimer) debugTimer.addEventListener('click', () => {
+            const status = PAC.Timer.getStatus();
+            alert(`Active Intervals: ${status.activeIntervals}\nActive Timeouts: ${status.activeTimeouts}\nDetails: ${status.details.join(', ')}`);
+        });
+    }
+
+    function refreshStatsTab() {
+        if (!game || !statsDashboard) return;
+        try {
+            const s = statsDashboard.getSummary(game, manager);
+            const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+            set('statCoins', s.coins.toLocaleString() + 'Ⓒ');
+            set('statEarned', '+' + s.totalEarned.toLocaleString());
+            set('statSpent', '-' + s.totalSpent.toLocaleString());
+            set('statNet', (s.netProfit >= 0 ? '+' : '') + s.netProfit.toLocaleString());
+            set('statAgents', s.agentCount);
+            set('statTasks', s.totalTasks);
+            set('statContracts', `${s.completedContracts}✅ / ${s.failedContracts}❌`);
+            set('statSuccessRate', s.successRate + '%');
+            set('statMood', s.avgMood + '%');
+            set('statEnergy', s.avgEnergy + '%');
+
+            // Net profit color
+            const netEl = document.getElementById('statNet');
+            if (netEl) netEl.style.color = s.netProfit >= 0 ? '#00d4aa' : '#ff4757';
+
+            // Draw mini chart
+            const canvas = document.getElementById('statsChart');
+            if (canvas) statsDashboard.drawMiniChart(canvas, 'coins');
+        } catch (e) {
+            PAC.ErrorHandler.log('stats-ui', `refreshStatsTab error: ${e.message}`, e);
+        }
+    }
+
+    function refreshDebugTab() {
+        try {
+            const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+            const timerStatus = PAC.Timer.getStatus();
+            set('debugTimers', timerStatus.activeIntervals + ' intervals, ' + timerStatus.activeTimeouts + ' timeouts');
+            set('debugErrors', PAC.ErrorHandler.errors.length);
+            const storage = PAC.Storage.getUsage();
+            set('debugStorage', `${storage.usedKB}KB / ${storage.maxKB}KB (${storage.pct}%)`);
+
+            // Count loaded modules
+            const modules = ['GameState', 'PixelEngine', 'AgentManager', 'TechTree', 'SlotMachine',
+                'GoldTrading', 'GoldTradingUI', 'BilliardGame', 'PokerDeck', 'FarmManager',
+                'StatsDashboard', 'AgentChatbox'].filter(m => typeof window[m] !== 'undefined');
+            set('debugModules', modules.length + ' loaded');
+        } catch (e) { /* ignore debug errors */ }
     }
 
     // ============ TECH TREE UI ============

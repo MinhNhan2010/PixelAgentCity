@@ -12,6 +12,9 @@ class GoldTrading {
         this.dayHigh = 2380;
         this.dayLow = 2380;
 
+        // Transaction fee (spread) — prevents risk-free arbitrage
+        this.spreadPct = opts.spreadPct || 0.02; // 2% spread
+
         // Price history for charting (each entry = 1 candle)
         this.priceHistory = [];  // { open, high, low, close, time, volume }
         this.maxHistory = 60;
@@ -79,7 +82,6 @@ class GoldTrading {
             // Try multiple free APIs
             const apis = [
                 'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/xau.min.json',
-                'https://api.frankfurter.app/latest?from=XAU&to=USD',
             ];
             
             for (const url of apis) {
@@ -271,11 +273,14 @@ class GoldTrading {
     }
 
     getCostForOunces(ounces) {
-        return this.priceToCoins(this.currentPrice * ounces);
+        // Include spread in displayed cost
+        return this.priceToCoins(this.currentPrice * ounces * (1 + this.spreadPct));
     }
 
     buy(ounces, availableCoins) {
-        const cost = this.getCostForOunces(ounces);
+        // Buy at ask price (current + spread)
+        const askPrice = this.currentPrice * (1 + this.spreadPct);
+        const cost = this.priceToCoins(askPrice * ounces);
         if (cost > availableCoins || cost <= 0) return null;
 
         // Update average buy price
@@ -301,7 +306,9 @@ class GoldTrading {
         const actualOunces = Math.min(ounces, maxOunces, this.goldHeld);
         if (actualOunces <= 0) return null;
 
-        const revenue = this.priceToCoins(this.currentPrice * actualOunces);
+        // Sell at bid price (current - spread)
+        const bidPrice = this.currentPrice * (1 - this.spreadPct);
+        const revenue = this.priceToCoins(bidPrice * actualOunces);
         const costBasis = this.priceToCoins(this.avgBuyPrice * actualOunces);
         const profit = revenue - costBasis;
 

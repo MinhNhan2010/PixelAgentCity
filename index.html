@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="description" content="PixelAgent City — Quản lý studio AI, tuyển agent, nhận hợp đồng, kiếm tiền!">
     <meta name="theme-color" content="#0a0e1a">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>🎮 PixelAgent City — AI Office Tycoon</title>
@@ -178,23 +179,23 @@
             <button class="btn-pixel" id="btnAddAgent" title="Tuyển Agent mới [H]">
                 <span>+ HIRE</span>
             </button>
-            <button class="btn-pixel btn-icon" id="btnAchievements" title="Thành tựu [A]">
+            <button class="btn-pixel btn-icon" id="btnAchievements" title="Thành tựu [A]" aria-label="Thành tựu">
                 <span>🏆</span><span class="notif-badge" id="achBadge" style="display:none">0</span>
             </button>
-            <button class="btn-pixel btn-icon" id="btnNotifCenter" title="Thông báo [N]">
+            <button class="btn-pixel btn-icon" id="btnNotifCenter" title="Thông báo [N]" aria-label="Thông báo">
                 <span>🔔</span><span class="notif-badge" id="notifBadge" style="display:none">0</span>
             </button>
-            <button class="btn-pixel btn-icon" id="btnShortcuts" title="Phím tắt [?]">
+            <button class="btn-pixel btn-icon" id="btnShortcuts" title="Phím tắt [?]" aria-label="Phím tắt">
                 <span>⌨️</span>
             </button>
-            <button class="btn-pixel btn-secondary" id="btnSettings" title="Cài đặt">
+            <button class="btn-pixel btn-secondary" id="btnSettings" title="Cài đặt" aria-label="Cài đặt">
                 <span>⚙️</span>
             </button>
         </div>
     </header>
 
     <!-- ========== GAME HUD BAR ========== -->
-    <div class="game-hud" id="gameHud" style="display:none">
+    <div class="game-hud" id="gameHud" style="display:none" role="toolbar" aria-label="Game HUD">
         <div class="hud-section hud-coins">
             <span class="hud-icon">💰</span>
             <span class="hud-value" id="hudCoins">500</span>
@@ -238,7 +239,8 @@
         </div>
         <div class="hud-section">
             <button class="hud-btn hud-btn-research" id="btnTechTree" title="Cây Công Nghệ [R]">
-                🔬 Research <span class="hud-badge hud-research-badge" id="hudResearchBadge" style="display:none">0</span>
+                🔬 Research <span class="hud-badge hud-research-badge" id="hudResearchBadge"
+                    style="display:none">0</span>
             </button>
         </div>
         <div class="hud-section">
@@ -281,7 +283,7 @@
                 <button class="zone-btn" data-zone="rooftop" title="Tầng Thượng">🌆 Tầng Thượng</button>
                 <button class="zone-btn active" data-zone="indoor" title="Tòa Nhà">🏢 Tòa Nhà</button>
                 <button class="zone-btn" data-zone="outdoor" title="Sân Ngoài Trời">🏞️ Ngoài Trời</button>
-                <button class="zone-btn" data-zone="elevator" title="Thang Máy">🛗 Thang Máy</button>
+                <button class="zone-btn" data-zone="cafe" title="Quán Cafe">☕ Quán Cafe</button>
             </div>
             <div class="office-viewport" id="officeViewport">
                 <canvas id="officeCanvas"></canvas>
@@ -294,36 +296,70 @@
                 <canvas id="minimapCanvas" width="150" height="100"></canvas>
             </div>
             <!-- Bottom Toolbar -->
-            <div class="office-toolbar">
+            <div class="office-toolbar" id="officeToolbar">
                 <div class="toolbar-group">
-                    <button class="toolbar-btn" data-tool="floor" title="Đặt sàn">Floor</button>
-                    <button class="toolbar-btn" data-tool="wall" title="Đặt tường">Wall</button>
-                    <button class="toolbar-btn" data-tool="erase" title="Xóa">Erase</button>
-                    <button class="toolbar-btn" data-tool="furniture" title="Đặt nội thất">Furniture</button>
+                    <button class="toolbar-btn" data-tool="floor" title="Đặt sàn cho phòng">
+                        <span class="tb-icon">🟫</span>
+                        <span class="tb-label">Sàn</span>
+                    </button>
+                    <button class="toolbar-btn" data-tool="wall" title="Đặt tường & vách ngăn">
+                        <span class="tb-icon">🧱</span>
+                        <span class="tb-label">Tường</span>
+                    </button>
+                    <button class="toolbar-btn" data-tool="erase" title="Xóa nội thất / sàn">
+                        <span class="tb-icon">🗑️</span>
+                        <span class="tb-label">Xóa</span>
+                    </button>
+                    <button class="toolbar-btn" data-tool="furniture" title="Đặt bàn ghế & thiết bị">
+                        <span class="tb-icon">🪑</span>
+                        <span class="tb-label">Nội thất</span>
+                    </button>
                 </div>
+                <div class="toolbar-divider"></div>
                 <div class="toolbar-group">
-                    <button class="toolbar-btn toolbar-primary" id="btnAddAgentToolbar" title="Tuyển Agent">+
-                        Hire</button>
-                    <button class="toolbar-btn toolbar-accent" data-tool="layout" title="Bố cục">Layout</button>
+                    <button class="toolbar-btn toolbar-primary" id="btnAddAgentToolbar" title="Tuyển Agent mới">
+                        <span class="tb-icon">👾</span>
+                        <span class="tb-label">Tuyển</span>
+                    </button>
+                    <button class="toolbar-btn toolbar-accent" data-tool="layout" title="Chỉnh sửa bố cục phòng">
+                        <span class="tb-icon">📐</span>
+                        <span class="tb-label">Bố cục</span>
+                    </button>
                 </div>
             </div>
         </section>
 
         <!-- Right Panel - Agent Management -->
         <section class="management-panel">
+            <!-- Panel Header -->
+            <div class="mp-header">
+                <div class="mp-header-left">
+                    <span class="mp-header-icon">🖥️</span>
+                    <span class="mp-title">QUẢN LÝ</span>
+                </div>
+                <div class="mp-header-right">
+                    <span class="mp-agent-count" id="mpAgentCount">0</span>
+                    <span class="mp-agent-label">agents</span>
+                </div>
+            </div>
+
             <!-- Tab Navigation -->
             <div class="tab-nav">
-                <button class="tab-btn active" data-tab="agents">
-                    <span class="tab-icon">👾</span> Agents
+                <button class="tab-btn active" data-tab="agents" title="Danh sách Agent">
+                    <span class="tab-emoji">👤</span>
+                    <span class="tab-text">Agents</span>
                 </button>
-                <button class="tab-btn" data-tab="tasks">
-                    <span class="tab-icon">📋</span> Tasks
+                <button class="tab-btn" data-tab="tasks" title="Công việc">
+                    <span class="tab-emoji">📋</span>
+                    <span class="tab-text">Tasks</span>
                 </button>
-                <button class="tab-btn" data-tab="logs">
-                    <span class="tab-icon">📝</span> Logs
+                <button class="tab-btn" data-tab="logs" title="Nhật ký">
+                    <span class="tab-emoji">🖥️</span>
+                    <span class="tab-text">Logs</span>
                 </button>
-                <button class="tab-btn" data-tab="stats">
-                    <span class="tab-icon">📊</span> Stats
+                <button class="tab-btn" data-tab="stats" title="Thống kê">
+                    <span class="tab-emoji">📊</span>
+                    <span class="tab-text">Stats</span>
                 </button>
             </div>
 
@@ -336,15 +372,15 @@
                 <!-- Tasks Tab -->
                 <div class="tab-pane" id="tab-tasks">
                     <div class="task-header">
-                        <h3>Quản Lý Công Việc</h3>
+                        <h3>📋 Quản Lý Công Việc</h3>
                     </div>
                     <div class="task-list" id="taskList"></div>
                 </div>
                 <!-- Logs Tab -->
                 <div class="tab-pane" id="tab-logs">
                     <div class="log-header">
-                        <h3>Activity Logs</h3>
-                        <button class="btn-pixel btn-small" id="btnClearLogs">Clear</button>
+                        <h3>🖥️ Nhật Ký Hoạt Động</h3>
+                        <button class="btn-pixel btn-small" id="btnClearLogs">Xóa</button>
                     </div>
                     <div class="log-console" id="logConsole"></div>
                 </div>
@@ -352,7 +388,7 @@
                 <div class="tab-pane" id="tab-stats">
                     <div class="stats-grid" id="statsGrid"></div>
                     <div class="chart-container">
-                        <h3>Hiệu Suất Agent</h3>
+                        <h3>📊 Hiệu Suất Agent</h3>
                         <canvas id="performanceChart" height="200"></canvas>
                     </div>
                 </div>
@@ -557,7 +593,9 @@
                 <button class="modal-close" id="closeAchievements">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="ach-progress-bar"><div class="ach-progress-fill" id="achProgressFill"></div></div>
+                <div class="ach-progress-bar">
+                    <div class="ach-progress-fill" id="achProgressFill"></div>
+                </div>
                 <div class="ach-grid" id="achGrid"></div>
             </div>
         </div>
@@ -567,7 +605,8 @@
     <div class="modal-overlay" id="techTreeOverlay">
         <div class="modal pixel-border tech-tree-modal">
             <div class="modal-header">
-                <h2>🔬 Cây Công Nghệ <span id="techUnlockedCount" style="font-size:12px;color:var(--text-muted)"></span></h2>
+                <h2>🔬 Cây Công Nghệ <span id="techUnlockedCount" style="font-size:12px;color:var(--text-muted)"></span>
+                </h2>
                 <button class="modal-close" id="closeTechTree">&times;</button>
             </div>
             <div class="modal-body tech-tree-body">
@@ -606,29 +645,117 @@
     </div>
 
     <!-- ========== SETTINGS MODAL ========== -->
-    <div class="modal-overlay" id="settingsOverlay">
-        <div class="modal pixel-border" style="max-width:440px">
+    <div class="modal-overlay" id="settingsOverlay" role="dialog" aria-label="Cài đặt game">
+        <div class="modal pixel-border" style="max-width:540px">
             <div class="modal-header">
                 <h2>⚙️ Cài Đặt</h2>
-                <button class="modal-close" id="closeSettings">&times;</button>
+                <button class="modal-close" id="closeSettings" aria-label="Đóng cài đặt">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="settings-group">
-                    <label class="settings-label">🔊 Âm Lượng SFX</label>
-                    <input type="range" id="settingSfxVol" min="0" max="100" value="30" class="settings-range">
-                    <span id="settingSfxVolVal" class="settings-val">30%</span>
+                <!-- Settings Tab Buttons -->
+                <div style="display:flex;gap:6px;margin-bottom:12px">
+                    <button class="btn-pixel btn-sm settings-tab-btn active" data-tab="settings"
+                        aria-label="Tab cài đặt">⚙️ Cài Đặt</button>
+                    <button class="btn-pixel btn-sm settings-tab-btn" data-tab="stats" aria-label="Tab thống kê">📊
+                        Thống Kê</button>
+                    <button class="btn-pixel btn-sm settings-tab-btn" data-tab="debug" aria-label="Tab gỡ lỗi">🐛
+                        Debug</button>
                 </div>
-                <div class="settings-group">
-                    <label class="settings-label">🎵 Nhạc Nền (BGM)</label>
-                    <button class="btn-pixel btn-sm" id="settingBgmToggle">🎵 BẬT BGM</button>
+
+                <!-- Tab: Settings -->
+                <div class="settings-tab" id="settingsTabSettings">
+                    <div class="settings-group">
+                        <label class="settings-label" for="settingSfxVol">🔊 Âm Lượng SFX</label>
+                        <input type="range" id="settingSfxVol" min="0" max="100" value="30" class="settings-range"
+                            aria-label="Điều chỉnh âm lượng">
+                        <span id="settingSfxVolVal" class="settings-val">30%</span>
+                    </div>
+                    <div class="settings-group">
+                        <label class="settings-label">🎵 Nhạc Nền (BGM)</label>
+                        <button class="btn-pixel btn-sm" id="settingBgmToggle" aria-label="Bật tắt nhạc nền">🎵 BẬT
+                            BGM</button>
+                    </div>
+                    <div class="settings-group">
+                        <label class="settings-label">💬 Agent Auto-Chat</label>
+                        <button class="btn-pixel btn-sm" id="settingChatToggle" aria-label="Bật tắt auto chat">💬
+                            BẬT</button>
+                    </div>
+                    <div class="settings-group">
+                        <label class="settings-label">💾 Auto-Save (30s)</label>
+                        <span class="settings-val" style="color:var(--accent-success)">✅ Luôn bật</span>
+                    </div>
                 </div>
-                <div class="settings-group">
-                    <label class="settings-label">💬 Agent Auto-Chat</label>
-                    <button class="btn-pixel btn-sm" id="settingChatToggle">💬 BẬT</button>
+
+                <!-- Tab: Statistics -->
+                <div class="settings-tab" id="settingsTabStats" style="display:none">
+                    <div id="statsContent" style="font-size:12px;line-height:1.6">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+                            <div class="stat-card">
+                                <div class="stat-label">💰 Coins</div>
+                                <div class="stat-value" id="statCoins">-</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">📈 Tổng Thu</div>
+                                <div class="stat-value" id="statEarned" style="color:#00d4aa">-</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">📉 Tổng Chi</div>
+                                <div class="stat-value" id="statSpent" style="color:#ff6b6b">-</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">💵 Lợi Nhuận</div>
+                                <div class="stat-value" id="statNet">-</div>
+                            </div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+                            <div class="stat-card">
+                                <div class="stat-label">👥 Agents</div>
+                                <div class="stat-value" id="statAgents">-</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">📋 Tasks Done</div>
+                                <div class="stat-value" id="statTasks">-</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">✅ Contracts</div>
+                                <div class="stat-value" id="statContracts">-</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">📊 Success Rate</div>
+                                <div class="stat-value" id="statSuccessRate">-</div>
+                            </div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                            <div class="stat-card">
+                                <div class="stat-label">😊 Avg Mood</div>
+                                <div class="stat-value" id="statMood">-</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">⚡ Avg Energy</div>
+                                <div class="stat-value" id="statEnergy">-</div>
+                            </div>
+                        </div>
+                        <canvas id="statsChart" width="460" height="80"
+                            style="margin-top:12px;width:100%;border-radius:6px;border:1px solid rgba(78,205,196,0.2)"></canvas>
+                    </div>
                 </div>
-                <div class="settings-group">
-                    <label class="settings-label">💾 Auto-Save (30s)</label>
-                    <span class="settings-val" style="color:var(--accent-success)">✅ Luôn bật</span>
+
+                <!-- Tab: Debug -->
+                <div class="settings-tab" id="settingsTabDebug" style="display:none">
+                    <div style="font-size:11px;font-family:monospace;color:#8892b0;line-height:1.8">
+                        <div>🕐 Active Timers: <span id="debugTimers" style="color:#4ecdc4">-</span></div>
+                        <div>⚠️ Errors Logged: <span id="debugErrors" style="color:#ff6b6b">-</span></div>
+                        <div>💾 Storage: <span id="debugStorage" style="color:#ffd93d">-</span></div>
+                        <div>🎮 Version: <span style="color:#4ecdc4">v1.1.0</span></div>
+                        <div>📦 Modules: <span id="debugModules" style="color:#78e08f">-</span></div>
+                        <div style="margin-top:8px">
+                            <button class="btn-pixel btn-sm" id="debugClearErrors" style="font-size:10px"
+                                aria-label="Xóa log lỗi">🗑️ Clear Errors</button>
+                            <button class="btn-pixel btn-sm" id="debugTimerStatus"
+                                style="font-size:10px;margin-left:4px" aria-label="Xem trạng thái timer">⏱️ Timer
+                                Info</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -658,6 +785,9 @@
         </div>
     </div>
 
+    <!-- Error Handler & Utils (must load first) -->
+    <script src="error-handler.js"></script>
+    <script src="statistics.js"></script>
     <script src="billiards.js"></script>
     <script src="billiards-ui.js"></script>
     <script src="slot-machine.js"></script>

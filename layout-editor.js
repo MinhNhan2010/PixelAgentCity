@@ -69,6 +69,14 @@ class LayoutEditor {
                 { id: 'hanging_plant', name: 'Cây treo', icon: '<img src="assets/furniture/HANGING_PLANT/HANGING_PLANT.png" style="height:24px; image-rendering:pixelated;">', w: 1, h: 1 },
                 { id: 'cactus', name: 'Xương rồng', icon: '<img src="assets/furniture/CACTUS/CACTUS.png" style="height:24px; image-rendering:pixelated;">', w: 1, h: 2 },
                 { id: 'pot', name: 'Chậu hoa', icon: '<img src="assets/furniture/POT/POT.png" style="height:24px; image-rendering:pixelated;">', w: 1, h: 1 },
+                { id: 'bamboo', name: 'Tre trúc', icon: '🎋', w: 1, h: 2 },
+                { id: 'succulent', name: 'Sen đá', icon: '🪴', w: 1, h: 1 },
+                { id: 'bonsai', name: 'Cây bonsai', icon: '🌳', w: 1, h: 2 },
+                { id: 'palm_indoor', name: 'Cây cọ', icon: '🌴', w: 1, h: 2 },
+                { id: 'fern', name: 'Dương xỉ', icon: '🌿', w: 1, h: 2 },
+                { id: 'orchid', name: 'Lan hồ điệp', icon: '🌸', w: 1, h: 2 },
+                { id: 'vine_wall', name: 'Dây leo', icon: '🍀', w: 1, h: 2 },
+                { id: 'money_tree', name: 'Cây Kim Tiền', icon: '💰', w: 1, h: 2 },
                 { id: 'painting', name: 'Tranh treo', icon: '<img src="assets/furniture/LARGE_PAINTING/LARGE_PAINTING.png" style="height:24px; image-rendering:pixelated;">', w: 2, h: 1 },
                 { id: 'painting2', name: 'Tranh nhỏ', icon: '<img src="assets/furniture/SMALL_PAINTING_2/SMALL_PAINTING_2.png" style="height:24px; image-rendering:pixelated;">', w: 1, h: 1 },
                 { id: 'lamp', name: 'Đèn đứng', icon: '💡', w: 1, h: 2 },
@@ -88,6 +96,14 @@ class LayoutEditor {
             shelf: 'XP gain +',
             plant: 'Stress reduction',
             cactus: 'Stress reduction',
+            bamboo: 'Stress reduction',
+            succulent: 'Stress reduction',
+            bonsai: 'Focus + Zen',
+            palm_indoor: 'Mood boost',
+            fern: 'Air quality +',
+            orchid: 'Mood + Beauty',
+            vine_wall: 'Stress reduction',
+            money_tree: 'Luck + Coin bonus',
             painting: 'Mood boost',
             lamp: 'Mood boost',
             pictureframe: 'Mood boost',
@@ -277,10 +293,13 @@ class LayoutEditor {
             const ty = Math.floor(wy / T);
 
             if (this.currentTool === 'floor') {
-                // If it's a right click, we may cancel painting, but we'll assume left click or general mousedown is fine
                 if (e.button !== 0) return; 
                 isPainting = true;
                 this.paintFloor(tx, ty);
+            } else if (this.currentTool === 'wall') {
+                if (e.button !== 0) return;
+                isPainting = true;
+                this.paintWall(tx, ty);
             } else if (this.currentTool === 'furniture' && this.selectedFurnitureType) {
                 this.placeFurniture(this.selectedFurnitureType, tx, ty);
             } else if (this.currentTool === 'erase') {
@@ -296,11 +315,12 @@ class LayoutEditor {
             const wy = (e.offsetY - this.engine.camera.y) / this.engine.scale;
             this.ghostPos = { x: wx, y: wy };
             
-            if (isPainting && this.currentTool === 'floor') {
+            if (isPainting && (this.currentTool === 'floor' || this.currentTool === 'wall')) {
                 const T = this.engine.T;
                 const tx = Math.floor(wx / T);
                 const ty = Math.floor(wy / T);
-                this.paintFloor(tx, ty);
+                if (this.currentTool === 'floor') this.paintFloor(tx, ty);
+                else this.paintWall(tx, ty);
             }
         });
 
@@ -316,6 +336,49 @@ class LayoutEditor {
             this.currentTool = null;
             this.selectedFurnitureType = null;
             this.engine.editMode = null;
+            // Notify toolbar to deactivate buttons
+            document.querySelectorAll('.toolbar-btn[data-tool]').forEach(b => b.classList.remove('active'));
+        }
+    }
+
+    /**
+     * setTool — Called by bottom toolbar buttons to activate a tool.
+     * Bridges the toolbar UI to internal editor state.
+     * @param {string} tool - 'floor' | 'wall' | 'erase' | 'furniture'
+     */
+    setTool(tool) {
+        this.currentTool = tool;
+
+        // Sync panel tool buttons
+        this.panel.querySelectorAll('.le-tool-btn').forEach(b => b.classList.remove('active'));
+        const internalMap = { floor: null, wall: null, erase: 'erase', furniture: 'furniture' };
+        const leToolName = internalMap[tool];
+        if (leToolName) {
+            const matchBtn = this.panel.querySelector(`[data-letool="${leToolName}"]`);
+            if (matchBtn) matchBtn.classList.add('active');
+        }
+
+        // Floor tool defaults
+        if (tool === 'floor') {
+            this.floorType = this.floorType || 'wood';
+            this.panel.querySelectorAll('.le-floor-btn').forEach(b => b.classList.remove('active'));
+            const floorBtn = this.panel.querySelector(`[data-floor="${this.floorType}"]`);
+            if (floorBtn) floorBtn.classList.add('active');
+            this.setStatus('🟫 Sàn — Click để vẽ sàn, kéo chuột để tô liên tục');
+        } else if (tool === 'wall') {
+            this.setStatus('🧱 Tường — Click tile để đặt/xóa tường');
+        } else if (tool === 'erase') {
+            this.selectedFurnitureType = null;
+            this.setStatus('🗑️ Xóa — Click vào đồ vật để xóa');
+        } else if (tool === 'furniture') {
+            // Show catalog, select first item if none selected
+            if (!this.selectedFurnitureType) {
+                const firstItem = this.panel.querySelector('.le-item-btn');
+                if (firstItem) {
+                    firstItem.click();
+                }
+            }
+            this.setStatus('🪑 Nội thất — Chọn đồ vật từ danh mục rồi click để đặt');
         }
     }
 
@@ -641,7 +704,20 @@ class LayoutEditor {
         this.engine.map[ty][tx] = nextFloor;
         this.pushUndo({ type: 'floor', tx, ty, old, new: this.engine.map[ty][tx] });
         this.notifyOfficeChanged({ reason: 'Floor da thay doi' });
-        this.setStatus(`Floor updated at (${tx}, ${ty})`);
+        this.setStatus(`Sàn cập nhật tại (${tx}, ${ty})`);
+    }
+
+    paintWall(tx, ty) {
+        if (tx < 0 || ty < 0 || tx >= this.engine.MW || ty >= this.engine.MH) return;
+        const old = this.engine.map[ty][tx];
+        // Toggle: if current tile is 'wall' → remove it; otherwise set to 'wall'
+        const nextVal = (old === 'wall') ? null : 'wall';
+        if (old === nextVal) return;
+
+        this.engine.map[ty][tx] = nextVal;
+        this.pushUndo({ type: 'floor', tx, ty, old, new: nextVal });
+        this.notifyOfficeChanged({ reason: 'Wall da thay doi' });
+        this.setStatus(nextVal === 'wall' ? `🧱 Đặt tường tại (${tx}, ${ty})` : `Xóa tường tại (${tx}, ${ty})`);
     }
 
     selectFurnitureAt(wx, wy) {

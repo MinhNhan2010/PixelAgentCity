@@ -210,16 +210,30 @@ class PixelEngine {
 
         const PAD = 2, LX = 1, RX = 24;
         const roomDefs = {
-            0:{w:12,h:8,f:'wood'}, 1:{w:20,h:16,f:'wood'}, 2:{w:15,h:10,f:'tile'},
-            3:{w:18,h:12,f:'carpet'}, 4:{w:15,h:7,f:'carpet'}, 5:{w:12,h:8,f:'tile'},
-            6:{w:12,h:8,f:'wood'}, 7:{w:14,h:8,f:'wood'}, 8:{w:12,h:8,f:'carpet'},
-            9:{w:14,h:8,f:'carpet'}, 10:{w:15,h:10,f:'tile'},
-            11:{w:18,h:20,f:'grass'}, 12:{w:6,h:6,f:'metal'}, 13:{w:20,h:10,f:'concrete'},
+            // ═══ STANDARDIZED ROOM SIZES ═══
+            // Small rooms: 10×8
+            0:{w:10,h:8,f:'wood'},    // Meeting Room
+            2:{w:10,h:8,f:'tile'},    // Kitchen
+            5:{w:10,h:8,f:'tile'},    // Server Room
+            6:{w:10,h:8,f:'wood'},    // Gym
+            7:{w:10,h:8,f:'wood'},    // Library
+            8:{w:10,h:8,f:'carpet'},  // Garden
+            9:{w:10,h:8,f:'carpet'},  // VIP Lounge
+            12:{w:5,h:8,f:'metal'},   // Elevator (narrow)
+            // Medium rooms: 14×8
+            1:{w:14,h:8,f:'wood'},    // Office
+            3:{w:14,h:8,f:'carpet'},  // Game Room
+            4:{w:10,h:8,f:'carpet'},  // Lounge
+            10:{w:14,h:8,f:'tile'},   // R&D Lab
+            // Large / Special
+            11:{w:18,h:20,f:'grass'}, // Outdoor (separate scene)
+            13:{w:20,h:10,f:'concrete'}, // Rooftop
+            14:{w:16,h:10,f:'wood'},  // Cafe
         };
 
-        // ═══ SCENE: INDOOR (Building) ═══
+        // ═══ SCENE: INDOOR (Building) — Elevator now lives here ═══
         const indoorLeft  = [0, 1, 6, 7, 8].filter(id => this._unlockedRooms.includes(id));
-        const indoorRight = [2, 3, 4, 5, 9, 10].filter(id => this._unlockedRooms.includes(id));
+        const indoorRight = [2, 3, 4, 5, 9, 10, 12].filter(id => this._unlockedRooms.includes(id));
         if (indoorLeft.length || indoorRight.length) {
             this._buildScene('indoor', indoorLeft, indoorRight, roomDefs, LX, RX, PAD, '🏢');
         }
@@ -234,11 +248,10 @@ class PixelEngine {
             this._buildScene('rooftop', [13], [], roomDefs, LX + 2, RX, PAD, '🌆');
         }
 
-        // ═══ SCENE: ELEVATOR ═══
-        if (this._unlockedRooms.includes(12)) {
-            this._buildScene('elevator', [12], [], roomDefs, LX + 5, RX, PAD, '🛗');
+        // ═══ SCENE: CAFE ═══
+        if (this._unlockedRooms.includes(14)) {
+            this._buildScene('cafe', [14], [], roomDefs, LX + 2, RX, PAD, '☕');
         }
-
         // Activate default scene
         const defaultScene = this.scenes['indoor'] || this.scenes[Object.keys(this.scenes)[0]];
         if (defaultScene) {
@@ -261,22 +274,76 @@ class PixelEngine {
         this.deskSlots = desks;
         this.interactionPoints = iPoints;
 
-        let ly = 1;
-        leftIds.forEach(id => {
-            const d = roomDefs[id];
-            placed.push({id, x:LX, y:ly, w:d.w, h:d.h, f:d.f, zone:name});
-            ly += d.h + PAD;
-        });
-        let ry = 1;
-        rightIds.forEach(id => {
-            const d = roomDefs[id];
-            placed.push({id, x:RX, y:ry, w:d.w, h:d.h, f:d.f, zone:name});
-            ry += d.h + PAD;
-        });
+        if (name === 'indoor') {
+            // ═══ BUILDING LAYOUT: 3-Floor Office Building ═══
+            // All indoor rooms are h=8, consistent grid layout
+            const GAP = 2;         // gap between rooms on same floor
+            const FLOOR_SEP = 3;   // separator between floors (hallway/stairs)
+            const MARGIN = 1;      // left margin
+            const allIds = [...leftIds, ...rightIds];
+
+            // Floor assignments: rooms placed left-to-right per floor
+            const floors = [
+                // Floor 1 (Ground): Meeting + Office + Elevator
+                [0, 1, 12],
+                // Floor 2: Kitchen + Server Room + Game Room + Lounge
+                [2, 5, 3, 4],
+                // Floor 3: Gym + Library + Garden + VIP + R&D
+                [6, 7, 8, 9, 10],
+            ];
+
+            let curY = 1;
+            const floorData = []; // store for corridor building
+
+            floors.forEach((floorRoomIds, fi) => {
+                const available = floorRoomIds.filter(id => allIds.includes(id) && roomDefs[id]);
+                if (!available.length) return;
+
+                const floorStartY = curY;
+                let cx = MARGIN; // current X cursor
+
+                available.forEach(id => {
+                    const d = roomDefs[id];
+                    placed.push({id, x:cx, y:curY, w:d.w, h:d.h, f:d.f, zone:name});
+                    cx += d.w + GAP;
+                });
+
+                const floorH = 8; // all rooms are h=8
+                const floorEndX = cx - GAP; // rightmost edge
+
+                floorData.push({
+                    y: curY,
+                    h: floorH,
+                    startX: MARGIN,
+                    endX: floorEndX,
+                    floorIdx: fi,
+                });
+
+                curY += floorH + FLOOR_SEP;
+            });
+
+            // Store floor data for corridors (on the instance temporarily)
+            this._floorHalls = floorData;
+
+        } else {
+            // Non-indoor scenes: simple linear placement
+            let ly = 1;
+            leftIds.forEach(id => {
+                const d = roomDefs[id];
+                placed.push({id, x:LX, y:ly, w:d.w, h:d.h, f:d.f, zone:name});
+                ly += d.h + PAD;
+            });
+            let ry = 1;
+            rightIds.forEach(id => {
+                const d = roomDefs[id];
+                placed.push({id, x:RX, y:ry, w:d.w, h:d.h, f:d.f, zone:name});
+                ry += d.h + PAD;
+            });
+        }
 
         // Calculate map bounds
         let mx = 20, my = 20;
-        placed.forEach(r => { mx = Math.max(mx, r.x+r.w+2); my = Math.max(my, r.y+r.h+2); });
+        placed.forEach(r => { mx = Math.max(mx, r.x+r.w+3); my = Math.max(my, r.y+r.h+3); });
 
         // Build tile map
         const map = [];
@@ -302,7 +369,7 @@ class PixelEngine {
         // Furnish rooms
         placed.forEach(r => this._furnishRoom(r));
 
-        // Save scene
+        // Save scene (include floorData for labels)
         this.scenes[name] = {
             name, icon,
             map, MW: mx, MH: my,
@@ -310,6 +377,7 @@ class PixelEngine {
             deskSlots: desks,
             interactionPoints: iPoints,
             placedRooms: placed,
+            floorData: this._floorHalls || null,
         };
 
         // Restore originals
@@ -319,6 +387,7 @@ class PixelEngine {
         this.map = origMap;
         this.MW = origMW;
         this.MH = origMH;
+        this._floorHalls = null;
     }
 
     _applyScene(scene) {
@@ -402,7 +471,7 @@ class PixelEngine {
                     indoor: '🏢 TÒA NHÀ',
                     outdoor: '🏞️ NGOÀI TRỜI',
                     rooftop: '🌆 TẦNG THƯỢNG',
-                    elevator: '🛗 THANG MÁY'
+                    cafe: '☕ QUÁN CAFE'
                 }[tr.target] || tr.target.toUpperCase();
                 this.ctx.fillText(label, this.canvas.width / 2, this.canvas.height / 2);
                 this.ctx.textAlign = 'start';
@@ -416,154 +485,165 @@ class PixelEngine {
     }
 
     _addIndoorCorridors(rooms) {
-        const connect = (list) => {
-            const sorted = list.sort((a,b) => a.y - b.y);
-            for (let i=0;i<sorted.length-1;i++) {
-                const top=sorted[i], bot=sorted[i+1];
-                const cy = top.y+top.h, ch = bot.y-cy;
-                if (ch>0 && ch<=4) {
-                    const cx = Math.max(top.x,bot.x)+3;
-                    for (let dy=0;dy<ch;dy++) for (let dx=0;dx<4;dx++)
-                        if(this.map[cy+dy]) this.map[cy+dy][cx+dx] = top.f;
+        if (!this._floorHalls || !this._floorHalls.length) return;
+
+        // For each floor, fill gaps between rooms with hallway tiles
+        this._floorHalls.forEach(floor => {
+            const floorRooms = rooms.filter(r => r.y === floor.y).sort((a, b) => a.x - b.x);
+            if (floorRooms.length < 2) return;
+
+            for (let i = 0; i < floorRooms.length - 1; i++) {
+                const left = floorRooms[i];
+                const right = floorRooms[i + 1];
+                const gapX1 = left.x + left.w;
+                const gapX2 = right.x;
+                if (gapX2 <= gapX1) continue;
+
+                // Full-height hallway between rooms (same height as rooms)
+                for (let dy = 0; dy < floor.h; dy++) {
+                    for (let dx = gapX1; dx < gapX2; dx++) {
+                        const ty = floor.y + dy;
+                        if (ty >= 0 && ty < this.MH && this.map[ty]) {
+                            this.map[ty][dx] = 'tile';
+                        }
+                    }
                 }
             }
-        };
-        connect(rooms.filter(r=>r.x<18));
-        connect(rooms.filter(r=>r.x>=18));
+        });
 
-        // Horizontal corridor between left and right columns
-        const L = rooms.filter(r=>r.x<18).sort((a,b)=>a.y-b.y);
-        const R = rooms.filter(r=>r.x>=18).sort((a,b)=>a.y-b.y);
-        if (L.length && R.length) {
-            const oy = Math.max(L[0].y, R[0].y)+2;
-            const x1 = L[0].x+L[0].w, x2 = R[0].x;
-            if (x2>x1) for (let dy=0;dy<3;dy++) for (let dx=x1;dx<x2;dx++)
-                if(this.map[oy+dy]) this.map[oy+dy][dx]='wood';
+        // Vertical stairwell connecting floors
+        if (this._floorHalls.length > 1) {
+            // Place stairwell at x=3 (centered in the building's left area)
+            const stairX = 3;
+            const stairW = 3;
+
+            for (let i = 0; i < this._floorHalls.length - 1; i++) {
+                const upper = this._floorHalls[i];
+                const lower = this._floorHalls[i + 1];
+                const startY = upper.y + upper.h;
+                const endY = lower.y;
+
+                for (let dy = startY; dy < endY; dy++) {
+                    for (let dx = 0; dx < stairW; dx++) {
+                        if (dy < this.MH && this.map[dy]) {
+                            this.map[dy][stairX + dx] = 'tile';
+                        }
+                    }
+                }
+            }
         }
     }
 
     _furnishRoom(room) {
         const T=this.T, f=this.furniture, rx=room.x, ry=room.y;
         switch(room.id) {
-            case 0: // Meeting
+            case 0: // Meeting — bonsai for sophistication
                 f.push({t:'mtable',x:(rx+2)*T,y:(ry+1)*T,w:3,h:4});
                 f.push({t:'mchair',x:(rx+2)*T,y:(ry+1)*T,dir:'down'},{t:'mchair',x:(rx+4)*T,y:(ry+1)*T,dir:'down'});
                 f.push({t:'mchair',x:(rx+2)*T,y:(ry+5)*T,dir:'up'},{t:'mchair',x:(rx+4)*T,y:(ry+5)*T,dir:'up'});
                 f.push({t:'mchair',x:(rx+1)*T,y:(ry+3)*T,dir:'right'},{t:'mchair',x:(rx+7)*T,y:(ry+3)*T,dir:'left'});
                 f.push({t:'whiteboard',x:(rx+8)*T,y:ry*T});
-                f.push({t:'plant',x:rx*T,y:ry*T},{t:'plant',x:rx*T,y:(ry+5)*T});
+                f.push({t:'bonsai',x:rx*T,y:ry*T},{t:'bonsai',x:rx*T,y:(ry+5)*T});
                 f.push({t:'clock',x:(rx+9)*T,y:ry*T});
                 break;
-            case 1: // Office — 4 columns x 3 rows = 12 desks
-                [[rx+1,ry+3],[rx+5,ry+3],[rx+9,ry+3],[rx+13,ry+3],
-                 [rx+1,ry+7],[rx+5,ry+7],[rx+9,ry+7],[rx+13,ry+7],
-                 [rx+1,ry+11],[rx+5,ry+11],[rx+9,ry+11],[rx+13,ry+11]].forEach(([dx,dy])=>{
+            case 1: // Office — 3 columns x 2 rows = 6 desks (14×8)
+                [[rx+1,ry+2],[rx+5,ry+2],[rx+9,ry+2],
+                 [rx+1,ry+5],[rx+5,ry+5],[rx+9,ry+5]].forEach(([dx,dy])=>{
                     f.push({t:'desk',x:dx*T,y:dy*T,slotIdx:this.deskSlots.length});
                     this.deskSlots.push({tx:dx,ty:dy,x:(dx+0.5)*T,y:(dy+0.5)*T,occupied:false,agentId:null});
                     f.push({t:'pc',x:(dx+1)*T,y:(dy-1)*T});
                 });
-                f.push({t:'bookshelf',x:(rx+1)*T,y:ry*T},{t:'bookshelf',x:(rx+4)*T,y:ry*T},{t:'bookshelf',x:(rx+7)*T,y:ry*T},{t:'bookshelf',x:(rx+10)*T,y:ry*T},{t:'bookshelf',x:(rx+13)*T,y:ry*T});
-                f.push({t:'plant',x:rx*T,y:ry*T},{t:'plant',x:(rx+18)*T,y:ry*T},{t:'plant',x:rx*T,y:(ry+14)*T},{t:'plant',x:(rx+18)*T,y:(ry+14)*T});
-                f.push({t:'boxes',x:(rx+16)*T,y:ry*T},{t:'painting',x:(rx+15)*T,y:ry*T});
+                f.push({t:'bookshelf',x:(rx+1)*T,y:ry*T},{t:'bookshelf',x:(rx+4)*T,y:ry*T},{t:'bookshelf',x:(rx+7)*T,y:ry*T},{t:'bookshelf',x:(rx+10)*T,y:ry*T});
+                f.push({t:'succulent',x:rx*T,y:ry*T},{t:'succulent',x:(rx+13)*T,y:ry*T});
+                f.push({t:'painting',x:(rx+12)*T,y:ry*T});
                 this.interactionPoints.push(
                     {id:'bs1',type:'bookshelf',tx:rx+1,ty:ry+1,emoji:'📖',label:'Kệ sách',effect:'xp'},
                     {id:'bs2',type:'bookshelf',tx:rx+4,ty:ry+1,emoji:'📚',label:'Kệ sách',effect:'xp'},
                     {id:'pl1',type:'plant',tx:rx,ty:ry+1,emoji:'🌿',label:'Cây xanh',effect:'mood'},
                 );
                 break;
-            case 2: // Kitchen
+            case 2: // Kitchen (10×8)
                 f.push({t:'vending',x:(rx+1)*T,y:ry*T},{t:'vending',x:(rx+3)*T,y:ry*T});
-                f.push({t:'coffee',x:(rx+5)*T,y:ry*T},{t:'counter',x:(rx+7)*T,y:ry*T,w:4});
-                f.push({t:'fridge',x:(rx+12)*T,y:ry*T},{t:'fridge',x:(rx+14)*T,y:ry*T});
-                f.push({t:'clock',x:(rx+11)*T,y:ry*T});
-                f.push({t:'table_small',x:(rx+3)*T,y:(ry+4)*T},{t:'bench',x:(rx+3)*T,y:(ry+6)*T});
-                f.push({t:'table_small',x:(rx+8)*T,y:(ry+4)*T},{t:'bench',x:(rx+8)*T,y:(ry+6)*T});
-                f.push({t:'plant',x:rx*T,y:ry*T},{t:'plant',x:rx*T,y:(ry+8)*T});
-                [[rx+11,ry+5],[rx+11,ry+7]].forEach(([dx,dy])=>{
-                    f.push({t:'desk',x:dx*T,y:dy*T,slotIdx:this.deskSlots.length});
-                    this.deskSlots.push({tx:dx,ty:dy,x:(dx+0.5)*T,y:(dy+0.5)*T,occupied:false,agentId:null});
-                });
+                f.push({t:'coffee',x:(rx+5)*T,y:ry*T},{t:'counter',x:(rx+7)*T,y:ry*T,w:2});
+                f.push({t:'fridge',x:(rx+9)*T,y:ry*T});
+                f.push({t:'table_small',x:(rx+2)*T,y:(ry+3)*T},{t:'bench',x:(rx+2)*T,y:(ry+5)*T});
+                f.push({t:'table_small',x:(rx+6)*T,y:(ry+3)*T},{t:'bench',x:(rx+6)*T,y:(ry+5)*T});
+                f.push({t:'fern',x:rx*T,y:ry*T},{t:'fern',x:rx*T,y:(ry+6)*T});
                 this.interactionPoints.push(
                     {id:'coffee1',type:'coffee',tx:rx+5,ty:ry+1,emoji:'☕',label:'Máy cà phê',effect:'energy'},
                     {id:'vend1',type:'vending',tx:rx+1,ty:ry+1,emoji:'🥤',label:'Máy bán nước',effect:'energy'},
-                    {id:'fridge1',type:'fridge',tx:rx+12,ty:ry+1,emoji:'🍽️',label:'Tủ lạnh',effect:'energy'},
+                    {id:'fridge1',type:'fridge',tx:rx+9,ty:ry+1,emoji:'🍽️',label:'Tủ lạnh',effect:'energy'},
+                    {id:'eat1',type:'table',tx:rx+3,ty:ry+4,emoji:'🍜',label:'Ăn trưa',effect:'energy'},
                 );
                 break;
-            case 3: // Game Room (expanded with Slot Machine & Gold Terminal)
-                // Row 1: Poker + Billiard tables
-                f.push({t:'poker_table',x:(rx+2)*T,y:(ry+2)*T,w:3,h:2});
-                f.push({t:'billiard_table',x:(rx+8)*T,y:(ry+2)*T,w:3,h:2});
-                // Row 2: Slot Machine + Gold Trading Terminal
-                f.push({t:'slot_machine',x:(rx+2)*T,y:(ry+7)*T,w:2,h:3});
-                f.push({t:'gold_terminal',x:(rx+8)*T,y:(ry+7)*T,w:3,h:3});
-                // Furniture
-                f.push({t:'sofa',x:(rx+14)*T,y:(ry+1)*T},{t:'armchair',x:(rx+14)*T,y:(ry+8)*T});
-                f.push({t:'plant',x:rx*T,y:ry*T},{t:'plant',x:(rx+17)*T,y:ry*T});
-                f.push({t:'painting',x:(rx+5)*T,y:ry*T},{t:'painting',x:(rx+11)*T,y:ry*T});
-                f.push({t:'bookshelf',x:rx*T,y:(ry+6)*T},{t:'lamp',x:(rx+5)*T,y:(ry+6)*T});
-                f.push({t:'table_low',x:(rx+14)*T,y:(ry+5)*T});
-                f.push({t:'vending',x:(rx+16)*T,y:(ry+5)*T});
+            case 3: // Game Room (14×8)
+                f.push({t:'poker_table',x:(rx+1)*T,y:(ry+1)*T,w:3,h:2});
+                f.push({t:'billiard_table',x:(rx+7)*T,y:(ry+1)*T,w:3,h:2});
+                f.push({t:'slot_machine',x:(rx+1)*T,y:(ry+5)*T,w:2,h:2});
+                f.push({t:'gold_terminal',x:(rx+7)*T,y:(ry+5)*T,w:3,h:2});
+                f.push({t:'palm_indoor',x:rx*T,y:ry*T},{t:'palm_indoor',x:(rx+13)*T,y:ry*T});
+                f.push({t:'painting',x:(rx+5)*T,y:ry*T},{t:'vending',x:(rx+12)*T,y:(ry+4)*T});
                 this.interactionPoints.push(
-                    {id:'poker1',type:'poker',tx:rx+3,ty:ry+3,emoji:'🃏',label:'Bàn Poker',effect:'poker'},
-                    {id:'billiard1',type:'billiard',tx:rx+9,ty:ry+3,emoji:'🎱',label:'Bàn Billiard',effect:'billiard'},
-                    {id:'slot1',type:'slot',tx:rx+3,ty:ry+8,emoji:'🎰',label:'Slot Machine',effect:'slot'},
-                    {id:'goldtrade1',type:'gold_trade',tx:rx+9,ty:ry+8,emoji:'📊',label:'Gold Trading',effect:'gold_trade'},
+                    {id:'poker1',type:'poker',tx:rx+2,ty:ry+2,emoji:'🃏',label:'Bàn Poker',effect:'poker'},
+                    {id:'billiard1',type:'billiard',tx:rx+8,ty:ry+2,emoji:'🎱',label:'Bàn Billiard',effect:'billiard'},
+                    {id:'slot1',type:'slot',tx:rx+2,ty:ry+6,emoji:'🎰',label:'Slot Machine',effect:'slot'},
+                    {id:'goldtrade1',type:'gold_trade',tx:rx+8,ty:ry+6,emoji:'📊',label:'Gold Trading',effect:'gold_trade'},
                 );
                 break;
-            case 4: // Lounge — cozy relaxation area
-                f.push({t:'sofa',x:(rx+2)*T,y:(ry+2)*T},{t:'sofa',x:(rx+8)*T,y:(ry+2)*T});
-                f.push({t:'armchair',x:(rx+1)*T,y:(ry+4)*T},{t:'armchair',x:(rx+13)*T,y:(ry+4)*T});
-                f.push({t:'table_low',x:(rx+5)*T,y:(ry+3)*T},{t:'table_low',x:(rx+11)*T,y:(ry+3)*T});
-                f.push({t:'rug',x:(rx+4)*T,y:(ry+2)*T},{t:'rug',x:(rx+10)*T,y:(ry+2)*T});
-                f.push({t:'lamp',x:(rx+1)*T,y:ry*T},{t:'lamp',x:(rx+13)*T,y:ry*T});
-                f.push({t:'bookshelf',x:(rx+3)*T,y:ry*T},{t:'bookshelf',x:(rx+6)*T,y:ry*T});
-                f.push({t:'painting',x:(rx+9)*T,y:ry*T},{t:'painting',x:(rx+11)*T,y:ry*T});
-                f.push({t:'plant',x:rx*T,y:ry*T},{t:'plant',x:(rx+14)*T,y:ry*T});
-                f.push({t:'pillow',x:(rx+3)*T,y:(ry+2)*T},{t:'pillow',x:(rx+9)*T,y:(ry+2)*T});
-                f.push({t:'coffee',x:(rx+7)*T,y:(ry+5)*T});
+            case 4: // Lounge (10×8)
+                f.push({t:'sofa',x:(rx+1)*T,y:(ry+2)*T},{t:'sofa',x:(rx+5)*T,y:(ry+2)*T});
+                f.push({t:'armchair',x:(rx+1)*T,y:(ry+5)*T},{t:'armchair',x:(rx+8)*T,y:(ry+5)*T});
+                f.push({t:'table_low',x:(rx+3)*T,y:(ry+3)*T},{t:'table_low',x:(rx+7)*T,y:(ry+3)*T});
+                f.push({t:'rug',x:(rx+2)*T,y:(ry+3)*T},{t:'rug',x:(rx+6)*T,y:(ry+3)*T});
+                f.push({t:'lamp',x:(rx+1)*T,y:ry*T},{t:'lamp',x:(rx+9)*T,y:ry*T});
+                f.push({t:'bookshelf',x:(rx+3)*T,y:ry*T},{t:'painting',x:(rx+6)*T,y:ry*T});
+                f.push({t:'palm_indoor',x:rx*T,y:ry*T},{t:'coffee',x:(rx+5)*T,y:(ry+5)*T});
                 this.interactionPoints.push(
-                    {id:'sofa1',type:'sofa',tx:rx+3,ty:ry+3,emoji:'😴',label:'Sofa',effect:'rest'},
-                    {id:'sofa2',type:'sofa',tx:rx+9,ty:ry+3,emoji:'😴',label:'Sofa',effect:'rest'},
-                    {id:'lcoffee',type:'coffee',tx:rx+7,ty:ry+5,emoji:'☕',label:'Cà phê',effect:'energy'},
+                    {id:'sofa1',type:'sofa',tx:rx+2,ty:ry+3,emoji:'😴',label:'Sofa',effect:'rest'},
+                    {id:'sofa2',type:'sofa',tx:rx+6,ty:ry+3,emoji:'😴',label:'Sofa',effect:'rest'},
+                    {id:'lcoffee',type:'coffee',tx:rx+5,ty:ry+6,emoji:'☕',label:'Cà phê',effect:'energy'},
                 );
                 break;
-            case 5: // Server Room — tech equipment
-                for(let i=0;i<3;i++) f.push({t:'server_rack',x:(rx+1+i*4)*T,y:ry*T});
-                for(let i=0;i<3;i++) f.push({t:'server_rack',x:(rx+1+i*4)*T,y:(ry+5)*T});
-                f.push({t:'lamp',x:(rx+2)*T,y:(ry+3)*T},{t:'lamp',x:(rx+5)*T,y:(ry+3)*T},{t:'lamp',x:(rx+8)*T,y:(ry+3)*T});
-                f.push({t:'clock',x:(rx+11)*T,y:ry*T});
-                [[rx+1,ry+3],[rx+5,ry+3],[rx+9,ry+3]].forEach(([dx,dy])=>{
+            case 5: // Server Room (10×8)
+                for(let i=0;i<3;i++) f.push({t:'server_rack',x:(rx+1+i*3)*T,y:ry*T});
+                for(let i=0;i<3;i++) f.push({t:'server_rack',x:(rx+1+i*3)*T,y:(ry+5)*T});
+                f.push({t:'lamp',x:(rx+2)*T,y:(ry+3)*T},{t:'lamp',x:(rx+5)*T,y:(ry+3)*T});
+                f.push({t:'clock',x:(rx+9)*T,y:ry*T});
+                [[rx+1,ry+3],[rx+5,ry+3]].forEach(([dx,dy])=>{
                     f.push({t:'desk',x:dx*T,y:dy*T,slotIdx:this.deskSlots.length});
                     this.deskSlots.push({tx:dx,ty:dy,x:(dx+0.5)*T,y:(dy+0.5)*T,occupied:false,agentId:null});
                     f.push({t:'pc',x:(dx+1)*T,y:(dy-1)*T});
                 });
-                f.push({t:'plant',x:rx*T,y:ry*T});
+                f.push({t:'bamboo',x:rx*T,y:ry*T},{t:'bamboo',x:(rx+9)*T,y:(ry+6)*T});
                 this.interactionPoints.push(
                     {id:'srv1',type:'cabinet',tx:rx+1,ty:ry+1,emoji:'🖥️',label:'Server Rack',effect:'productivity'},
-                    {id:'srv2',type:'cabinet',tx:rx+5,ty:ry+1,emoji:'🖥️',label:'Server Rack',effect:'productivity'},
+                    {id:'srv2',type:'cabinet',tx:rx+4,ty:ry+1,emoji:'🖥️',label:'Server Rack',effect:'productivity'},
+                    {id:'srv3',type:'cabinet',tx:rx+7,ty:ry+6,emoji:'💻',label:'Monitoring',effect:'xp'},
                 );
                 break;
-            case 6: // Gym — workout area
-                f.push({t:'treadmill',x:(rx+1)*T,y:(ry+1)*T},{t:'treadmill',x:(rx+4)*T,y:(ry+1)*T},{t:'treadmill',x:(rx+7)*T,y:(ry+1)*T});
+            case 6: // Gym (10×8)
+                f.push({t:'treadmill',x:(rx+1)*T,y:(ry+1)*T},{t:'treadmill',x:(rx+4)*T,y:(ry+1)*T});
                 f.push({t:'dumbbell',x:(rx+1)*T,y:(ry+4)*T},{t:'dumbbell',x:(rx+4)*T,y:(ry+4)*T});
-                f.push({t:'yoga_mat',x:(rx+7)*T,y:(ry+4)*T},{t:'yoga_mat',x:(rx+9)*T,y:(ry+4)*T});
+                f.push({t:'yoga_mat',x:(rx+7)*T,y:(ry+4)*T});
                 f.push({t:'bench',x:(rx+1)*T,y:(ry+6)*T},{t:'bench',x:(rx+4)*T,y:(ry+6)*T});
-                f.push({t:'vending',x:(rx+10)*T,y:ry*T},{t:'vending',x:(rx+10)*T,y:(ry+4)*T});
-                f.push({t:'clock',x:(rx+8)*T,y:ry*T});
-                f.push({t:'plant',x:rx*T,y:ry*T},{t:'plant',x:(rx+11)*T,y:ry*T});
+                f.push({t:'vending',x:(rx+8)*T,y:ry*T});
+                f.push({t:'clock',x:(rx+7)*T,y:ry*T});
+                f.push({t:'plant',x:rx*T,y:ry*T},{t:'vine_wall',x:(rx+9)*T,y:ry*T});
                 this.interactionPoints.push(
-                    {id:'gym1',type:'vending',tx:rx+10,ty:ry+1,emoji:'💪',label:'Tập gym',effect:'energy'},
-                    {id:'gym2',type:'vending',tx:rx+10,ty:ry+5,emoji:'🥤',label:'Nước uống',effect:'energy'},
+                    {id:'gym1',type:'treadmill',tx:rx+2,ty:ry+2,emoji:'🏃',label:'Chạy bộ',effect:'energy'},
+                    {id:'gym2',type:'dumbbell',tx:rx+2,ty:ry+5,emoji:'💪',label:'Tập tạ',effect:'energy'},
+                    {id:'gym3',type:'yoga',tx:rx+7,ty:ry+5,emoji:'🧘',label:'Yoga',effect:'mood'},
+                    {id:'gym4',type:'vending',tx:rx+8,ty:ry+1,emoji:'🥤',label:'Nước uống',effect:'energy'},
                 );
                 break;
-            case 7: // Library — study area
-                for(let i=0;i<6;i++) f.push({t:'bookshelf',x:(rx+1+i*2)*T,y:ry*T});
-                f.push({t:'table_small',x:(rx+2)*T,y:(ry+3)*T},{t:'table_small',x:(rx+7)*T,y:(ry+3)*T});
-                f.push({t:'armchair',x:(rx+2)*T,y:(ry+5)*T},{t:'armchair',x:(rx+7)*T,y:(ry+5)*T});
-                f.push({t:'lamp',x:(rx+3)*T,y:(ry+3)*T},{t:'lamp',x:(rx+8)*T,y:(ry+3)*T});
-                f.push({t:'rug',x:(rx+2)*T,y:(ry+4)*T},{t:'rug',x:(rx+7)*T,y:(ry+4)*T});
-                f.push({t:'plant',x:rx*T,y:ry*T},{t:'plant',x:(rx+13)*T,y:ry*T});
-                [[rx+2,ry+6],[rx+7,ry+6],[rx+11,ry+3]].forEach(([dx,dy])=>{
+            case 7: // Library (10×8)
+                for(let i=0;i<4;i++) f.push({t:'bookshelf',x:(rx+1+i*2)*T,y:ry*T});
+                f.push({t:'table_small',x:(rx+2)*T,y:(ry+3)*T},{t:'table_small',x:(rx+6)*T,y:(ry+3)*T});
+                f.push({t:'armchair',x:(rx+2)*T,y:(ry+5)*T},{t:'armchair',x:(rx+6)*T,y:(ry+5)*T});
+                f.push({t:'lamp',x:(rx+3)*T,y:(ry+3)*T},{t:'lamp',x:(rx+7)*T,y:(ry+3)*T});
+                f.push({t:'rug',x:(rx+2)*T,y:(ry+4)*T},{t:'rug',x:(rx+6)*T,y:(ry+4)*T});
+                f.push({t:'bonsai',x:rx*T,y:ry*T},{t:'bonsai',x:(rx+9)*T,y:ry*T});
+                [[rx+2,ry+6],[rx+6,ry+6]].forEach(([dx,dy])=>{
                     f.push({t:'desk',x:dx*T,y:dy*T,slotIdx:this.deskSlots.length});
                     this.deskSlots.push({tx:dx,ty:dy,x:(dx+0.5)*T,y:(dy+0.5)*T,occupied:false,agentId:null});
                     f.push({t:'pc',x:(dx+1)*T,y:(dy-1)*T});
@@ -571,13 +651,14 @@ class PixelEngine {
                 this.interactionPoints.push(
                     {id:'lib1',type:'bookshelf',tx:rx+1,ty:ry+1,emoji:'📚',label:'Thư viện',effect:'xp'},
                     {id:'lib2',type:'bookshelf',tx:rx+5,ty:ry+1,emoji:'📖',label:'Đọc sách',effect:'xp'},
+                    {id:'lib3',type:'desk',tx:rx+3,ty:ry+4,emoji:'✍️',label:'Học tập',effect:'xp'},
                 );
                 break;
             case 8: // Garden — outdoor zen
                 f.push({t:'tree',x:(rx+1)*T,y:ry*T},{t:'tree',x:(rx+9)*T,y:ry*T});
                 f.push({t:'fountain',x:(rx+4)*T,y:(ry+1)*T});
-                for(let i=0;i<5;i++) f.push({t:'plant',x:(rx+1+i*2)*T,y:(ry+5)*T});
-                for(let i=0;i<3;i++) f.push({t:'cactus',x:(rx+2+i*3)*T,y:(ry+6)*T});
+                f.push({t:'bamboo',x:(rx+1)*T,y:(ry+5)*T},{t:'fern',x:(rx+3)*T,y:(ry+5)*T},{t:'plant',x:(rx+5)*T,y:(ry+5)*T},{t:'fern',x:(rx+7)*T,y:(ry+5)*T},{t:'bamboo',x:(rx+9)*T,y:(ry+5)*T});
+                f.push({t:'succulent',x:(rx+2)*T,y:(ry+6)*T},{t:'orchid',x:(rx+5)*T,y:(ry+6)*T},{t:'succulent',x:(rx+8)*T,y:(ry+6)*T});
                 f.push({t:'bench',x:(rx+2)*T,y:(ry+3)*T},{t:'bench',x:(rx+7)*T,y:(ry+3)*T});
                 f.push({t:'table_low',x:(rx+4)*T,y:(ry+4)*T});
                 f.push({t:'lamp',x:(rx+11)*T,y:ry*T});
@@ -586,38 +667,37 @@ class PixelEngine {
                     {id:'garden2',type:'plant',tx:rx+2,ty:ry+1,emoji:'🌿',label:'Vườn cây',effect:'mood'},
                 );
                 break;
-            case 9: // VIP Lounge — luxury
-                f.push({t:'sofa',x:(rx+2)*T,y:(ry+2)*T},{t:'sofa',x:(rx+8)*T,y:(ry+2)*T});
-                f.push({t:'armchair',x:(rx+1)*T,y:(ry+4)*T},{t:'armchair',x:(rx+12)*T,y:(ry+4)*T});
-                f.push({t:'bed_single',x:(rx+5)*T,y:(ry+5)*T},{t:'bed_single',x:(rx+9)*T,y:(ry+5)*T});
-                f.push({t:'table_low',x:(rx+5)*T,y:(ry+2)*T},{t:'table_low',x:(rx+10)*T,y:(ry+2)*T});
-                f.push({t:'rug',x:(rx+3)*T,y:(ry+3)*T},{t:'rug',x:(rx+9)*T,y:(ry+3)*T});
-                f.push({t:'painting',x:(rx+4)*T,y:ry*T},{t:'painting',x:(rx+8)*T,y:ry*T},{t:'pictureframe',x:(rx+6)*T,y:ry*T});
-                f.push({t:'lamp',x:(rx+1)*T,y:ry*T},{t:'lamp',x:(rx+13)*T,y:ry*T});
-                f.push({t:'plant',x:rx*T,y:ry*T},{t:'plant',x:(rx+13)*T,y:(ry+6)*T});
-                f.push({t:'vending',x:(rx+12)*T,y:(ry+6)*T},{t:'coffee',x:(rx+12)*T,y:ry*T});
-                f.push({t:'pillow',x:(rx+3)*T,y:(ry+2)*T},{t:'pillow',x:(rx+9)*T,y:(ry+2)*T});
+            case 9: // VIP Lounge (10×8)
+                f.push({t:'sofa',x:(rx+1)*T,y:(ry+2)*T},{t:'sofa',x:(rx+5)*T,y:(ry+2)*T});
+                f.push({t:'armchair',x:(rx+1)*T,y:(ry+5)*T},{t:'armchair',x:(rx+8)*T,y:(ry+5)*T});
+                f.push({t:'table_low',x:(rx+3)*T,y:(ry+2)*T},{t:'table_low',x:(rx+7)*T,y:(ry+2)*T});
+                f.push({t:'rug',x:(rx+2)*T,y:(ry+3)*T},{t:'rug',x:(rx+6)*T,y:(ry+3)*T});
+                f.push({t:'painting',x:(rx+3)*T,y:ry*T},{t:'painting',x:(rx+6)*T,y:ry*T});
+                f.push({t:'lamp',x:(rx+1)*T,y:ry*T},{t:'lamp',x:(rx+9)*T,y:ry*T});
+                f.push({t:'orchid',x:rx*T,y:ry*T},{t:'orchid',x:(rx+9)*T,y:(ry+6)*T});
+                f.push({t:'coffee',x:(rx+8)*T,y:ry*T});
                 this.interactionPoints.push(
-                    {id:'vip1',type:'sofa',tx:rx+3,ty:ry+3,emoji:'👑',label:'VIP Sofa',effect:'rest'},
-                    {id:'vip2',type:'coffee',tx:rx+12,ty:ry+1,emoji:'☕',label:'VIP Coffee',effect:'energy'},
+                    {id:'vip1',type:'sofa',tx:rx+2,ty:ry+3,emoji:'👑',label:'VIP Sofa',effect:'rest'},
+                    {id:'vip2',type:'coffee',tx:rx+8,ty:ry+1,emoji:'☕',label:'VIP Coffee',effect:'energy'},
+                    {id:'vip3',type:'painting',tx:rx+5,ty:ry+1,emoji:'🎨',label:'Ngắm tranh',effect:'mood'},
                 );
                 break;
-            case 10: // R&D Lab — research station
-                [[rx+1,ry+2],[rx+5,ry+2],[rx+9,ry+2],[rx+1,ry+6],[rx+5,ry+6],[rx+9,ry+6]].forEach(([dx,dy])=>{
+            case 10: // R&D Lab (14×8)
+                [[rx+1,ry+2],[rx+5,ry+2],[rx+9,ry+2],[rx+1,ry+5],[rx+5,ry+5],[rx+9,ry+5]].forEach(([dx,dy])=>{
                     f.push({t:'desk',x:dx*T,y:dy*T,slotIdx:this.deskSlots.length});
                     this.deskSlots.push({tx:dx,ty:dy,x:(dx+0.5)*T,y:(dy+0.5)*T,occupied:false,agentId:null});
                     f.push({t:'pc',x:(dx+1)*T,y:(dy-1)*T});
                 });
-                f.push({t:'microscope',x:(rx+13)*T,y:(ry+1)*T},{t:'microscope',x:(rx+13)*T,y:(ry+5)*T});
-                f.push({t:'flask',x:(rx+12)*T,y:(ry+1)*T},{t:'flask',x:(rx+12)*T,y:(ry+5)*T});
+                f.push({t:'microscope',x:(rx+12)*T,y:(ry+1)*T},{t:'microscope',x:(rx+12)*T,y:(ry+5)*T});
+                f.push({t:'flask',x:(rx+13)*T,y:(ry+1)*T},{t:'flask',x:(rx+13)*T,y:(ry+5)*T});
                 f.push({t:'whiteboard',x:(rx+12)*T,y:(ry+3)*T});
-                f.push({t:'bookshelf',x:(rx+13)*T,y:(ry+8)*T});
                 f.push({t:'lamp',x:(rx+3)*T,y:ry*T},{t:'lamp',x:(rx+7)*T,y:ry*T},{t:'lamp',x:(rx+11)*T,y:ry*T});
-                f.push({t:'plant',x:rx*T,y:ry*T},{t:'plant',x:(rx+14)*T,y:ry*T});
+                f.push({t:'bamboo',x:rx*T,y:ry*T},{t:'bamboo',x:(rx+13)*T,y:ry*T});
                 f.push({t:'clock',x:(rx+6)*T,y:ry*T});
                 this.interactionPoints.push(
-                    {id:'lab1',type:'bookshelf',tx:rx+13,ty:ry+2,emoji:'🔬',label:'Kính hiển vi',effect:'xp'},
-                    {id:'lab2',type:'cabinet',tx:rx+12,ty:ry+2,emoji:'🧪',label:'Phòng thí nghiệm',effect:'xp'},
+                    {id:'lab1',type:'bookshelf',tx:rx+12,ty:ry+2,emoji:'🔬',label:'Kính hiển vi',effect:'xp'},
+                    {id:'lab2',type:'cabinet',tx:rx+13,ty:ry+2,emoji:'🧪',label:'Phòng thí nghiệm',effect:'xp'},
+                    {id:'lab3',type:'desk',tx:rx+5,ty:ry+3,emoji:'💻',label:'Nghiên cứu',effect:'xp'},
                 );
                 break;
             case 11: // Sân Ngoài Trời — Outdoor space with nature & animals
@@ -696,17 +776,66 @@ class PixelEngine {
                     {id:'well1',type:'water_well',tx:rx+16,ty:ry+11,emoji:'💧',label:'Giếng nước',effect:'energy'},
                 );
                 break;
-            case 12: // Thang Máy — Elevator shaft with doors and panel
-                // Elevator doors (center)
+            case 12: // Elevator (5×8)
                 f.push({t:'elevator_door',x:(rx+1)*T,y:(ry+1)*T});
-                // Control panel
-                f.push({t:'elevator_panel',x:(rx+4)*T,y:(ry+1)*T});
-                // Decorations
-                f.push({t:'plant',x:rx*T,y:ry*T},{t:'plant',x:(rx+5)*T,y:ry*T});
-                f.push({t:'lamp',x:rx*T,y:(ry+3)*T},{t:'lamp',x:(rx+5)*T,y:(ry+3)*T});
-                f.push({t:'clock',x:(rx+3)*T,y:ry*T});
+                f.push({t:'elevator_panel',x:(rx+3)*T,y:(ry+1)*T});
+                f.push({t:'lamp',x:rx*T,y:ry*T},{t:'lamp',x:(rx+4)*T,y:ry*T});
+                f.push({t:'clock',x:(rx+2)*T,y:ry*T});
                 this.interactionPoints.push(
                     {id:'elev1',type:'elevator',tx:rx+2,ty:ry+3,emoji:'🛗',label:'Thang máy',effect:'energy'},
+                );
+                break;
+            case 14: // Quán Cafe — Cozy cafe with bar counter, tables, pastries
+                // Bar counter (left side)
+                f.push({t:'cafe_counter',x:(rx+1)*T,y:(ry+1)*T,w:4,h:2});
+                f.push({t:'coffee',x:(rx+1)*T,y:ry*T});
+                f.push({t:'coffee',x:(rx+3)*T,y:ry*T});
+                // Bar stools
+                f.push({t:'chair',x:(rx+1)*T,y:(ry+3)*T});
+                f.push({t:'chair',x:(rx+3)*T,y:(ry+3)*T});
+                f.push({t:'chair',x:(rx+5)*T,y:(ry+3)*T});
+                // Cafe tables (center area)
+                f.push({t:'table_small',x:(rx+2)*T,y:(ry+5)*T});
+                f.push({t:'chair',x:(rx+1)*T,y:(ry+5)*T,dir:'right'});
+                f.push({t:'chair',x:(rx+4)*T,y:(ry+5)*T,dir:'left'});
+                f.push({t:'table_small',x:(rx+7)*T,y:(ry+5)*T});
+                f.push({t:'chair',x:(rx+6)*T,y:(ry+5)*T,dir:'right'});
+                f.push({t:'chair',x:(rx+9)*T,y:(ry+5)*T,dir:'left'});
+                f.push({t:'table_small',x:(rx+12)*T,y:(ry+5)*T});
+                f.push({t:'chair',x:(rx+11)*T,y:(ry+5)*T,dir:'right'});
+                f.push({t:'chair',x:(rx+14)*T,y:(ry+5)*T,dir:'left'});
+                // Sofa lounge area (right side)
+                f.push({t:'sofa',x:(rx+10)*T,y:(ry+1)*T});
+                f.push({t:'sofa',x:(rx+13)*T,y:(ry+1)*T});
+                f.push({t:'table_low',x:(rx+11)*T,y:(ry+3)*T});
+                // Window tables (bottom row)
+                f.push({t:'table_small',x:(rx+2)*T,y:(ry+8)*T});
+                f.push({t:'chair',x:(rx+1)*T,y:(ry+8)*T,dir:'right'});
+                f.push({t:'chair',x:(rx+4)*T,y:(ry+8)*T,dir:'left'});
+                f.push({t:'table_small',x:(rx+7)*T,y:(ry+8)*T});
+                f.push({t:'chair',x:(rx+6)*T,y:(ry+8)*T,dir:'right'});
+                f.push({t:'chair',x:(rx+9)*T,y:(ry+8)*T,dir:'left'});
+                f.push({t:'sofa',x:(rx+12)*T,y:(ry+8)*T});
+                f.push({t:'table_low',x:(rx+12)*T,y:(ry+10)*T});
+                // Decorations
+                f.push({t:'fern',x:rx*T,y:ry*T},{t:'fern',x:(rx+15)*T,y:ry*T});
+                f.push({t:'fern',x:rx*T,y:(ry+10)*T},{t:'fern',x:(rx+15)*T,y:(ry+10)*T});
+                f.push({t:'painting',x:(rx+7)*T,y:ry*T});
+                f.push({t:'painting2',x:(rx+9)*T,y:ry*T});
+                f.push({t:'pictureframe',x:(rx+6)*T,y:ry*T});
+                f.push({t:'hanging_plant',x:(rx+5)*T,y:ry*T});
+                f.push({t:'hanging_plant',x:(rx+10)*T,y:ry*T});
+                // Pastry display
+                f.push({t:'vending',x:(rx+7)*T,y:(ry+1)*T});
+                // Interaction points
+                this.interactionPoints.push(
+                    {id:'cafe1',type:'coffee',tx:rx+2,ty:ry+2,emoji:'☕',label:'Espresso Bar',effect:'energy'},
+                    {id:'cafe2',type:'coffee',tx:rx+4,ty:ry+2,emoji:'🧋',label:'Trà sữa',effect:'energy'},
+                    {id:'cafe3',type:'rest',tx:rx+11,ty:ry+2,emoji:'🛋️',label:'Sofa nghỉ ngơi',effect:'rest'},
+                    {id:'cafe4',type:'food',tx:rx+8,ty:ry+2,emoji:'🧁',label:'Bánh ngọt',effect:'energy'},
+                    {id:'cafe5',type:'social',tx:rx+3,ty:ry+6,emoji:'💬',label:'Chat bạn bè',effect:'mood'},
+                    {id:'cafe6',type:'social',tx:rx+8,ty:ry+6,emoji:'📰',label:'Đọc báo',effect:'xp'},
+                    {id:'cafe7',type:'rest',tx:rx+13,ty:ry+9,emoji:'🎵',label:'Nghe nhạc chill',effect:'mood'},
                 );
                 break;
             case 13: // Tầng Thượng — Rooftop terrace with telescope, antenna, helipad
@@ -726,8 +855,8 @@ class PixelEngine {
                 f.push({t:'bbq_grill',x:(rx+14)*T,y:(ry+6)*T});
                 f.push({t:'table_small',x:(rx+14)*T,y:(ry+8)*T},{t:'bench',x:(rx+14)*T,y:(ry+9)*T});
                 // Plants & decor
-                f.push({t:'plant',x:rx*T,y:ry*T},{t:'plant',x:(rx+17)*T,y:ry*T});
-                f.push({t:'plant',x:rx*T,y:(ry+8)*T},{t:'plant',x:(rx+17)*T,y:(ry+8)*T});
+                f.push({t:'palm_indoor',x:rx*T,y:ry*T},{t:'palm_indoor',x:(rx+17)*T,y:ry*T});
+                f.push({t:'orchid',x:rx*T,y:(ry+8)*T},{t:'orchid',x:(rx+17)*T,y:(ry+8)*T});
                 f.push({t:'street_lamp',x:(rx+4)*T,y:(ry+5)*T},{t:'street_lamp',x:(rx+10)*T,y:(ry+5)*T},{t:'street_lamp',x:(rx+16)*T,y:(ry+5)*T});
                 f.push({t:'cactus',x:(rx+12)*T,y:(ry+8)*T},{t:'cactus',x:(rx+13)*T,y:(ry+8)*T});
                 // Rooftop garden: flowers & fruit tree
@@ -780,6 +909,18 @@ class PixelEngine {
                 
                 const px = x * T;
                 const py = y * T;
+
+                // Wall tiles get a special dark brick appearance
+                if (fl === 'wall') {
+                    this.px(px, py, T, T, '#1a2035');
+                    // Brick pattern lines
+                    this.px(px, py, T, 1, '#2a3550');
+                    this.px(px, py + Math.floor(T/2), T, 1, '#2a3550');
+                    this.px(px + Math.floor(T/2), py, 1, Math.floor(T/2), '#2a3550');
+                    this.px(px, py + Math.floor(T/2), 1, Math.floor(T/2), '#2a3550');
+                    continue;
+                }
+
                 const imgKey = floorMap[fl] || 'floor_0';
                 const img = this.floorImages[imgKey];
                 
@@ -817,8 +958,8 @@ class PixelEngine {
 
         for (let y = 0; y < this.MH; y++) {
             for (let x = 0; x < this.MW; x++) {
-                if (!map[y][x]) continue;
-                const hasFloor = (tx, ty) => tx >= 0 && ty >= 0 && tx < this.MW && ty < this.MH && map[ty][tx];
+                if (!map[y][x] || map[y][x] === 'wall') continue;
+                const hasFloor = (tx, ty) => tx >= 0 && ty >= 0 && tx < this.MW && ty < this.MH && map[ty][tx] && map[ty][tx] !== 'wall';
                 
                 const px = x * T;
                 const py = y * T;
@@ -848,6 +989,59 @@ class PixelEngine {
                 }
             }
         }
+    }
+
+    _drawRoomLabels() {
+        if (!this._placedRooms) return;
+        const T = this.T;
+        const ctx = this.ctx;
+        const roomNames = {
+            0: '🤝 PHÒNG HỌP',
+            1: '💻 VĂN PHÒNG',
+            2: '🍳 PHÒNG BẾP',
+            3: '🎮 PHÒNG GAME',
+            4: '🛋️ LOUNGE',
+            5: '🖥️ SERVER ROOM',
+            6: '💪 PHÒNG GYM',
+            7: '📚 THƯ VIỆN',
+            8: '🌿 VƯỜN CÂY',
+            9: '👑 VIP LOUNGE',
+            10: '🔬 PHÒNG R&D',
+            11: '🌳 SÂN NGOÀI',
+            12: '🛗 THANG MÁY',
+            13: '🌆 TẦNG THƯỢNG',
+            14: '☕ QUÁN CAFE',
+        };
+
+        ctx.save();
+        ctx.font = '7px "Press Start 2P", monospace';
+        ctx.textAlign = 'center';
+
+        this._placedRooms.forEach(r => {
+            const name = roomNames[r.id];
+            if (!name) return;
+
+            const cx = (r.x + r.w / 2) * T;
+            const cy = r.y * T - 4;  // just above the room
+
+            const sx = Math.floor(cx * this.scale + this.camera.x);
+            const sy = Math.floor(cy * this.scale + this.camera.y);
+
+            // Background strip
+            const textW = ctx.measureText(name).width;
+            ctx.fillStyle = 'rgba(13, 17, 23, 0.75)';
+            ctx.fillRect(sx - textW / 2 - 6, sy - 8, textW + 12, 14);
+
+            // Accent line below label
+            ctx.fillStyle = '#4ecdc4';
+            ctx.fillRect(sx - textW / 2 - 6, sy + 5, textW + 12, 1);
+
+            // Text
+            ctx.fillStyle = '#e0e6ed';
+            ctx.fillText(name, sx, sy + 2);
+        });
+
+        ctx.restore();
     }
 
     // === FURNITURE ===
@@ -964,6 +1158,17 @@ class PixelEngine {
             case 'scarecrow': this.drawScarecrow(x, y); break;
             case 'water_well': this.drawWaterWell(x, y); break;
             case 'compost_bin': this.drawCompostBin(x, y); break;
+            // Cafe
+            case 'cafe_counter': this.drawCafeCounter(x, y, f.w || 6); break;
+            // Themed plants
+            case 'bamboo': this.drawBamboo(x, y); break;
+            case 'succulent': this.drawSucculent(x, y); break;
+            case 'bonsai': this.drawBonsai(x, y); break;
+            case 'palm_indoor': this.drawPalmIndoor(x, y); break;
+            case 'fern': this.drawFern(x, y); break;
+            case 'orchid': this.drawOrchid(x, y); break;
+            case 'vine_wall': this.drawVineWall(x, y); break;
+            case 'money_tree': this.drawMoneyTree(x, y); break;
         }
     }
 
@@ -2005,6 +2210,199 @@ class PixelEngine {
         }
     }
 
+    // === THEMED PLANT DRAWING METHODS ===
+
+    drawBamboo(x, y) {
+        const T = this.T, sw = Math.sin(this.elapsed * 0.02 + x) * 0.8;
+        // Pot
+        this.px(x + 2, y + T * 2 - 6, 10, 6, '#6d4c2e');
+        this.px(x + 3, y + T * 2 - 5, 8, 4, '#8b6340');
+        // Stalks (3 bamboo poles)
+        for (let i = 0; i < 3; i++) {
+            const bx = x + 3 + i * 3;
+            const sway = sw * (1 + i * 0.3);
+            // Main stalk
+            this.px(bx + sway, y + 2, 2, T * 2 - 8, '#2d8a2e');
+            this.px(bx + 1 + sway, y + 3, 1, T * 2 - 10, '#3aad3e');
+            // Nodes (joints)
+            this.px(bx - 1 + sway, y + T * 0.5, 4, 1, '#1e6b20');
+            this.px(bx - 1 + sway, y + T, 4, 1, '#1e6b20');
+            // Leaves at top
+            this.px(bx - 2 + sway, y + 1, 3, 2, '#27ae60');
+            this.px(bx + 2 + sway, y, 3, 2, '#2ecc71');
+            this.px(bx - 1 + sway, y + T * 0.3, 2, 1, '#32d967');
+        }
+    }
+
+    drawSucculent(x, y) {
+        const T = this.T;
+        // Small terracotta pot
+        this.px(x + 3, y + T - 5, 8, 5, '#c0724a');
+        this.px(x + 4, y + T - 4, 6, 3, '#d4845c');
+        this.px(x + 2, y + T - 5, 10, 1, '#a85d3a');
+        // Rosette leaves (layered circles from bottom)
+        const pulse = Math.sin(this.elapsed * 0.008) * 0.5;
+        // Outer ring
+        this.px(x + 2, y + T - 9, 10, 4, '#5ba85b');
+        this.px(x + 3, y + T - 10, 8, 3, '#6bc06b');
+        // Middle ring
+        this.px(x + 4 + pulse, y + T - 11, 6, 3, '#7ed67e');
+        // Center rosette
+        this.px(x + 5, y + T - 11, 4, 2, '#92e892');
+        this.px(x + 6, y + T - 12, 2, 2, '#a8f0a8');
+        // Tiny highlight
+        this.px(x + 6, y + T - 12, 1, 1, '#c8ffc8');
+    }
+
+    drawBonsai(x, y) {
+        const T = this.T, sw = Math.sin(this.elapsed * 0.012 + x) * 0.5;
+        // Ceramic pot (flat, elegant)
+        this.px(x + 1, y + T * 2 - 5, 12, 5, '#5a4a3a');
+        this.px(x + 2, y + T * 2 - 4, 10, 3, '#6e5c4a');
+        this.px(x + 0, y + T * 2 - 5, 14, 1, '#4a3a2a');
+        this.px(x + 3, y + T * 2 - 1, 8, 1, '#4a3a2a');
+        // Trunk (curved bonsai style)
+        this.px(x + 6, y + T, 2, T - 5, '#6d4c2e');
+        this.px(x + 5, y + T * 0.8, 2, 3, '#7d5c3e');
+        this.px(x + 4, y + T * 0.6, 2, 3, '#6d4c2e');
+        // Crown (shaped cloud)
+        this.px(x + 1 + sw, y + T * 0.2, 6, 5, '#1a6b2a');
+        this.px(x + 2 + sw, y + T * 0.1, 4, 3, '#228b35');
+        this.px(x + 7 + sw, y + T * 0.35, 5, 4, '#1f7a30');
+        this.px(x + 8 + sw, y + T * 0.25, 3, 3, '#27a040');
+        // Highlight dots
+        this.px(x + 3 + sw, y + T * 0.15, 1, 1, '#3bbd55');
+        this.px(x + 9 + sw, y + T * 0.3, 1, 1, '#3bbd55');
+    }
+
+    drawPalmIndoor(x, y) {
+        const T = this.T, sw = Math.sin(this.elapsed * 0.018 + x) * 1.2;
+        // Decorative pot
+        this.px(x + 3, y + T * 2 - 6, 8, 6, '#8b7355');
+        this.px(x + 4, y + T * 2 - 5, 6, 4, '#a08868');
+        this.px(x + 2, y + T * 2 - 6, 10, 1, '#7a6245');
+        // Trunk (slightly curved)
+        this.px(x + 6, y + T * 0.5, 2, T * 1.2, '#8d6e4a');
+        this.px(x + 7, y + T * 0.6, 1, T, '#a0805a');
+        // Palm fronds (radiating from top)
+        // Left fronds
+        this.px(x + sw, y + 2, 7, 2, '#228B22');
+        this.px(x - 1 + sw, y + 4, 5, 1, '#1a7a1a');
+        this.px(x + 1 + sw, y + 1, 4, 1, '#2ecc71');
+        // Right fronds
+        this.px(x + 7 + sw, y + 1, 6, 2, '#228B22');
+        this.px(x + 9 + sw, y + 3, 4, 1, '#1a7a1a');
+        this.px(x + 8 + sw, y, 4, 1, '#2ecc71');
+        // Top tuft
+        this.px(x + 4 + sw, y, 5, 2, '#27ae60');
+        this.px(x + 5 + sw, y - 1, 3, 2, '#2ecc71');
+    }
+
+    drawFern(x, y) {
+        const T = this.T, sw = Math.sin(this.elapsed * 0.02 + x) * 0.6;
+        // Hanging basket / pot
+        this.px(x + 2, y + T * 2 - 5, 10, 5, '#7a5a3a');
+        this.px(x + 3, y + T * 2 - 4, 8, 3, '#8d6d4a');
+        // Cascading fronds (fern leaves drooping)
+        for (let i = 0; i < 5; i++) {
+            const fx = x + 1 + i * 2.5;
+            const sway = sw * (1 + Math.sin(i) * 0.5);
+            const droopY = y + T * 0.3 + i * 1.5;
+            // Main frond
+            this.px(fx + sway, droopY, 2, T * 0.8, '#2d7a2e');
+            // Leaflets (alternating sides)
+            for (let j = 0; j < 4; j++) {
+                const ly = droopY + j * 3;
+                this.px(fx - 1 + sway, ly, 1, 2, '#3a9e3e');
+                this.px(fx + 2 + sway, ly + 1, 1, 2, '#3a9e3e');
+            }
+        }
+        // Top crown
+        this.px(x + 3 + sw, y + T * 0.1, 8, 3, '#27ae60');
+        this.px(x + 4 + sw, y, 6, 2, '#2ecc71');
+    }
+
+    drawOrchid(x, y) {
+        const T = this.T, sw = Math.sin(this.elapsed * 0.015 + x) * 0.4;
+        // Elegant slim pot
+        this.px(x + 4, y + T * 2 - 6, 6, 6, '#dcd0c0');
+        this.px(x + 5, y + T * 2 - 5, 4, 4, '#ece0d0');
+        this.px(x + 3, y + T * 2 - 6, 8, 1, '#c4b8a8');
+        // Thin stem
+        this.px(x + 6, y + T * 0.5, 1, T, '#3a7a3a');
+        this.px(x + 7, y + T * 0.4, 1, T * 0.3, '#4a8a4a');
+        // Orchid flowers (elegant petals)
+        const colors = ['#d946a8', '#e468b8', '#c83898'];
+        for (let i = 0; i < 3; i++) {
+            const fx = x + 3 + i * 3 + sw;
+            const fy = y + 2 + i * 2.5;
+            const c = colors[i];
+            // Petals
+            this.px(fx, fy, 4, 3, c);
+            this.px(fx + 1, fy - 1, 2, 1, c);
+            this.px(fx, fy + 2, 1, 1, c);
+            this.px(fx + 3, fy + 2, 1, 1, c);
+            // Center
+            this.px(fx + 1, fy + 1, 2, 1, '#f1c40f');
+        }
+        // Leaves at base
+        this.px(x + 3, y + T * 1.2, 4, 3, '#2d7a2e');
+        this.px(x + 7, y + T * 1.3, 4, 3, '#3a8e3e');
+    }
+
+    drawVineWall(x, y) {
+        const T = this.T;
+        // Wall trellis (wooden frame)
+        this.px(x + 1, y, 2, T * 2, '#8b6d4a');
+        this.px(x + T - 3, y, 2, T * 2, '#8b6d4a');
+        this.px(x + 1, y + T * 0.5, T - 2, 1, '#8b6d4a');
+        this.px(x + 1, y + T, T - 2, 1, '#8b6d4a');
+        this.px(x + 1, y + T * 1.5, T - 2, 1, '#8b6d4a');
+        // Climbing vines (ivy pattern)
+        for (let i = 0; i < 6; i++) {
+            const vx = x + 2 + (i % 3) * 3;
+            const vy = y + 1 + i * 3;
+            const sway = Math.sin(this.elapsed * 0.01 + i * 1.2) * 0.3;
+            // Vine tendrils
+            this.px(vx + sway, vy, 2, 3, '#27783a');
+            // Leaves
+            this.px(vx - 1 + sway, vy + 1, 2, 2, '#2ecc71');
+            this.px(vx + 2 + sway, vy, 2, 2, '#27ae60');
+            // Highlight
+            this.px(vx + sway, vy, 1, 1, '#3beb5c');
+        }
+    }
+
+    drawMoneyTree(x, y) {
+        const T = this.T, sw = Math.sin(this.elapsed * 0.013 + x) * 0.5;
+        // Ornate pot (golden rim)
+        this.px(x + 2, y + T * 2 - 6, 10, 6, '#a0392e');
+        this.px(x + 3, y + T * 2 - 5, 8, 4, '#b84a3e');
+        this.px(x + 1, y + T * 2 - 6, 12, 1, '#d4a017');
+        this.px(x + 2, y + T * 2 - 1, 10, 1, '#d4a017');
+        // Braided trunk
+        for (let i = 0; i < 5; i++) {
+            const ty = y + T * 0.5 + i * 3;
+            this.px(x + 5 + (i % 2), ty, 2, 3, '#8b6d4a');
+            this.px(x + 7 - (i % 2), ty, 2, 3, '#7a5c3a');
+        }
+        // Round money leaves (jade green)
+        const lx = x + sw;
+        this.px(lx + 2, y + 2, 4, 3, '#1a8a2e');
+        this.px(lx + 7, y + 1, 4, 3, '#228b35');
+        this.px(lx + 1, y + 5, 3, 3, '#27ae60');
+        this.px(lx + 9, y + 4, 3, 3, '#2ecc71');
+        this.px(lx + 4, y, 3, 2, '#32d967');
+        this.px(lx + 6, y + 6, 3, 2, '#27ae60');
+        // Golden coin highlights (prosperity!)
+        const blink = Math.sin(this.elapsed * 0.04) > 0.5;
+        if (blink) {
+            this.px(lx + 3, y + 3, 2, 1, '#f1c40f');
+            this.px(lx + 8, y + 2, 2, 1, '#f1c40f');
+            this.px(lx + 5, y + 1, 1, 1, '#f39c12');
+        }
+    }
+
     drawBirdBath(x, y) {
         const T = this.T;
         // Pedestal
@@ -2411,7 +2809,9 @@ class PixelEngine {
     // === AGENT PATHFINDING (A*) ===
     getFurnSize(type) {
         const sizes = {
-            'desk': {w:3, h:2}, 'mtable': {w:3, h:4}, 'table_small': {w:2, h:2}, 'table_low': {w:2, h:1}, 'mchair': {w:1, h:1}, 'chair': {w:1, h:2}, 'sofa': {w:2, h:1}, 'armchair': {w:1, h:1}, 'bench': {w:1, h:1}, 'bed_single': {w:2, h:3}, 'bed_double': {w:3, h:3}, 'rug': {w:3, h:2}, 'pillow': {w:1, h:1}, 'bookshelf': {w:2, h:1}, 'cabinet': {w:2, h:1}, 'shelf': {w:2, h:1}, 'boxes': {w:1, h:1}, 'pc': {w:1, h:2}, 'whiteboard': {w:2, h:2}, 'vending': {w:1, h:2}, 'coffee': {w:1, h:1}, 'fridge': {w:1, h:2}, 'billiard_table': {w:3, h:2}, 'counter': {w:3, h:1}, 'plant': {w:1, h:2}, 'large_plant': {w:2, h:3}, 'plant2': {w:1, h:1}, 'hanging_plant': {w:1, h:1}, 'cactus': {w:1, h:2}, 'pot': {w:1, h:1}, 'painting': {w:2, h:1}, 'painting2': {w:1, h:1}, 'lamp': {w:1, h:2}, 'clock': {w:1, h:1}, 'pictureframe': {w:1, h:1}, 'poker_table': {w:3, h:2}, 'slot_machine': {w:2, h:3}, 'gold_terminal': {w:3, h:3}, 'treadmill': {w:2, h:1}, 'dumbbell': {w:1, h:1}, 'yoga_mat': {w:2, h:1}, 'server_rack': {w:2, h:1}, 'microscope': {w:1, h:1}, 'flask': {w:1, h:1}, 'tree': {w:2, h:2}, 'fountain': {w:3, h:3}, 'parasol': {w:3, h:3}, 'bbq_grill': {w:2, h:1}, 'pond': {w:4, h:3}, 'elevator_door': {w:2, h:1}, 'elevator_panel': {w:1, h:1}, 'telescope': {w:1, h:1}, 'antenna': {w:2, h:2}, 'helipad': {w:5, h:5}
+            'desk': {w:3, h:2}, 'mtable': {w:3, h:4}, 'table_small': {w:2, h:2}, 'table_low': {w:2, h:1}, 'mchair': {w:1, h:1}, 'chair': {w:1, h:2}, 'sofa': {w:2, h:1}, 'armchair': {w:1, h:1}, 'bench': {w:1, h:1}, 'bed_single': {w:2, h:3}, 'bed_double': {w:3, h:3}, 'rug': {w:3, h:2}, 'pillow': {w:1, h:1}, 'bookshelf': {w:2, h:1}, 'cabinet': {w:2, h:1}, 'shelf': {w:2, h:1}, 'boxes': {w:1, h:1}, 'pc': {w:1, h:2}, 'whiteboard': {w:2, h:2}, 'vending': {w:1, h:2}, 'coffee': {w:1, h:1}, 'fridge': {w:1, h:2}, 'billiard_table': {w:3, h:2}, 'counter': {w:3, h:1}, 'plant': {w:1, h:2}, 'large_plant': {w:2, h:3}, 'plant2': {w:1, h:1}, 'hanging_plant': {w:1, h:1}, 'cactus': {w:1, h:2}, 'pot': {w:1, h:1}, 'painting': {w:2, h:1}, 'painting2': {w:1, h:1}, 'lamp': {w:1, h:2}, 'clock': {w:1, h:1}, 'pictureframe': {w:1, h:1}, 'poker_table': {w:3, h:2}, 'slot_machine': {w:2, h:3}, 'gold_terminal': {w:3, h:3}, 'treadmill': {w:2, h:1}, 'dumbbell': {w:1, h:1}, 'yoga_mat': {w:2, h:1}, 'server_rack': {w:2, h:1}, 'microscope': {w:1, h:1}, 'flask': {w:1, h:1}, 'tree': {w:2, h:2}, 'fountain': {w:3, h:3}, 'parasol': {w:3, h:3}, 'bbq_grill': {w:2, h:1}, 'pond': {w:4, h:3}, 'elevator_door': {w:2, h:1}, 'elevator_panel': {w:1, h:1}, 'telescope': {w:1, h:1}, 'antenna': {w:2, h:2}, 'helipad': {w:5, h:5},
+            // Themed plants
+            'bamboo': {w:1, h:2}, 'succulent': {w:1, h:1}, 'bonsai': {w:1, h:2}, 'palm_indoor': {w:1, h:2}, 'fern': {w:1, h:2}, 'orchid': {w:1, h:2}, 'vine_wall': {w:1, h:2}, 'money_tree': {w:1, h:2}
         };
         return sizes[type] || {w:1, h:1};
     }
@@ -2424,7 +2824,7 @@ class PixelEngine {
         const walkableItems = ['rug', 'yoga_mat', 'painting', 'painting2', 'pictureframe', 'clock', 'whiteboard', 'shelf', 'pillow'];
         const getCost = (x, y) => {
             if (x < 0 || y < 0 || x >= this.MW || y >= this.MH) return Infinity; // out of bounds
-            if (!this.map[y][x]) return Infinity; // wall/null map // wall/null map
+            if (!this.map[y][x] || this.map[y][x] === 'wall') return Infinity; // null or wall tiles block movement
             
             // Allow stepping onto the target exact tile (for interacting with items / sitting on chairs)
             if (x === endX && y === endY) return 1;
@@ -2606,9 +3006,9 @@ class PixelEngine {
         const c = this.mmCtx, mw = this.mmCanvas.width, mh = this.mmCanvas.height;
         const sx = mw / (this.MW * this.T), sy = mh / (this.MH * this.T);
         c.fillStyle = '#0a0e1a'; c.fillRect(0, 0, mw, mh);
-        const floorCols = { wood: '#8c6838', tile: '#d5d0c0', carpet: '#456585', grass: '#4a7c3f', metal: '#6a6a7a', concrete: '#7a7a7a' };
+        const floorCols = { wood: '#8c6838', tile: '#d5d0c0', carpet: '#456585', grass: '#4a7c3f', metal: '#6a6a7a', concrete: '#7a7a7a', wall: '#1a2035' };
         for (let y = 0; y < this.MH; y++) for (let x = 0; x < this.MW; x++) {
-            if (this.map[y][x]) { c.fillStyle = floorCols[this.map[y][x]]; c.fillRect(x * this.T * sx, y * this.T * sy, this.T * sx + 1, this.T * sy + 1); }
+            if (this.map[y][x]) { c.fillStyle = floorCols[this.map[y][x]] || '#666'; c.fillRect(x * this.T * sx, y * this.T * sy, this.T * sx + 1, this.T * sy + 1); }
         }
         this.agentSprites.forEach(sp => { c.fillStyle = sp.color; c.fillRect(sp.x * sx, sp.y * sy, 4, 4); });
         c.strokeStyle = '#4ecdc4'; c.lineWidth = 1;
@@ -2638,6 +3038,7 @@ class PixelEngine {
         this.drawGrid();
         this.drawFloors();
         this.drawWalls();
+        this._drawRoomLabels();
 
         // Walk agents toward targets (speed normalized with deltaTime)
         const moveSpeed = 0.5 * this.deltaTime;
@@ -2736,7 +3137,7 @@ class PixelEngine {
         this._drawSceneTransition();
         
         if (this._postRender) this._postRender();
-        requestAnimationFrame((t) => this.render(t));
+        if (!this._destroyed) requestAnimationFrame((t) => this.render(t));
     }
     // ============================
     // === FARM DRAW METHODS ===
@@ -2921,6 +3322,54 @@ class PixelEngine {
             this.px(x + 4, y - 1, 2, 1, 'rgba(255,255,255,0.2)');
             this.px(x + 8, y - 2, 1, 1, 'rgba(255,255,255,0.15)');
         }
+    }
+
+    drawCafeCounter(x, y, tw) {
+        const T = this.T;
+        const w = (tw || 6) * T;
+        const h = 2 * T;
+        // Counter body (dark wood)
+        this.px(x, y + 4, w, h - 4, '#4a2c17');
+        this.px(x + 1, y + 5, w - 2, h - 6, '#5c3a22');
+        // Counter top (polished wood with highlight)
+        this.px(x - 1, y + 2, w + 2, 3, '#8B6914');
+        this.px(x, y + 2, w, 1, '#c4a035'); // top shine
+        this.px(x, y + 3, w, 1, '#a07828');
+        // Front panel details (vertical slats)
+        for (let i = 0; i < Math.floor(w / 6); i++) {
+            this.px(x + 2 + i * 6, y + 6, 1, h - 8, '#3a1e0f');
+        }
+        // Espresso machine (left side)
+        this.px(x + 3, y - 2, 8, 6, '#555');
+        this.px(x + 4, y - 1, 6, 4, '#666');
+        this.px(x + 5, y, 2, 2, '#4ecdc4'); // buttons
+        this.px(x + 8, y, 1, 2, '#e74c3c'); // power light
+        this.px(x + 4, y - 3, 6, 1, '#777'); // top
+        // Steam animation
+        if (Math.floor(this.elapsed * 0.03) % 2 === 0) {
+            this.px(x + 6, y - 5, 1, 2, 'rgba(255,255,255,0.25)');
+            this.px(x + 7, y - 6, 1, 1, 'rgba(255,255,255,0.15)');
+        }
+        // Menu board (right side above counter)
+        this.px(x + w - 20, y - 8, 18, 10, '#1a1a2e');
+        this.px(x + w - 19, y - 7, 16, 8, '#2a2a4e');
+        // Menu text lines
+        this.px(x + w - 17, y - 5, 8, 1, '#4ecdc4');
+        this.px(x + w - 17, y - 3, 10, 1, '#ffd93d');
+        this.px(x + w - 17, y - 1, 6, 1, '#78e08f');
+        // Coffee cups on counter
+        this.px(x + 16, y, 3, 3, '#fff');
+        this.px(x + 17, y - 1, 1, 1, '#fff');
+        this.px(x + 16, y, 3, 1, '#d4a76a'); // coffee inside
+        this.px(x + 22, y, 3, 3, '#fff');
+        this.px(x + 23, y - 1, 1, 1, '#fff');
+        this.px(x + 22, y, 3, 1, '#6b4226'); // dark coffee
+    }
+
+    // ============ CLEANUP ============
+    destroy() {
+        this._destroyed = true;
+        console.log('[PixelEngine] Destroyed');
     }
 }
 

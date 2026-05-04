@@ -5,13 +5,13 @@
 class SlotMachine {
     constructor(opts = {}) {
         this.symbols = [
-            { id: 'cherry',  emoji: '🍒', weight: 25, name: 'Cherry' },
-            { id: 'lemon',   emoji: '🍋', weight: 22, name: 'Lemon' },
-            { id: 'orange',  emoji: '🍊', weight: 20, name: 'Orange' },
-            { id: 'star',    emoji: '⭐', weight: 15, name: 'Star' },
-            { id: 'seven',   emoji: '7️⃣',  weight: 10, name: 'Seven' },
-            { id: 'diamond', emoji: '💎', weight: 6,  name: 'Diamond' },
-            { id: 'jackpot', emoji: '🎰', weight: 2,  name: 'Jackpot' },
+            { id: 'cherry',  emoji: '🍒', weight: 22, name: 'Cherry' },
+            { id: 'lemon',   emoji: '🍋', weight: 20, name: 'Lemon' },
+            { id: 'orange',  emoji: '🍊', weight: 18, name: 'Orange' },
+            { id: 'star',    emoji: '⭐', weight: 16, name: 'Star' },
+            { id: 'seven',   emoji: '7️⃣',  weight: 12, name: 'Seven' },
+            { id: 'diamond', emoji: '💎', weight: 8,  name: 'Diamond' },
+            { id: 'jackpot', emoji: '🎰', weight: 4,  name: 'Jackpot' },
         ];
 
         this.payouts = {
@@ -24,12 +24,15 @@ class SlotMachine {
             'cherry-cherry-cherry':    { mul: 3,  name: '🍒 Triple Cherry!' },
         };
 
-        // Two-of-a-kind payouts
+        // Two-of-a-kind payouts (more generous to boost RTP)
         this.twoOfAKindMul = {
             'jackpot': 5,
             'diamond': 3,
-            'seven':   2,
-            'star':    1.5,
+            'seven':   2.5,
+            'star':    2,
+            'orange':  1.5,
+            'lemon':   1.2,
+            'cherry':  1.1,
         };
 
         this.betOptions = [10, 25, 50, 100];
