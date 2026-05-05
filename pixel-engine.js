@@ -575,6 +575,9 @@ class PixelEngine {
                     {id:'fridge1',type:'fridge',tx:rx+9,ty:ry+1,emoji:'🍽️',label:'Tủ lạnh',effect:'energy'},
                     {id:'eat1',type:'table',tx:rx+3,ty:ry+4,emoji:'🍜',label:'Ăn trưa',effect:'energy'},
                 );
+                // NPCs
+                f.push({t:'npc',x:(rx+4)*T,y:(ry+4)*T,charIndex:2,emoji:'👨‍🍳',wanderRange:3,speeches:['Hôm nay nấu gì?','Phở hay cơm?','Ai muốn cà phê?','Rửa bát đi nào!']});
+                f.push({t:'npc',x:(rx+8)*T,y:(ry+5)*T,charIndex:4,emoji:'🍽️',wanderRange:2,speeches:['Ngon quá!','Nghỉ trưa thôi','Ăn no rồi..']});
                 break;
             case 3: // Game Room (14×8)
                 f.push({t:'poker_table',x:(rx+1)*T,y:(ry+1)*T,w:3,h:2});
@@ -589,6 +592,9 @@ class PixelEngine {
                     {id:'slot1',type:'slot',tx:rx+2,ty:ry+6,emoji:'🎰',label:'Slot Machine',effect:'slot'},
                     {id:'goldtrade1',type:'gold_trade',tx:rx+8,ty:ry+6,emoji:'📊',label:'Gold Trading',effect:'gold_trade'},
                 );
+                // NPCs
+                f.push({t:'npc',x:(rx+3)*T,y:(ry+3)*T,charIndex:1,emoji:'🎮',wanderRange:3,speeches:['All in!','Raise!','Ván nữa đi!','GG EZ','Lucky hand!']});
+                f.push({t:'npc',x:(rx+10)*T,y:(ry+3)*T,charIndex:5,emoji:'🎲',wanderRange:2,speeches:['Cue ball...','Nice shot!','Đánh lỗ rồi!']});
                 break;
             case 4: // Lounge (10×8)
                 f.push({t:'sofa',x:(rx+1)*T,y:(ry+2)*T},{t:'sofa',x:(rx+5)*T,y:(ry+2)*T});
@@ -603,6 +609,8 @@ class PixelEngine {
                     {id:'sofa2',type:'sofa',tx:rx+6,ty:ry+3,emoji:'😴',label:'Sofa',effect:'rest'},
                     {id:'lcoffee',type:'coffee',tx:rx+5,ty:ry+6,emoji:'☕',label:'Cà phê',effect:'energy'},
                 );
+                // NPCs
+                f.push({t:'npc',x:(rx+4)*T,y:(ry+4)*T,charIndex:3,emoji:'📖',wanderRange:2,speeches:['Đọc gì hay?','Chill thôi~','Mệt quá...','Ngủ chút']});
                 break;
             case 5: // Server Room (10×8)
                 for(let i=0;i<3;i++) f.push({t:'server_rack',x:(rx+1+i*3)*T,y:ry*T});
@@ -635,6 +643,8 @@ class PixelEngine {
                     {id:'gym3',type:'yoga',tx:rx+7,ty:ry+5,emoji:'🧘',label:'Yoga',effect:'mood'},
                     {id:'gym4',type:'vending',tx:rx+8,ty:ry+1,emoji:'🥤',label:'Nước uống',effect:'energy'},
                 );
+                // NPCs
+                f.push({t:'npc',x:(rx+6)*T,y:(ry+3)*T,charIndex:0,emoji:'🏋️',wanderRange:3,speeches:['No pain no gain!','1 hiệp nữa!','Warm up đi!','Cố lên!']});
                 break;
             case 7: // Library (10×8)
                 for(let i=0;i<4;i++) f.push({t:'bookshelf',x:(rx+1+i*2)*T,y:ry*T});
@@ -653,6 +663,8 @@ class PixelEngine {
                     {id:'lib2',type:'bookshelf',tx:rx+5,ty:ry+1,emoji:'📖',label:'Đọc sách',effect:'xp'},
                     {id:'lib3',type:'desk',tx:rx+3,ty:ry+4,emoji:'✍️',label:'Học tập',effect:'xp'},
                 );
+                // NPCs
+                f.push({t:'npc',x:(rx+5)*T,y:(ry+4)*T,charIndex:5,emoji:'📚',wanderRange:2,speeches:['Sssh...im lặng','Sách hay lắm!','Tìm tài liệu...','Chương 3 rồi']});
                 break;
             case 8: // Garden — outdoor zen
                 f.push({t:'tree',x:(rx+1)*T,y:ry*T},{t:'tree',x:(rx+9)*T,y:ry*T});
@@ -775,6 +787,10 @@ class PixelEngine {
                     {id:'farm4',type:'farm_plot',tx:rx+15,ty:ry+12,emoji:'🌱',label:'Luống rau 4',effect:'farm'},
                     {id:'well1',type:'water_well',tx:rx+16,ty:ry+11,emoji:'💧',label:'Giếng nước',effect:'energy'},
                 );
+                // NPCs
+                f.push({t:'npc',x:(rx+6)*T,y:(ry+5)*T,charIndex:2,emoji:'🚶',wanderRange:5,speeches:['Trời đẹp quá!','Hít thở nào~','Dạo chơi tí']});
+                f.push({t:'npc',x:(rx+12)*T,y:(ry+7)*T,charIndex:4,emoji:'🌻',wanderRange:4,speeches:['Tưới cây thôi','Hoa nở rồi!','Cỏ mọc quá!']});
+                f.push({t:'npc',x:(rx+4)*T,y:(ry+9)*T,charIndex:0,emoji:'🧑‍🌾',wanderRange:3,speeches:['Thu hoạch nào!','Đất tốt lắm','Gieo hạt đi!']});
                 break;
             case 12: // Elevator (5×8)
                 f.push({t:'elevator_door',x:(rx+1)*T,y:(ry+1)*T});
@@ -837,6 +853,10 @@ class PixelEngine {
                     {id:'cafe6',type:'social',tx:rx+8,ty:ry+6,emoji:'📰',label:'Đọc báo',effect:'xp'},
                     {id:'cafe7',type:'rest',tx:rx+13,ty:ry+9,emoji:'🎵',label:'Nghe nhạc chill',effect:'mood'},
                 );
+                // NPCs
+                f.push({t:'npc',x:(rx+3)*T,y:(ry+3)*T,charIndex:3,emoji:'☕',wanderRange:3,speeches:['Latte nóng nhé!','Trà sữa không?','Order gì ạ?','Cà phê sáng~']});
+                f.push({t:'npc',x:(rx+8)*T,y:(ry+7)*T,charIndex:1,emoji:'💻',wanderRange:3,speeches:['Wifi mạnh ghê','Làm việc chút','Quán đẹp thật','Ngồi cả ngày!']});
+                f.push({t:'npc',x:(rx+12)*T,y:(ry+4)*T,charIndex:5,emoji:'📱',wanderRange:2,speeches:['Check mail...','Story mới nè','Selfie nào!','Like nhiều quá']});
                 break;
             case 13: // Tầng Thượng — Rooftop terrace with telescope, antenna, helipad
                 // Telescope area (left)
@@ -874,6 +894,9 @@ class PixelEngine {
                     {id:'roof4',type:'parasol',tx:rx+3,ty:ry+6,emoji:'☂️',label:'Ngồi ngắm cảnh',effect:'rest'},
                     {id:'roof5',type:'bbq',tx:rx+15,ty:ry+7,emoji:'🍖',label:'BBQ Rooftop',effect:'energy'},
                 );
+                // NPCs
+                f.push({t:'npc',x:(rx+4)*T,y:(ry+6)*T,charIndex:1,emoji:'🌙',wanderRange:4,speeches:['Ngắm sao đẹp!','View đỉnh thật','Gió mát quá~','Chụp ảnh nào!']});
+                f.push({t:'npc',x:(rx+12)*T,y:(ry+7)*T,charIndex:3,emoji:'🍻',wanderRange:3,speeches:['Cheers!','Nướng thêm đi','BBQ time!']});
                 break;
         }
     }
@@ -1150,6 +1173,8 @@ class PixelEngine {
             case 'animal_bird': this.drawAnimalBird(f); break;
             case 'animal_cat': this.drawAnimalCat(f); break;
             case 'animal_dog': this.drawAnimalDog(f); break;
+            // NPCs (wandering characters)
+            case 'npc': this.drawNpc(f); break;
             // Street furniture
             case 'street_lamp': this.drawStreetLamp(x, y); break;
             // Farm objects
@@ -2468,16 +2493,27 @@ class PixelEngine {
         // Wander logic
         if (this.elapsed > f._nextMove) {
             f._nextMove = this.elapsed + 40 + Math.random() * 80;
-            f._wanderX = f._baseX + (Math.random() - 0.5) * T * 3;
-            f._wanderY = f._baseY + (Math.random() - 0.5) * T * 1.5;
+            let wx = f._baseX, wy = f._baseY;
+            for (let a = 0; a < 5; a++) {
+                const cx = f._baseX + (Math.random() - 0.5) * T * 3;
+                const cy = f._baseY + (Math.random() - 0.5) * T * 1.5;
+                if (this.isPositionWalkable(cx, cy)) { wx = cx; wy = cy; break; }
+            }
+            f._wanderX = wx; f._wanderY = wy;
             f._flying = Math.random() < 0.3;
         }
         // Move toward target
         const dx = f._wanderX - f.x, dy = f._wanderY - f.y;
         const d = Math.sqrt(dx*dx + dy*dy);
         if (d > 1) {
-            f.x += dx * 0.02 * this.deltaTime;
-            f.y += dy * 0.02 * this.deltaTime;
+            const nx = f.x + dx * 0.02 * this.deltaTime;
+            const ny = f.y + dy * 0.02 * this.deltaTime;
+            if (f._flying || this.isPositionWalkable(nx, ny)) {
+                f.x = nx; f.y = ny;
+            } else {
+                f._wanderX = f.x; f._wanderY = f.y;
+                f._nextMove = this.elapsed + 15;
+            }
         }
         const x = f.x, y = f.y;
         const flapAnim = Math.sin(this.elapsed * 0.3) > 0;
@@ -2528,15 +2564,27 @@ class PixelEngine {
         }
         if (this.elapsed > f._nextMove) {
             f._nextMove = this.elapsed + 80 + Math.random() * 150;
-            f._wanderX = f._baseX + (Math.random() - 0.5) * T * 2.5;
-            f._wanderY = f._baseY + (Math.random() - 0.5) * T * 1.5;
+            let wx = f._baseX, wy = f._baseY;
+            for (let a = 0; a < 5; a++) {
+                const cx = f._baseX + (Math.random() - 0.5) * T * 2.5;
+                const cy = f._baseY + (Math.random() - 0.5) * T * 1.5;
+                if (this.isPositionWalkable(cx, cy)) { wx = cx; wy = cy; break; }
+            }
+            f._wanderX = wx; f._wanderY = wy;
             f._sitting = Math.random() < 0.4;
         }
         const dx = f._wanderX - f.x, dy = f._wanderY - f.y;
         const d = Math.sqrt(dx*dx + dy*dy);
         if (d > 1 && !f._sitting) {
-            f.x += dx * 0.015 * this.deltaTime;
-            f.y += dy * 0.015 * this.deltaTime;
+            const nx = f.x + dx * 0.015 * this.deltaTime;
+            const ny = f.y + dy * 0.015 * this.deltaTime;
+            if (this.isPositionWalkable(nx, ny)) {
+                f.x = nx; f.y = ny;
+            } else {
+                f._wanderX = f.x; f._wanderY = f.y;
+                f._sitting = true;
+                f._nextMove = this.elapsed + 30;
+            }
         }
         const x = f.x, y = f.y;
         const catColor = f.catColor || '#f39c12';
@@ -2622,15 +2670,28 @@ class PixelEngine {
         }
         if (this.elapsed > f._nextMove) {
             f._nextMove = this.elapsed + 50 + Math.random() * 100;
-            f._wanderX = f._baseX + (Math.random() - 0.5) * T * 3;
-            f._wanderY = f._baseY + (Math.random() - 0.5) * T * 1.5;
+            // Try walkable targets
+            let wx = f._baseX, wy = f._baseY;
+            for (let a = 0; a < 5; a++) {
+                const cx = f._baseX + (Math.random() - 0.5) * T * 3;
+                const cy = f._baseY + (Math.random() - 0.5) * T * 1.5;
+                if (this.isPositionWalkable(cx, cy)) { wx = cx; wy = cy; break; }
+            }
+            f._wanderX = wx; f._wanderY = wy;
             f._sitting = Math.random() < 0.3;
         }
         const dx = f._wanderX - f.x, dy = f._wanderY - f.y;
         const d = Math.sqrt(dx*dx + dy*dy);
         if (d > 1 && !f._sitting) {
-            f.x += dx * 0.018 * this.deltaTime;
-            f.y += dy * 0.018 * this.deltaTime;
+            const nx = f.x + dx * 0.018 * this.deltaTime;
+            const ny = f.y + dy * 0.018 * this.deltaTime;
+            if (this.isPositionWalkable(nx, ny)) {
+                f.x = nx; f.y = ny;
+            } else {
+                f._wanderX = f.x; f._wanderY = f.y;
+                f._sitting = true;
+                f._nextMove = this.elapsed + 20;
+            }
         }
         const x = f.x, y = f.y;
         const dogColor = f.dogColor || '#8B4513';
@@ -2710,6 +2771,153 @@ class PixelEngine {
             // Tail (wagging!!)
             this.px(x + 11, y + 1 + tailWag, 2, 2, dogColor);
             this.px(x + 12, y + tailWag, 2, 2, dogColor);
+        }
+    }
+
+    // === NPC CHARACTERS (Non-Player Characters wandering in areas) ===
+    drawNpc(f) {
+        const T = this.T;
+        // Initialize NPC wandering state
+        if (!f._npcInit) {
+            f._npcInit = true;
+            f._baseX = f.x; f._baseY = f.y;
+            f._wanderX = f.x; f._wanderY = f.y;
+            f._nextMove = this.elapsed + 30 + Math.random() * 60;
+            f._idle = Math.random() < 0.4;
+            f._dir = 'down';
+            f._speechTimer = this.elapsed + 100 + Math.random() * 200;
+            f._showSpeech = false;
+            f._speechText = '';
+        }
+
+        // Wander logic
+        if (this.elapsed > f._nextMove) {
+            f._nextMove = this.elapsed + 60 + Math.random() * 120;
+            const range = (f.wanderRange || 3) * T;
+            // Try up to 5 random targets to find a walkable one
+            let wx = f._baseX, wy = f._baseY;
+            for (let attempt = 0; attempt < 5; attempt++) {
+                const cx = f._baseX + (Math.random() - 0.5) * range;
+                const cy = f._baseY + (Math.random() - 0.5) * range * 0.6;
+                if (this.isPositionWalkable(cx, cy)) {
+                    wx = cx; wy = cy; break;
+                }
+            }
+            f._wanderX = wx;
+            f._wanderY = wy;
+            f._idle = Math.random() < 0.35;
+        }
+
+        // Speech bubble logic
+        if (this.elapsed > f._speechTimer && f.speeches && f.speeches.length) {
+            f._speechTimer = this.elapsed + 200 + Math.random() * 300;
+            f._showSpeech = true;
+            f._speechText = f.speeches[Math.floor(Math.random() * f.speeches.length)];
+            f._speechEnd = this.elapsed + 80;
+        }
+        if (f._showSpeech && this.elapsed > f._speechEnd) f._showSpeech = false;
+
+        // Move toward target with collision
+        const dx = f._wanderX - f.x, dy = f._wanderY - f.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const isWalking = dist > 1 && !f._idle;
+        if (isWalking) {
+            const stepX = dx * 0.02 * this.deltaTime;
+            const stepY = dy * 0.02 * this.deltaTime;
+            const nextX = f.x + stepX;
+            const nextY = f.y + stepY;
+            // Check collision at next position
+            if (this.isPositionWalkable(nextX, nextY)) {
+                f.x = nextX;
+                f.y = nextY;
+            } else {
+                // Blocked — stop and pick new target next tick
+                f._wanderX = f.x;
+                f._wanderY = f.y;
+                f._idle = true;
+                f._nextMove = this.elapsed + 20 + Math.random() * 40;
+            }
+            // Determine facing direction
+            if (Math.abs(dx) > Math.abs(dy)) f._dir = dx > 0 ? 'right' : 'left';
+            else f._dir = dy > 0 ? 'down' : 'up';
+        }
+
+        const x = f.x, y = f.y;
+        const charIdx = f.charIndex || 0;
+        const img = this.charImages[charIdx % this.charImages.length];
+
+        if (img && img.complete) {
+            // Use sprite sheet: row 0=down, 1=up, 2=side; frames [0,1,2,1] walk cycle
+            const row = (f._dir === 'down') ? 0 : (f._dir === 'up') ? 1 : 2;
+            const walkCycle = [0, 1, 2, 1];
+            const frame = isWalking ? walkCycle[Math.floor(this.elapsed * 0.12) % 4] : 1;
+
+            // Shadow
+            this.ctx.globalAlpha = 0.15;
+            this.px(x - 4, y + 15, 12, 3, '#000');
+            this.ctx.globalAlpha = 1;
+
+            this.ctx.save();
+            if (f._dir === 'left') {
+                this.ctx.translate(Math.floor((x + 8) * this.scale + this.camera.x), Math.floor((y - 15) * this.scale + this.camera.y));
+                this.ctx.scale(-1, 1);
+                this.ctx.drawImage(img, frame * 16, row * 32, 16, 32, Math.floor(-8 * this.scale), 0, Math.ceil(16 * this.scale), Math.ceil(32 * this.scale));
+            } else {
+                this.ctx.translate(Math.floor((x - 8) * this.scale + this.camera.x), Math.floor((y - 15) * this.scale + this.camera.y));
+                this.ctx.drawImage(img, frame * 16, row * 32, 16, 32, 0, 0, Math.ceil(16 * this.scale), Math.ceil(32 * this.scale));
+            }
+            this.ctx.restore();
+        } else {
+            // Fallback: procedural pixel character
+            const skinColor = f.skinColor || '#fdebd0';
+            const shirtColor = f.shirtColor || '#3498db';
+            const hairColor = f.hairColor || '#5d4037';
+            const bob = isWalking ? Math.sin(this.elapsed * 0.2) * 1 : 0;
+            const walkFrame = isWalking ? Math.floor(this.elapsed * 0.12) % 2 : 0;
+
+            // Shadow
+            this.ctx.globalAlpha = 0.15;
+            this.px(x - 3, y + 14, 10, 3, '#000');
+            this.ctx.globalAlpha = 1;
+            // Hair
+            this.px(x, y - 2 + bob, 6, 3, hairColor);
+            // Head
+            this.px(x + 1, y + 1 + bob, 4, 4, skinColor);
+            // Eyes
+            this.px(x + 1, y + 2 + bob, 1, 1, '#1a1a1a');
+            this.px(x + 4, y + 2 + bob, 1, 1, '#1a1a1a');
+            // Body
+            this.px(x - 1, y + 5 + bob, 8, 6, shirtColor);
+            this.px(x, y + 6 + bob, 6, 4, this.li(shirtColor, 15));
+            // Legs
+            const lo = walkFrame * 2;
+            this.px(x, y + 11 + lo, 3, 4 - lo, '#2c3e50');
+            this.px(x + 3, y + 11 - lo, 3, 4 + lo, '#2c3e50');
+            // Shoes
+            this.px(x, y + 14, 3, 1, '#1a1a2e');
+            this.px(x + 3, y + 14, 3, 1, '#1a1a2e');
+        }
+
+        // Role emoji above head
+        if (f.emoji) {
+            const ex = x * this.scale + this.camera.x;
+            const ey = (y - 22) * this.scale + this.camera.y;
+            this.ctx.font = `${Math.max(6, 8 * this.scale * 0.5)}px sans-serif`;
+            this.ctx.fillText(f.emoji, ex, ey);
+        }
+
+        // Speech bubble
+        if (f._showSpeech && f._speechText) {
+            const bx = x - 8, by = y - 30;
+            const bw = Math.min(f._speechText.length * 3 + 10, 70);
+            this.px(bx, by, bw, 10, 'rgba(21,29,48,0.9)');
+            this.px(bx, by, bw, 1, '#4ecdc4');
+            this.px(bx, by + 9, bw, 1, '#4ecdc4');
+            this.px(bx + 4, by + 10, 2, 2, '#4ecdc4');
+            this.ctx.fillStyle = '#e8eaf6';
+            this.ctx.font = `${Math.max(3, 4 * this.scale * 0.5)}px "Press Start 2P"`;
+            const txt = f._speechText.length > 14 ? f._speechText.substring(0, 14) + '..' : f._speechText;
+            this.ctx.fillText(txt, (bx + 3) * this.scale + this.camera.x, (by + 7) * this.scale + this.camera.y);
         }
     }
 
@@ -2816,12 +3024,46 @@ class PixelEngine {
         return sizes[type] || {w:1, h:1};
     }
 
+    // === COLLISION CHECK (for NPCs, animals, wandering entities) ===
+    // Checks if a pixel position (px, py) is walkable: not blocked by walls, map edges, or solid furniture.
+    isPositionWalkable(px, py) {
+        const T = this.T;
+        const tx = Math.floor(px / T);
+        const ty = Math.floor(py / T);
+
+        // Out of bounds
+        if (tx < 0 || ty < 0 || tx >= this.MW || ty >= this.MH) return false;
+
+        // No floor tile or wall
+        const tile = this.map[ty] && this.map[ty][tx];
+        if (!tile || tile === 'wall') return false;
+
+        // Check furniture collisions
+        const passthrough = ['rug', 'yoga_mat', 'painting', 'painting2', 'pictureframe', 'clock', 'whiteboard', 'shelf', 'pillow', 'npc', 'animal_bird', 'animal_cat', 'animal_dog', 'farm_plot', 'flower_bed', 'hanging_plant'];
+        for (let i = 0; i < this.furniture.length; i++) {
+            const f = this.furniture[i];
+            if (passthrough.includes(f.t)) continue;
+
+            const size = this.getFurnSize(f.t);
+            const fx = f.x;
+            const fy = f.y;
+            const fw = (f.w || size.w) * T;
+            const fh = (f.h || size.h) * T;
+
+            // AABB collision (pixel-level, with small margin for character width)
+            if (px + 4 > fx && px - 4 < fx + fw && py + 8 > fy && py - 2 < fy + fh) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     findPath(startX, startY, endX, endY) {
         const heuristic = (x1, y1, x2, y2) => Math.abs(x1 - x2) + Math.abs(y1 - y2);
         const open = [{ x: startX, y: startY, g: 0, f: heuristic(startX, startY, endX, endY), parent: null }];
         const closed = new Set();
         
-        const walkableItems = ['rug', 'yoga_mat', 'painting', 'painting2', 'pictureframe', 'clock', 'whiteboard', 'shelf', 'pillow'];
+        const walkableItems = ['rug', 'yoga_mat', 'painting', 'painting2', 'pictureframe', 'clock', 'whiteboard', 'shelf', 'pillow', 'npc', 'animal_bird', 'animal_cat', 'animal_dog'];
         const getCost = (x, y) => {
             if (x < 0 || y < 0 || x >= this.MW || y >= this.MH) return Infinity; // out of bounds
             if (!this.map[y][x] || this.map[y][x] === 'wall') return Infinity; // null or wall tiles block movement

@@ -434,49 +434,99 @@
 
     <!-- ========== MODAL: Hire Agent ========== -->
     <div class="modal-overlay" id="modalAddAgent">
-        <div class="modal pixel-border">
-            <div class="modal-header">
-                <h2>🤖 Tuyển Agent <span id="hireCost" class="hire-cost-badge"></span></h2>
+        <div class="modal pixel-border hire-modal">
+            <div class="modal-header hire-modal-header">
+                <div class="hire-header-left">
+                    <h2>🤖 Tuyển Agent</h2>
+                    <span id="hireCost" class="hire-cost-badge"></span>
+                </div>
                 <button class="modal-close" id="closeAddAgent">&times;</button>
             </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label class="pixel-label">Tên Agent</label>
-                    <input type="text" class="pixel-input" id="agentName" placeholder="PixelBot-001">
-                </div>
-                <div class="form-group">
-                    <label class="pixel-label">Vai Trò <span id="roleUnlockHint" class="unlock-hint"></span></label>
-                    <select class="pixel-select" id="agentRole">
-                        <option value="coder">💻 Coder — 100Ⓒ</option>
-                        <option value="tester">🧪 Tester — 120Ⓒ</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="pixel-label">Model AI</label>
-                    <select class="pixel-select" id="agentModel">
-                        <option value="claude-opus">Claude Opus 4</option>
-                        <option value="claude-sonnet">Claude Sonnet 4</option>
-                        <option value="gemini-pro">Gemini 2.5 Pro</option>
-                        <option value="gpt-4">GPT-4o</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="pixel-label">Màu Sắc</label>
-                    <div class="color-picker" id="colorPicker">
-                        <div class="color-option selected" data-color="#4ecdc4" style="background:#4ecdc4"></div>
-                        <div class="color-option" data-color="#ff6b6b" style="background:#ff6b6b"></div>
-                        <div class="color-option" data-color="#ffd93d" style="background:#ffd93d"></div>
-                        <div class="color-option" data-color="#6c5ce7" style="background:#6c5ce7"></div>
-                        <div class="color-option" data-color="#a8e6cf" style="background:#a8e6cf"></div>
-                        <div class="color-option" data-color="#ff8a5c" style="background:#ff8a5c"></div>
-                        <div class="color-option" data-color="#ea8685" style="background:#ea8685"></div>
-                        <div class="color-option" data-color="#78e08f" style="background:#78e08f"></div>
+            <div class="modal-body hire-modal-body">
+                <div class="hire-layout">
+                    <!-- Left: Preview -->
+                    <div class="hire-preview-col">
+                        <div class="hire-preview-card">
+                            <div class="hire-preview-glow"></div>
+                            <canvas id="hirePreviewCanvas" width="64" height="80"></canvas>
+                            <div class="hire-preview-name" id="hirePreviewName">PixelBot-001</div>
+                            <div class="hire-preview-role" id="hirePreviewRole">💻 Coder</div>
+                        </div>
+                        <!-- Role Stats -->
+                        <div class="hire-role-stats" id="hireRoleStats">
+                            <div class="hire-stat">
+                                <span class="hire-stat-label">⚡ Tốc độ</span>
+                                <div class="hire-stat-bar"><div class="hire-stat-fill" id="statSpeed" style="width:60%"></div></div>
+                            </div>
+                            <div class="hire-stat">
+                                <span class="hire-stat-label">🧠 XP Bonus</span>
+                                <div class="hire-stat-bar"><div class="hire-stat-fill stat-xp" id="statXP" style="width:50%"></div></div>
+                            </div>
+                            <div class="hire-stat">
+                                <span class="hire-stat-label">💪 Stamina</span>
+                                <div class="hire-stat-bar"><div class="hire-stat-fill stat-stamina" id="statStamina" style="width:70%"></div></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Right: Form -->
+                    <div class="hire-form-col">
+                        <div class="form-group">
+                            <label class="pixel-label">Tên Agent</label>
+                            <input type="text" class="pixel-input" id="agentName" placeholder="PixelBot-001">
+                        </div>
+                        <div class="form-group">
+                            <label class="pixel-label">Vai Trò <span id="roleUnlockHint" class="unlock-hint"></span></label>
+                            <select class="pixel-select" id="agentRole">
+                                <option value="coder">💻 Coder — 100Ⓒ</option>
+                                <option value="tester">🧪 Tester — 120Ⓒ</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="pixel-label">Model AI</label>
+                            <select class="pixel-select" id="agentModel">
+                                <option value="claude-opus-4">🟣 Claude Opus 4</option>
+                                <option value="claude-sonnet-4">🔵 Claude Sonnet 4</option>
+                                <option value="gemini-2.5-pro">🟢 Gemini 2.5 Pro</option>
+                                <option value="gemini-2.5-flash">🟡 Gemini 2.5 Flash</option>
+                                <option value="gpt-4o">⚪ GPT-4o</option>
+                                <option value="gpt-4o-mini">⚪ GPT-4o Mini</option>
+                                <option value="deepseek-v3">🔴 DeepSeek V3</option>
+                                <option value="llama-4">🟠 Llama 4 Maverick</option>
+                            </select>
+                            <div class="model-info" id="modelInfo">
+                                <span class="model-tier" id="modelTier">S-Tier</span>
+                                <span class="model-desc" id="modelDesc">Mạnh nhất, sáng tạo vượt trội</span>
+                                <span class="model-cost-mul" id="modelCostMul">×1.5 chi phí</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="pixel-label">Màu Sắc</label>
+                            <div class="color-picker" id="colorPicker">
+                                <div class="color-option selected" data-color="#4ecdc4" style="background:#4ecdc4"></div>
+                                <div class="color-option" data-color="#ff6b6b" style="background:#ff6b6b"></div>
+                                <div class="color-option" data-color="#ffd93d" style="background:#ffd93d"></div>
+                                <div class="color-option" data-color="#6c5ce7" style="background:#6c5ce7"></div>
+                                <div class="color-option" data-color="#a8e6cf" style="background:#a8e6cf"></div>
+                                <div class="color-option" data-color="#ff8a5c" style="background:#ff8a5c"></div>
+                                <div class="color-option" data-color="#ea8685" style="background:#ea8685"></div>
+                                <div class="color-option" data-color="#78e08f" style="background:#78e08f"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button class="btn-pixel btn-secondary" id="cancelAddAgent">Hủy</button>
-                <button class="btn-pixel" id="confirmAddAgent">💰 Tuyển Agent</button>
+            <div class="modal-footer hire-modal-footer">
+                <div class="hire-total-cost" id="hireTotalCost">
+                    <span class="hire-total-label">Tổng chi phí:</span>
+                    <span class="hire-total-amount" id="hireTotalAmount">150Ⓒ</span>
+                </div>
+                <div class="hire-footer-btns">
+                    <button class="btn-pixel btn-secondary" id="cancelAddAgent">Hủy</button>
+                    <button class="btn-pixel hire-confirm-btn" id="confirmAddAgent">
+                        <span class="hire-btn-sparkle">✨</span>
+                        Tuyển Agent
+                    </button>
+                </div>
             </div>
         </div>
     </div>

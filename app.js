@@ -159,7 +159,15 @@
     }
 
     // ============ CLEANUP (prevent leaks on restart) ============
+    let _gameLoopFrameId = null; // Track rAF for proper cleanup
+
     function cleanupGameWorld() {
+        // Cancel the game loop animation frame
+        if (_gameLoopFrameId) {
+            cancelAnimationFrame(_gameLoopFrameId);
+            _gameLoopFrameId = null;
+        }
+
         // Clear all managed timers
         PAC.Timer.clearAll();
 
@@ -241,9 +249,14 @@
         // Game loop (day/night tick every frame)
         let lastTick = performance.now();
         function loop(ts) {
+            // Stop the loop if game was cleaned up
+            if (!game) {
+                _gameLoopFrameId = null;
+                return;
+            }
             const dt = (ts - lastTick) / 1000;
             lastTick = ts;
-            if (game && game.started && !game.isGameOver) {
+            if (game.started && !game.isGameOver) {
                 game.tickDay(dt);
                 // Night overlay
                 const nightEl = document.getElementById('nightOverlay');
@@ -260,9 +273,9 @@
                     game.showingDayTransition = false;
                 }
             }
-            requestAnimationFrame(loop);
+            _gameLoopFrameId = requestAnimationFrame(loop);
         }
-        requestAnimationFrame(loop);
+        _gameLoopFrameId = requestAnimationFrame(loop);
 
         // === Statistics Dashboard ===
         statsDashboard = new StatsDashboard();
@@ -1151,17 +1164,157 @@
     function updateHireCost() {
         const sel = document.getElementById('agentRole');
         const badge = document.getElementById('hireCost');
-        if (sel && badge) badge.textContent = `💰 ${game.hiringCosts[sel.value] || 100}Ⓒ`;
+        const baseCost = game.hiringCosts[sel?.value] || 100;
+        if (sel && badge) badge.textContent = `💰 ${baseCost}Ⓒ`;
+        updateHireTotal();
+    }
+
+    // AI Model tiers with cost multipliers and descriptions
+    const MODEL_INFO = {
+        'claude-opus-4':     { tier: 'S', tierClass: 'tier-s', desc: 'Mạnh nhất, sáng tạo vượt trội', mul: 1.5 },
+        'claude-sonnet-4':   { tier: 'A', tierClass: 'tier-a', desc: 'Cân bằng tốc độ & chất lượng',   mul: 1.2 },
+        'gemini-2.5-pro':    { tier: 'A', tierClass: 'tier-a', desc: 'Đa năng, context dài',            mul: 1.3 },
+        'gemini-2.5-flash':  { tier: 'B', tierClass: 'tier-b', desc: 'Nhanh, tiết kiệm chi phí',       mul: 0.8 },
+        'gpt-4o':            { tier: 'A', tierClass: 'tier-a', desc: 'Ổn định, đa nhiệm tốt',          mul: 1.2 },
+        'gpt-4o-mini':       { tier: 'B', tierClass: 'tier-b', desc: 'Nhẹ, phù hợp task đơn giản',     mul: 0.7 },
+        'deepseek-v3':       { tier: 'B', tierClass: 'tier-b', desc: 'Code mạnh, giá rẻ',              mul: 0.6 },
+        'llama-4':           { tier: 'C', tierClass: 'tier-c', desc: 'Open-source, tự host',            mul: 0.5 },
+    };
+
+    function updateModelInfo() {
+        const model = document.getElementById('agentModel')?.value;
+        const info = MODEL_INFO[model] || { tier: 'B', tierClass: 'tier-b', desc: '—', mul: 1.0 };
+        const tierEl = document.getElementById('modelTier');
+        const descEl = document.getElementById('modelDesc');
+        const mulEl = document.getElementById('modelCostMul');
+        if (tierEl) { tierEl.textContent = `${info.tier}-Tier`; tierEl.className = `model-tier ${info.tierClass}`; }
+        if (descEl) descEl.textContent = info.desc;
+        if (mulEl) mulEl.textContent = info.mul >= 1 ? `×${info.mul} chi phí` : `×${info.mul} tiết kiệm`;
+        updateHireTotal();
+    }
+
+    function updateHireTotal() {
+        const role = document.getElementById('agentRole')?.value;
+        const model = document.getElementById('agentModel')?.value;
+        const baseCost = game.hiringCosts[role] || 100;
+        const info = MODEL_INFO[model] || { mul: 1.0 };
+        const total = Math.round(baseCost * info.mul);
+        const totalEl = document.getElementById('hireTotalAmount');
+        if (totalEl) totalEl.textContent = `${total}Ⓒ`;
+    }
+
+    function getHireTotalCost() {
+        const role = document.getElementById('agentRole')?.value;
+        const model = document.getElementById('agentModel')?.value;
+        const baseCost = game.hiringCosts[role] || 100;
+        const info = MODEL_INFO[model] || { mul: 1.0 };
+        return Math.round(baseCost * info.mul);
+    }
+
+    // Role stat bars
+    function updateRoleStats() {
+        const role = document.getElementById('agentRole')?.value;
+        const cfg = manager.roleConfigs[role];
+        if (!cfg) return;
+        const speedPct = Math.round((cfg.speedMul / 1.3) * 100);
+        const xpPct = Math.round((cfg.xpMul / 1.4) * 100);
+        const staminaPct = Math.round((1 - cfg.energyDrain / 0.08) * 100);
+        document.getElementById('statSpeed').style.width = speedPct + '%';
+        document.getElementById('statXP').style.width = xpPct + '%';
+        document.getElementById('statStamina').style.width = Math.max(20, staminaPct) + '%';
+        // Update preview role text
+        const emoji = ROLE_EMOJIS[role] || '🤖';
+        const roleName = cfg.name || role;
+        const previewRole = document.getElementById('hirePreviewRole');
+        if (previewRole) previewRole.textContent = `${emoji} ${roleName}`;
+    }
+
+    // Character sprite preview
+    let _hirePreviewAnim = null;
+    function startHirePreview() {
+        const canvas = document.getElementById('hirePreviewCanvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        let frame = 0;
+        const draw = () => {
+            ctx.clearRect(0, 0, 64, 80);
+            const colorEl = document.querySelector('.color-option.selected');
+            const color = colorEl ? colorEl.dataset.color : '#4ecdc4';
+            // Draw pixel character (matching game style)
+            const cx = 20, cy = 10;
+            // Shadow
+            ctx.globalAlpha = 0.2;
+            ctx.fillStyle = '#000';
+            ctx.fillRect(cx - 2, cy + 48, 28, 4);
+            ctx.globalAlpha = 1;
+            // Skin
+            ctx.fillStyle = '#f5cfa0';
+            ctx.fillRect(cx + 4, cy, 16, 16); // head
+            // Hair
+            const hairs = ['#3a2820', '#1a1a1a', '#8b4513', '#c0392b', '#2c3e50'];
+            ctx.fillStyle = hairs[Math.floor(Date.now() / 5000) % hairs.length];
+            ctx.fillRect(cx + 2, cy - 4, 20, 8);
+            ctx.fillRect(cx, cy - 2, 4, 10);
+            // Eyes
+            const blink = Math.sin(Date.now() * 0.003) > 0.97;
+            ctx.fillStyle = '#1a1a1a';
+            if (!blink) {
+                ctx.fillRect(cx + 6, cy + 6, 3, 3);
+                ctx.fillRect(cx + 14, cy + 6, 3, 3);
+            } else {
+                ctx.fillRect(cx + 6, cy + 7, 3, 1);
+                ctx.fillRect(cx + 14, cy + 7, 3, 1);
+            }
+            // Body with color
+            ctx.fillStyle = color;
+            ctx.fillRect(cx, cy + 16, 24, 20);
+            // Belt
+            ctx.fillStyle = '#2c3e50';
+            ctx.fillRect(cx, cy + 34, 24, 3);
+            // Legs
+            const walkOff = Math.sin(frame * 0.15) * 3;
+            ctx.fillStyle = '#34495e';
+            ctx.fillRect(cx + 2, cy + 37 + walkOff, 8, 14 - walkOff);
+            ctx.fillRect(cx + 14, cy + 37 - walkOff, 8, 14 + walkOff);
+            // Shoes
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(cx, cy + 49, 10, 3);
+            ctx.fillRect(cx + 14, cy + 49, 10, 3);
+            // Mouth smile
+            ctx.fillStyle = '#c0392b';
+            ctx.fillRect(cx + 8, cy + 11, 8, 2);
+
+            // Update preview name
+            const nameInput = document.getElementById('agentName');
+            const previewName = document.getElementById('hirePreviewName');
+            if (previewName) previewName.textContent = nameInput?.value || 'PixelBot-001';
+
+            frame++;
+            _hirePreviewAnim = requestAnimationFrame(draw);
+        };
+        draw();
+    }
+
+    function stopHirePreview() {
+        if (_hirePreviewAnim) cancelAnimationFrame(_hirePreviewAnim);
+        _hirePreviewAnim = null;
     }
 
     // ============ UI EVENTS ============
     function bindUIEvents() {
-        const openHire = () => { refreshRoleSelect(); document.getElementById('modalAddAgent').classList.add('active'); };
+        const openHire = () => {
+            refreshRoleSelect();
+            updateModelInfo();
+            updateRoleStats();
+            document.getElementById('modalAddAgent').classList.add('active');
+            startHirePreview();
+        };
         document.getElementById('btnAddAgent').onclick = openHire;
         document.getElementById('btnAddAgentToolbar')?.addEventListener('click', openHire);
-        document.getElementById('closeAddAgent').onclick = () => document.getElementById('modalAddAgent').classList.remove('active');
-        document.getElementById('cancelAddAgent').onclick = () => document.getElementById('modalAddAgent').classList.remove('active');
-        document.getElementById('agentRole').onchange = updateHireCost;
+        document.getElementById('closeAddAgent').onclick = () => { document.getElementById('modalAddAgent').classList.remove('active'); stopHirePreview(); };
+        document.getElementById('cancelAddAgent').onclick = () => { document.getElementById('modalAddAgent').classList.remove('active'); stopHirePreview(); };
+        document.getElementById('agentRole').onchange = () => { updateHireCost(); updateRoleStats(); };
+        document.getElementById('agentModel').onchange = updateModelInfo;
 
         document.getElementById('confirmAddAgent').onclick = () => {
             const name = document.getElementById('agentName').value.trim() || `Agent-${Date.now().toString(36).slice(-4)}`;
@@ -1173,17 +1326,19 @@
             if (!game.isRoleUnlocked(role)) {
                 showToast(`🔒 Role "${role}" cần Level ${game.roleUnlockLevel[role]}!`, 'error'); return;
             }
-            const cost = game.hiringCosts[role] || 100;
+            const cost = getHireTotalCost();
             if (!game.canAfford(cost)) {
                 showToast(`💸 Không đủ tiền! Cần ${cost}Ⓒ, có ${game.coins}Ⓒ`, 'error'); return;
             }
             game.spend(cost, `Hire: ${name}`);
             manager.createAgent({ name, role, model, color });
             game.sfx.hire();
-            showToast(`🤖 ${name} joined! (-${cost}Ⓒ)`, 'success');
-            manager.addLog(name, `Joined as ${role}`, 'success');
+            const modelName = document.getElementById('agentModel').selectedOptions[0]?.text || model;
+            showToast(`🤖 ${name} joined! (${modelName}) (-${cost}Ⓒ)`, 'success');
+            manager.addLog(name, `Joined as ${role} with ${modelName}`, 'success');
             document.getElementById('modalAddAgent').classList.remove('active');
             document.getElementById('agentName').value = '';
+            stopHirePreview();
             refreshAgentList(); refreshHUD();
         };
 

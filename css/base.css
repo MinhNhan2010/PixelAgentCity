@@ -1,0 +1,130 @@
+/* ============================================
+   PIXEL AI AGENT MANAGER - BASE / DESIGN TOKENS
+   ============================================ */
+
+/* === CSS Custom Properties === */
+:root {
+    /* Dark theme colors */
+    --bg-primary: #0a0e1a;
+    --bg-secondary: #111827;
+    --bg-tertiary: #1a2236;
+    --bg-card: #151d30;
+    --bg-card-hover: #1c2740;
+    
+    /* Accent colors */
+    --accent-primary: #4ecdc4;
+    --accent-secondary: #6c5ce7;
+    --accent-tertiary: #ff6b6b;
+    --accent-warning: #ffd93d;
+    --accent-success: #78e08f;
+    --accent-info: #74b9ff;
+    
+    /* Text colors */
+    --text-primary: #e8eaf6;
+    --text-secondary: #8892b0;
+    --text-muted: #4a5568;
+    --text-accent: #4ecdc4;
+    
+    /* Pixel border */
+    --pixel-border: 2px solid;
+    --pixel-shadow: 4px 4px 0px;
+    --pixel-radius: 0px;
+    
+    /* Spacing */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 16px;
+    --space-lg: 24px;
+    --space-xl: 32px;
+    
+    /* Fonts */
+    --font-pixel: 'Press Start 2P', monospace;
+    --font-ui: 'Inter', sans-serif;
+    
+    /* Transitions */
+    --transition-fast: 0.15s ease;
+    --transition-normal: 0.3s ease;
+    --transition-slow: 0.5s ease;
+    
+    /* Sizes */
+    --header-height: 60px;
+    --hud-height: 40px;
+    --footer-height: 36px;
+}
+
+/* === Reset & Base === */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    font-family: var(--font-ui);
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Scanline Effect */
+.scanlines {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.03) 2px,
+        rgba(0, 0, 0, 0.03) 4px
+    );
+}
+
+/* === Scrollbar === */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--bg-tertiary);
+    border: 2px solid var(--accent-primary);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-primary);
+}
+
+/* === Common Animations === */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* === Shared Button Styles === */
+.btn-pixel {
+    font-family: var(--font-pixel);
+    border: var(--pixel-border);
+    cursor: pointer;
+    transition: var(--transition-fast);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}

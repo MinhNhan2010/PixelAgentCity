@@ -1,0 +1,44 @@
+/* ============================================
+   PIXEL AI AGENT MANAGER — CSS MODULE MANIFEST
+   ============================================
+   
+   This file replaces the original monolithic styles.css
+   by importing all modular CSS files.
+   
+   Module Order Matters:
+   1. base.css    — Design tokens, reset, scrollbar
+   2. All component modules (order-independent)
+   3. responsive.css — Media queries (last, to override)
+   ============================================ */
+
+/* === Foundation === */
+@import url('css/base.css');
+
+/* === Layout Components === */
+/* @import url('css/start-screen.css');   — Start/title screen */
+/* @import url('css/header.css');         — Top bar, nav buttons */
+/* @import url('css/hud.css');            — In-game HUD, day/night */
+/* @import url('css/office.css');         — Game canvas, buildings */
+
+/* === Management UI === */
+/* @import url('css/management.css');     — Agent panel, task lists */
+/* @import url('css/modals.css');         — Generic overlays, dialogs */
+/* @import url('css/room-shop.css');      — Room expansion shop */
+
+/* === Mini-Games === */
+/* @import url('css/poker.css');          — Texas Hold'em */
+/* @import url('css/billiards.css');      — Billiard table */
+/* @import url('css/slot-machine.css');   — Slot machine */
+/* @import url('css/gold-trading.css');   — Gold trading terminal */
+
+/* === Feature Systems === */
+/* @import url('css/features.css');       — Notifications, achievements, settings */
+/* @import url('css/tech-tree.css');      — Technology research tree */
+/* @import url('css/farm.css');           — Farm & cooking system */
+
+/* ============================================
+   TEMPORARY: Original monolithic CSS below.
+   Each @import above will be uncommented as its
+   corresponding module file is extracted and tested.
+   Lines below will be removed section-by-section.
+   ============================================ */
