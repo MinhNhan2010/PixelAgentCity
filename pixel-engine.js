@@ -228,7 +228,7 @@ class PixelEngine {
             // Large / Special
             11:{w:18,h:20,f:'grass'}, // Outdoor (separate scene)
             13:{w:20,h:10,f:'concrete'}, // Rooftop
-            14:{w:16,h:10,f:'wood'},  // Cafe
+            14:{w:16,h:12,f:'wood'},  // Cafe
         };
 
         // ═══ SCENE: INDOOR (Building) — Elevator now lives here ═══
@@ -847,11 +847,12 @@ class PixelEngine {
                 this.interactionPoints.push(
                     {id:'cafe1',type:'coffee',tx:rx+2,ty:ry+2,emoji:'☕',label:'Espresso Bar',effect:'energy'},
                     {id:'cafe2',type:'coffee',tx:rx+4,ty:ry+2,emoji:'🧋',label:'Trà sữa',effect:'energy'},
-                    {id:'cafe3',type:'rest',tx:rx+11,ty:ry+2,emoji:'🛋️',label:'Sofa nghỉ ngơi',effect:'rest'},
-                    {id:'cafe4',type:'food',tx:rx+8,ty:ry+2,emoji:'🧁',label:'Bánh ngọt',effect:'energy'},
+                    {id:'cafe3',type:'rest',tx:rx+12,ty:ry+3,emoji:'🛋️',label:'Sofa nghỉ ngơi',effect:'rest'},
+                    {id:'cafe4',type:'food',tx:rx+8,ty:ry+5,emoji:'🧁',label:'Bánh ngọt',effect:'energy'},
                     {id:'cafe5',type:'social',tx:rx+3,ty:ry+6,emoji:'💬',label:'Chat bạn bè',effect:'mood'},
-                    {id:'cafe6',type:'social',tx:rx+8,ty:ry+6,emoji:'📰',label:'Đọc báo',effect:'xp'},
-                    {id:'cafe7',type:'rest',tx:rx+13,ty:ry+9,emoji:'🎵',label:'Nghe nhạc chill',effect:'mood'},
+                    {id:'cafe6',type:'social',tx:rx+8,ty:ry+8,emoji:'📰',label:'Đọc báo',effect:'xp'},
+                    {id:'cafe7',type:'rest',tx:rx+13,ty:ry+10,emoji:'🎵',label:'Nghe nhạc chill',effect:'mood'},
+                    {id:'cafe8',type:'food',tx:rx+7,ty:ry+2,emoji:'🥤',label:'Máy bán nước',effect:'energy'},
                 );
                 // NPCs
                 f.push({t:'npc',x:(rx+3)*T,y:(ry+3)*T,charIndex:3,emoji:'☕',wanderRange:3,speeches:['Latte nóng nhé!','Trà sữa không?','Order gì ạ?','Cà phê sáng~']});

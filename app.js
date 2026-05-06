@@ -638,6 +638,12 @@
                     openGoldTrading();
                 }
             }
+            if (point.type === 'cafe') {
+                // Open Cafe Barista Challenge
+                if (!_cafeUI || !_cafeUI.overlay.classList.contains('show')) {
+                    openCafeGame();
+                }
+            }
         };
 
         // === BILLIARD SYSTEM ===
@@ -949,6 +955,104 @@
                     setTimeout(() => { if (_goldUI) _goldUI.hide(); }, 2000);
                 }
             }, 15000 + Math.random() * 10000);
+        };
+
+        // === CAFE BARISTA CHALLENGE SYSTEM ===
+        let _cafeUI = null;
+        let _cafeGame = null;
+        let _cafePlayers = [];
+
+        function openCafeGame(players) {
+            if (_cafeUI && _cafeUI.overlay.classList.contains('show')) return;
+
+            _cafeGame = new CafeGame();
+            _cafePlayers = players || [];
+
+            const overlayEl = document.getElementById('cafeOverlay');
+            _cafeUI = new CafeGameUI(overlayEl, _cafeGame);
+            _cafeUI.players = _cafePlayers;
+
+            // Validate and deduct coins on play
+            _cafeUI.onPlayRequest = (betAmount) => {
+                if (!game.canAfford(betAmount)) {
+                    showToast(`💸 Không đủ tiền! Cần ${betAmount}Ⓒ`, 'error');
+                    return false;
+                }
+                game.spend(betAmount, 'Cafe Barista bet');
+                _cafeUI.setBalance(game.coins);
+                return true;
+            };
+
+            // Handle results
+            _cafeUI.onResultCallback = (result) => {
+                if (result.win) {
+                    game._cafeWon = true; // Achievement tracking
+                    game.earn(result.payout, 'Cafe Barista win');
+                    manager.addLog('system', `☕ Cafe: ${result.name} +${result.payout}Ⓒ`, 'success');
+                    if (result.isPerfect) {
+                        showToast(`⭐☕ PERFECT DRINK! +${result.payout}Ⓒ`, 'success');
+                        engine.spawnInteractionFx(14, 10, '☕');
+                        engine.spawnInteractionFx(15, 11, '⭐');
+                    }
+                    // Mood boost for playing agents
+                    _cafePlayers.forEach(p => {
+                        if (p.mood !== undefined) p.mood = Math.min(100, p.mood + 5);
+                    });
+                } else {
+                    manager.addLog('system', `☕ Cafe: Hỏng đồ uống -${result.bet}Ⓒ`, 'info');
+                    _cafePlayers.forEach(p => {
+                        if (p.mood !== undefined) p.mood = Math.max(30, p.mood - 2);
+                    });
+                }
+                _cafeUI.setBalance(game.coins);
+                refreshHUD();
+            };
+
+            // On close
+            _cafeUI.onClose = () => {
+                if (_cafePlayers.length > 0) {
+                    _cafePlayers.forEach(p => {
+                        p._isPlayingCafe = false;
+                        if (p.mood !== undefined) p.mood = Math.min(100, p.mood + 2);
+                    });
+                }
+                const stats = _cafeGame.getStats();
+                if (stats.totalGames > 0) {
+                    manager.addLog('system', `☕ Session: ${stats.totalGames} ly, Thắng: ${stats.totalWon}Ⓒ, Thua: ${stats.totalLost}Ⓒ`, 'info');
+                }
+                _cafeGame.destroy();
+                _cafeGame = null;
+                _cafeUI = null;
+                _cafePlayers = [];
+            };
+
+            _cafeUI.setBalance(game.coins);
+            _cafeUI.show();
+            manager.addLog('system', `☕ Barista Challenge mở!`, 'info');
+            showToast('☕ Chào mừng đến Barista Challenge!', 'info');
+        }
+
+        // Agent auto-cafe request
+        manager.onCafeRequest = (players) => {
+            if (_cafeUI && _cafeUI.overlay.classList.contains('show')) return;
+            openCafeGame(players);
+            // Auto-play: agent tries one drink
+            setTimeout(() => {
+                if (_cafeGame && !_cafeGame.isPlaying && game.canAfford(_cafeGame.currentBet)) {
+                    _cafeUI?._doStart();
+                    // Auto-stop each step with random timing
+                    let autoStep = 0;
+                    const autoStopInterval = setInterval(() => {
+                        if (!_cafeGame || !_cafeGame.isPlaying || autoStep >= 3) {
+                            clearInterval(autoStopInterval);
+                            setTimeout(() => { if (_cafeUI) _cafeUI.hide(); }, 3000);
+                            return;
+                        }
+                        _cafeGame.stopIndicator();
+                        autoStep++;
+                    }, 1500 + Math.random() * 1000);
+                }
+            }, 2000);
         };
     }
 
@@ -1383,6 +1487,9 @@
 
         // Farm button
         document.getElementById('btnFarm')?.addEventListener('click', () => toggleFarmOverlay());
+
+        // Cafe Barista Challenge button
+        document.getElementById('btnCafeGame')?.addEventListener('click', () => openCafeGame());
 
         // Speed button cycle 1x→2x→3x→1x
         document.getElementById('btnSpeed').onclick = () => {
@@ -2207,6 +2314,9 @@
                 case 'c':
                     document.getElementById('btnContracts')?.click();
                     break;
+                case 'b':
+                    document.getElementById('btnCafeGame')?.click();
+                    break;
                 case 'h':
                     document.getElementById('btnAddAgent')?.click();
                     break;
@@ -2236,6 +2346,7 @@
                     document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
                     document.getElementById('notifCenter')?.style.setProperty('display', 'none');
                     document.getElementById('farmOverlay')?.style.setProperty('display', 'none');
+                    if (_cafeUI) _cafeUI.hide();
                     break;
                 case '?':
                 case '/':

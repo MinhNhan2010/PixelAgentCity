@@ -8725,3 +8725,564 @@ kbd:hover {
     border-color: #78e08f !important;
     box-shadow: 0 0 12px rgba(120, 224, 143, 0.3);
 }
+
+/* ============================================
+   CAFE GAME — BARISTA CHALLENGE
+   ============================================ */
+.cafe-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9800;
+    background: rgba(10, 8, 4, 0.96);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    backdrop-filter: blur(6px);
+}
+.cafe-overlay.show {
+    display: flex;
+    opacity: 1;
+}
+
+/* Container */
+.cafe-game-container {
+    width: 95%;
+    max-width: 520px;
+    background: linear-gradient(135deg, #1a120a, #2d1f14, #1a120a);
+    border: 3px solid #8B5E3C;
+    box-shadow: 0 0 40px rgba(139, 94, 60, 0.4), inset 0 0 60px rgba(139, 94, 60, 0.1);
+    animation: cafePop 0.4s ease-out;
+    overflow: hidden;
+    max-height: 95vh;
+    overflow-y: auto;
+}
+@keyframes cafePop {
+    0% { transform: scale(0.8); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+.cafe-perfect-flash {
+    animation: cafePerfectFlash 0.3s ease 6;
+}
+@keyframes cafePerfectFlash {
+    0%, 100% { box-shadow: 0 0 40px rgba(139, 94, 60, 0.4); }
+    50% { box-shadow: 0 0 80px rgba(255, 217, 61, 0.8), 0 0 120px rgba(255, 217, 61, 0.3); }
+}
+
+/* Header */
+.cafe-game-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: linear-gradient(90deg, #5D3A1A, #8B5E3C, #5D3A1A);
+    border-bottom: 2px solid #D4A574;
+}
+.cafe-game-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.cafe-neon {
+    font-size: 20px;
+    animation: cafeNeon 2s ease infinite;
+}
+@keyframes cafeNeon {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.4) drop-shadow(0 0 8px #D4A574); }
+}
+.cafe-title-text {
+    font-family: var(--font-pixel);
+    font-size: 12px;
+    color: #D4A574;
+    text-shadow: 0 0 10px rgba(212, 165, 116, 0.6);
+    letter-spacing: 2px;
+}
+.cafe-close-btn {
+    width: 30px;
+    height: 30px;
+    background: rgba(0,0,0,0.5);
+    border: 2px solid #ff6b6b;
+    color: #ff6b6b;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+.cafe-close-btn:hover {
+    background: #ff6b6b;
+    color: #fff;
+}
+
+/* Body */
+.cafe-game-body {
+    padding: 16px;
+}
+
+/* Cup Visual */
+.cafe-cup-display {
+    text-align: center;
+    padding: 12px 0 8px;
+    position: relative;
+}
+.cafe-cup-icon {
+    font-size: 48px;
+    display: block;
+    filter: drop-shadow(0 4px 12px rgba(139, 94, 60, 0.6));
+    transition: transform 0.3s;
+}
+.cafe-cup-display:hover .cafe-cup-icon {
+    transform: scale(1.1) rotate(-5deg);
+}
+.cafe-cup-label {
+    font-family: var(--font-pixel);
+    font-size: 8px;
+    color: #D4A574;
+    margin-top: 6px;
+}
+/* Steam animation */
+.cafe-cup-steam {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    height: 20px;
+    opacity: 0;
+    transition: opacity 0.5s;
+}
+.cafe-cup-steam.active {
+    opacity: 1;
+}
+.cafe-cup-steam span {
+    display: block;
+    width: 3px;
+    height: 16px;
+    background: rgba(212, 165, 116, 0.3);
+    border-radius: 2px;
+    animation: steamRise 1.5s ease infinite;
+}
+.cafe-cup-steam span:nth-child(2) { animation-delay: 0.3s; height: 20px; }
+.cafe-cup-steam span:nth-child(3) { animation-delay: 0.6s; height: 14px; }
+@keyframes steamRise {
+    0% { transform: translateY(0) scaleY(0.6); opacity: 0.3; }
+    50% { transform: translateY(-8px) scaleY(1); opacity: 0.7; }
+    100% { transform: translateY(-16px) scaleY(0.4); opacity: 0; }
+}
+
+/* Step Progress */
+.cafe-step-progress {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin-bottom: 14px;
+}
+.cafe-step-dot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 12px;
+    opacity: 0.4;
+    transition: all 0.3s;
+}
+.cafe-step-dot span { font-size: 18px; }
+.cafe-step-dot small {
+    font-family: var(--font-pixel);
+    font-size: 7px;
+    color: var(--text-muted);
+}
+.cafe-step-dot.active {
+    opacity: 1;
+    transform: scale(1.2);
+}
+.cafe-step-dot.active small { color: #D4A574; }
+.cafe-step-dot.done { opacity: 1; }
+.cafe-step-dot.perfect small { color: #ffd93d; }
+.cafe-step-dot.great small { color: #4ecdc4; }
+.cafe-step-dot.ok small { color: #78e08f; }
+.cafe-step-dot.miss small { color: #ff6b6b; }
+
+.cafe-step-line {
+    width: 30px;
+    height: 2px;
+    background: rgba(212, 165, 116, 0.2);
+}
+
+/* Timing Bar */
+.cafe-timing-section {
+    margin-bottom: 14px;
+    animation: fadeIn 0.3s ease;
+}
+.cafe-step-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.cafe-step-emoji { font-size: 20px; }
+.cafe-step-name {
+    font-family: var(--font-pixel);
+    font-size: 10px;
+    color: #D4A574;
+    letter-spacing: 1px;
+}
+.cafe-step-hint {
+    font-family: var(--font-pixel);
+    font-size: 7px;
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: 6px;
+}
+
+.cafe-timing-bar {
+    position: relative;
+    width: 100%;
+    height: 40px;
+    background: linear-gradient(180deg, #0d0a06, #1a120a, #0d0a06);
+    border: 2px solid #444;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
+    overflow: hidden;
+}
+.cafe-target-zone {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background: rgba(78, 205, 196, 0.2);
+    border-left: 2px solid #4ecdc4;
+    border-right: 2px solid #4ecdc4;
+    transition: left 0.2s, width 0.2s;
+}
+.cafe-bar-perfect {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #ffd93d;
+    opacity: 0.6;
+    z-index: 2;
+}
+.cafe-indicator {
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    width: 4px;
+    background: #ff6b6b;
+    border-radius: 2px;
+    z-index: 3;
+    box-shadow: 0 0 8px rgba(255, 107, 107, 0.8);
+    transition: left 0.016s linear;
+}
+.cafe-indicator.in-zone {
+    background: #78e08f;
+    box-shadow: 0 0 12px rgba(120, 224, 143, 0.8);
+}
+
+/* Step Result (per-step) */
+.cafe-step-result {
+    text-align: center;
+    padding: 16px;
+    margin-bottom: 14px;
+    animation: cafeResultPop 0.4s ease;
+}
+@keyframes cafeResultPop {
+    0% { transform: scale(0.5); opacity: 0; }
+    60% { transform: scale(1.15); }
+    100% { transform: scale(1); opacity: 1; }
+}
+.cafe-result-emoji { font-size: 32px; }
+.cafe-result-text {
+    font-family: var(--font-pixel);
+    font-size: 12px;
+    letter-spacing: 2px;
+    margin: 4px 0;
+}
+.cafe-result-stars {
+    font-size: 18px;
+    letter-spacing: 4px;
+}
+
+/* Final Result */
+.cafe-final-result {
+    text-align: center;
+    padding: 20px 16px;
+    margin-bottom: 14px;
+    background: rgba(212, 165, 116, 0.06);
+    border: 2px solid rgba(212, 165, 116, 0.2);
+    animation: cafeFinalPop 0.5s ease;
+}
+@keyframes cafeFinalPop {
+    0% { transform: scale(0.6) rotate(-10deg); opacity: 0; }
+    60% { transform: scale(1.05) rotate(2deg); }
+    100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+.cafe-final-cup {
+    font-size: 52px;
+    margin-bottom: 8px;
+    filter: drop-shadow(0 4px 16px rgba(139, 94, 60, 0.6));
+}
+.cafe-final-name {
+    font-family: var(--font-pixel);
+    font-size: 10px;
+    color: #D4A574;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+}
+.cafe-final-stars {
+    font-size: 20px;
+    letter-spacing: 4px;
+    margin-bottom: 8px;
+}
+.cafe-final-payout {
+    font-family: var(--font-pixel);
+    font-size: 14px;
+    letter-spacing: 1px;
+}
+.cafe-final-payout.cafe-win {
+    color: #78e08f;
+    text-shadow: 0 0 12px rgba(120, 224, 143, 0.5);
+}
+.cafe-final-payout.cafe-lose {
+    color: #ff6b6b;
+}
+.cafe-win-anim {
+    animation: cafeWinGlow 0.5s ease 3 alternate;
+}
+@keyframes cafeWinGlow {
+    from { box-shadow: inset 0 0 20px rgba(120, 224, 143, 0.1); }
+    to { box-shadow: inset 0 0 40px rgba(120, 224, 143, 0.3), 0 0 30px rgba(120, 224, 143, 0.2); }
+}
+
+/* Controls */
+.cafe-controls {
+    margin-bottom: 12px;
+}
+.cafe-recipe-section,
+.cafe-bet-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+.cafe-recipe-label,
+.cafe-bet-label {
+    font-family: var(--font-pixel);
+    font-size: 8px;
+    color: var(--text-secondary);
+    min-width: 65px;
+}
+.cafe-recipe-btns,
+.cafe-bet-btns {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+.cafe-recipe-btn {
+    font-family: var(--font-pixel);
+    font-size: 8px;
+    padding: 5px 8px;
+    background: #1a120a;
+    border: 2px solid #333;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.cafe-recipe-btn small {
+    font-size: 7px;
+    opacity: 0.8;
+}
+.cafe-recipe-btn:hover:not(:disabled) {
+    border-color: #D4A574;
+    color: #D4A574;
+}
+.cafe-recipe-btn.active {
+    background: rgba(212, 165, 116, 0.15);
+    border-color: #D4A574;
+    color: #D4A574;
+    box-shadow: 0 0 8px rgba(212, 165, 116, 0.3);
+}
+.cafe-recipe-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+.cafe-bet-btn {
+    font-family: var(--font-pixel);
+    font-size: 8px;
+    padding: 6px 10px;
+    background: #1a120a;
+    border: 2px solid #333;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.cafe-bet-btn:hover:not(:disabled) {
+    border-color: #ffd93d;
+    color: #ffd93d;
+}
+.cafe-bet-btn.active {
+    background: rgba(255, 217, 61, 0.15);
+    border-color: #ffd93d;
+    color: #ffd93d;
+    box-shadow: 0 0 8px rgba(255, 217, 61, 0.3);
+}
+.cafe-bet-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Action Buttons */
+.cafe-action-btns {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+}
+.cafe-start-btn {
+    font-family: var(--font-pixel);
+    font-size: 11px;
+    padding: 12px 28px;
+    background: linear-gradient(180deg, #8B5E3C, #6b4226);
+    border: 3px solid #D4A574;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 0 #4a2a14, 0 6px 12px rgba(0,0,0,0.4);
+}
+.cafe-start-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 #4a2a14, 0 8px 16px rgba(0,0,0,0.5);
+    background: linear-gradient(180deg, #a06f45, #8B5E3C);
+}
+.cafe-start-btn:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 #4a2a14;
+}
+.cafe-start-icon,
+.cafe-stop-icon {
+    font-size: 16px;
+}
+.cafe-stop-btn {
+    font-family: var(--font-pixel);
+    font-size: 12px;
+    padding: 14px 36px;
+    background: linear-gradient(180deg, #e74c3c, #c0392b);
+    border: 3px solid #ff6b6b;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 0 #922b21, 0 6px 12px rgba(0,0,0,0.4);
+    animation: stopPulse 0.8s ease infinite;
+}
+@keyframes stopPulse {
+    0%, 100% { box-shadow: 0 4px 0 #922b21, 0 6px 12px rgba(0,0,0,0.4); }
+    50% { box-shadow: 0 4px 0 #922b21, 0 6px 20px rgba(255,107,107,0.4); }
+}
+.cafe-stop-btn:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(180deg, #ff6b6b, #e74c3c);
+}
+.cafe-stop-btn:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 #922b21;
+}
+
+/* Footer */
+.cafe-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: #0d0a06;
+    border: 2px solid #222;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.cafe-balance {
+    font-family: var(--font-pixel);
+    font-size: 9px;
+    color: var(--text-secondary);
+    display: flex;
+    gap: 6px;
+}
+.cafe-balance-val { color: #ffd93d; }
+.cafe-stats {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.cafe-stat {
+    font-family: var(--font-pixel);
+    font-size: 7px;
+    color: var(--text-muted);
+}
+.cafe-win-val { color: #78e08f; }
+.cafe-lose-val { color: #ff6b6b; }
+
+/* History */
+.cafe-history {
+    max-height: 80px;
+    overflow-y: auto;
+}
+.cafe-hist-item {
+    font-family: var(--font-pixel);
+    font-size: 7px;
+    padding: 3px 8px;
+    border-bottom: 1px solid rgba(212, 165, 116, 0.08);
+    animation: fadeIn 0.3s ease;
+}
+.cafe-hist-win { color: #78e08f; }
+.cafe-hist-lose { color: #ff6b6b; }
+
+/* Players */
+.cafe-players {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.cafe-players-label {
+    font-family: var(--font-pixel);
+    font-size: 7px;
+    color: var(--text-muted);
+}
+.cafe-player-tag {
+    font-family: var(--font-pixel);
+    font-size: 7px;
+    color: var(--text-secondary);
+    padding: 2px 8px;
+    border: 1px solid #6c5ce7;
+    background: rgba(108, 92, 231, 0.1);
+}
+
+/* HUD Cafe Button */
+.hud-btn-cafe {
+    background: rgba(139, 94, 60, 0.2) !important;
+    border-color: rgba(212, 165, 116, 0.4) !important;
+    color: #D4A574 !important;
+}
+.hud-btn-cafe:hover {
+    background: rgba(139, 94, 60, 0.35) !important;
+    border-color: #D4A574 !important;
+    box-shadow: 0 0 12px rgba(212, 165, 116, 0.3);
+}
+
+/* Mobile responsive */
+@media (max-width: 480px) {
+    .cafe-game-container { max-width: 100%; }
+    .cafe-recipe-btn small { display: none; }
+    .cafe-timing-bar { height: 50px; }
+    .cafe-final-cup { font-size: 40px; }
+}
