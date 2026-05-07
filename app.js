@@ -8,6 +8,7 @@
     let _gameStartTime = null;
 
     let engine, manager, editor, chatbox, game, techTree, farmManager, statsDashboard;
+    let _shopCatalog, _shopManager, _shopUI;
 
     // Shared constants
     const ROLE_EMOJIS = {
@@ -211,6 +212,59 @@
         farmManager = new FarmManager(game);
         window._farmManager = farmManager; // for pixel-engine plot rendering
 
+        // ═══ PIXELMART SHOP SYSTEM ═══
+        _shopCatalog = new ItemCatalog();
+        _shopManager = new ItemShopManager(game, _shopCatalog);
+        _shopUI = new ItemShopUI(_shopManager, document.getElementById('pixelMartOverlay'));
+
+        // Load saved shop data
+        if (game._shopData) {
+            _shopManager.loadData(game._shopData);
+        }
+
+        // Wire shop UI callbacks
+        _shopUI.onBuy = (result) => {
+            showToast(result.msg, 'success');
+            manager.addLog('system', `🛒 ${result.msg}`, 'info');
+            refreshHUD();
+            refreshInventoryHotbar();
+        };
+        _shopUI.onSell = (result) => {
+            showToast(result.msg, 'info');
+            refreshHUD();
+            refreshInventoryHotbar();
+        };
+        _shopUI.onUseItem = (itemId) => {
+            // Use on the agent with lowest stats
+            const result = _shopManager.useItem(itemId, null, manager);
+            if (result.success) {
+                showToast(result.msg, 'success');
+                manager.addLog('system', `⚡ ${result.msg}`, 'info');
+                // Handle special actions
+                if (result.action === 'refreshContracts') {
+                    game.generateContracts();
+                    showToast('📋 Contract board refreshed!', 'info');
+                }
+            } else {
+                showToast(result.msg, 'warning');
+            }
+            _shopUI.render();
+            refreshHUD();
+            refreshInventoryHotbar();
+        };
+
+        // Wire HUD shop button
+        const btnShop = document.getElementById('btnShop');
+        if (btnShop) btnShop.onclick = () => openItemShop();
+
+        // Wire CMD bar shop button (if exists)
+        const cmdShopBtn = document.getElementById('cmdShop');
+        if (cmdShopBtn) cmdShopBtn.onclick = () => openItemShop();
+
+        // Init inventory hotbar
+        initInventoryHotbar();
+        refreshInventoryHotbar();
+
         // LayoutEditor takes engine reference
         editor = new LayoutEditor(engine);
         editor.loadSavedLayout(true);
@@ -295,6 +349,21 @@
                     manager.agents.forEach(a => {
                         engine.updateAgentStatus(a.id, a.status);
                     });
+                    // PixelMart: Update buffs + agent auto-shopping
+                    if (_shopManager) {
+                        _shopManager.updateBuffs();
+                        // Every ~10 ticks (~5s), let agents auto-shop
+                        if (Math.random() < 0.1) {
+                            manager.agents.forEach(a => {
+                                if (a.status === 'idle' && !a._isRoaming && (a.energy < 40 || a.mood < 45)) {
+                                    const result = _shopManager.agentAutoBuy(a, manager);
+                                    if (result) {
+                                        manager.addLog('system', `🛒 ${a.name}: ${result.reason}`, 'info');
+                                    }
+                                }
+                            });
+                        }
+                    }
                 }
             } catch (e) {
                 PAC.ErrorHandler.log('tick', `simulateTick error: ${e.message}`, e);
@@ -302,12 +371,15 @@
         }, 500, 'simulation-tick');
 
         // HUD refresh every second
+        let _invTickCount = 0;
         PAC.Timer.setInterval(() => {
             try {
                 if (game.started && !game.isGameOver) {
                     refreshHUD();
                     refreshAgentList();
                     refreshTaskList();
+                    // Refresh inventory hotbar every ~3s
+                    if (++_invTickCount % 3 === 0) refreshInventoryHotbar();
                 }
             } catch (e) {
                 PAC.ErrorHandler.log('hud', `refreshHUD error: ${e.message}`, e);
@@ -326,6 +398,8 @@
                     try { localStorage.setItem('pixelAgentTechTree', JSON.stringify(techTree.saveData())); } catch(e) { console.warn('TechTree auto-save failed:', e); }
                     // Save farm
                     try { localStorage.setItem('pixelAgentFarm', JSON.stringify(farmManager.saveData())); } catch(e) { console.warn('Farm auto-save failed:', e); }
+                    // Save shop
+                    try { game._shopData = _shopManager.saveData(); } catch(e) { console.warn('Shop auto-save failed:', e); }
                     // Save stats
                     try { localStorage.setItem('pixelAgentStats', JSON.stringify(statsDashboard.saveData())); } catch(e) {}
                 }
@@ -605,6 +679,8 @@
         // Also allow clicking the poker table in the engine to open poker
         engine.onInteractionClick = (point) => {
             if (point.type === 'poker' && !_pokerGame) {
+                const activeGame = isAnyMinigameActive();
+                if (activeGame) { showMinigameLockToast(activeGame); return; }
                 // Manually trigger poker with all idle agents
                 const idleAgents = Array.from(manager.agents.values()).filter(a =>
                     a.status === 'idle' && !a._isRoaming && !a._isPlayingPoker
@@ -616,6 +692,8 @@
                 }
             }
             if (point.type === 'billiard' && !_billiardGame) {
+                const activeGame = isAnyMinigameActive();
+                if (activeGame) { showMinigameLockToast(activeGame); return; }
                 // Manually trigger billiard with 2 idle agents
                 const idleAgents = Array.from(manager.agents.values()).filter(a =>
                     a.status === 'idle' && !a._isRoaming && !a._isPlayingPoker && !a._isPlayingBilliard
@@ -643,6 +721,57 @@
                 if (!_cafeUI || !_cafeUI.overlay.classList.contains('show')) {
                     openCafeGame();
                 }
+            }
+            if (point.type === 'arcade') {
+                // Open Pixel Fighter
+                if (!_fighterUI || !_fighterUI.overlay.classList.contains('show')) {
+                    openFighterGame();
+                }
+            }
+            if (point.type === 'coffee_machine') {
+                // Open Cafe Barista Challenge from coffee machine
+                if (!_cafeUI || !_cafeUI.overlay.classList.contains('show')) {
+                    openCafeGame();
+                }
+            }
+            if (point.type === 'helicopter') {
+                // Open Flappy Helicopter minigame
+                if (!_heliUI || !_heliUI.overlay.classList.contains('show')) {
+                    openFlappyHeli();
+                }
+            }
+            if (point.type === 'road_racer') {
+                // Open Road Racer minigame from the red sports car
+                if (!_racerUI || !_racerUI.overlay.classList.contains('show')) {
+                    openRoadRacer();
+                }
+            }
+            // ═══ ELEVATOR SCENE SWITCHING ═══
+            if (point.type === 'elevator') {
+                const effectToScene = {
+                    'elevator_outdoor': 'outdoor',
+                    'elevator_rooftop': 'rooftop',
+                    'elevator_cafe': 'cafe',
+                    'elevator_indoor': 'indoor',
+                    'elevator_shop': 'shop',
+                };
+                const targetScene = effectToScene[point.effect];
+                if (targetScene && engine.scenes[targetScene]) {
+                    if (engine.switchScene(targetScene)) {
+                        // Update zone buttons UI
+                        document.querySelectorAll('.zone-btn').forEach(b => {
+                            b.classList.toggle('active', b.dataset.zone === targetScene);
+                        });
+                        showToast(`🛗 Thang máy → ${point.label.replace('→ ','')}`, 'info');
+                        game.sfx.click();
+                    }
+                } else {
+                    showToast(`🔒 Khu vực chưa mở khóa!`, 'warning');
+                }
+            }
+            // ═══ PIXELMART SHOP INTERACTION ═══
+            if (point.type === 'item_shop') {
+                openItemShop();
             }
         };
 
@@ -746,8 +875,28 @@
         let _slotGame = null;
         let _slotPlayers = [];
 
+        // ═══ MINIGAME LOCK SYSTEM ═══
+        // Only one minigame can be active at a time
+        function isAnyMinigameActive() {
+            if (_pokerGame) return '🃏 Poker';
+            if (_billiardGame) return '🎱 Billiard';
+            if (_slotUI && _slotUI.overlay.classList.contains('show')) return '🎰 Slot Machine';
+            if (_goldUI && _goldUI.overlay.classList.contains('show')) return '💰 Gold Trading';
+            if (_cafeUI && _cafeUI.overlay.classList.contains('show')) return '☕ Cafe Challenge';
+            if (_fighterUI && _fighterUI.overlay.classList.contains('show')) return '🥊 Pixel Fighter';
+            if (_heliUI && _heliUI.overlay.classList.contains('show')) return '🚁 Flappy Heli';
+            if (_racerUI && _racerUI.overlay.classList.contains('show')) return '🏎️ Road Racer';
+            return null;
+        }
+
+        function showMinigameLockToast(activeGame) {
+            showToast(`🔒 Đang chơi ${activeGame}! Đóng game trước rồi mở game khác.`, 'warning');
+        }
+
         function openSlotMachine(players) {
             if (_slotUI && _slotUI.overlay.classList.contains('show')) return;
+            const activeGame = isAnyMinigameActive();
+            if (activeGame) { showMinigameLockToast(activeGame); return; }
 
             _slotGame = new SlotMachine({ stepDelay: 500 });
             _slotPlayers = players || [];
@@ -856,6 +1005,8 @@
 
         function openGoldTrading(players) {
             if (_goldUI && _goldUI.overlay.classList.contains('show')) return;
+            const activeGame = isAnyMinigameActive();
+            if (activeGame) { showMinigameLockToast(activeGame); return; }
 
             _goldPlayers = players || [];
 
@@ -964,6 +1115,8 @@
 
         function openCafeGame(players) {
             if (_cafeUI && _cafeUI.overlay.classList.contains('show')) return;
+            const activeGame = isAnyMinigameActive();
+            if (activeGame) { showMinigameLockToast(activeGame); return; }
 
             _cafeGame = new CafeGame();
             _cafePlayers = players || [];
@@ -1054,6 +1207,257 @@
                 }
             }, 2000);
         };
+
+        // === PIXEL FIGHTER SYSTEM ===
+        let _fighterUI = null;
+        let _fighterGame = null;
+
+        function openFighterGame() {
+            if (_fighterUI && _fighterUI.overlay.classList.contains('show')) return;
+            const activeGame = isAnyMinigameActive();
+            if (activeGame) { showMinigameLockToast(activeGame); return; }
+
+            const overlayEl = document.getElementById('fighter-overlay');
+            _fighterUI = new FighterGameUI(overlayEl);
+
+            // Validate and deduct coins on play
+            _fighterUI.onPlayRequest = (betAmount) => {
+                if (!game.canAfford(betAmount)) {
+                    showToast('\ud83d\udcb8 Kh\u00f4ng \u0111\u1ee7 ti\u1ec1n! C\u1ea7n ' + betAmount + '\u24b8', 'error');
+                    return false;
+                }
+                game.spend(betAmount, 'Pixel Fighter bet');
+                _fighterUI.setBalance(game.coins);
+                return true;
+            };
+
+            // Handle results
+            _fighterUI.onResultCallback = (result) => {
+                if (result.win) {
+                    game._fighterWon = true; // Achievement tracking
+                    game.earn(result.payout, 'Pixel Fighter win');
+                    manager.addLog('system', '\ud83c\udfae Fighter: ' + result.playerName + ' th\u1eafng! +' + result.payout + '\u24b8', 'success');
+                    if (result.perfect) {
+                        showToast('\u2b50\ud83c\udfae PERFECT VICTORY! +' + result.payout + '\u24b8', 'success');
+                        engine.spawnInteractionFx(30, 10, '\ud83c\udfc6');
+                    }
+                } else {
+                    manager.addLog('system', '\ud83c\udfae Fighter: Thua -' + result.bet + '\u24b8', 'info');
+                }
+                _fighterUI.setBalance(game.coins);
+                refreshHUD();
+            };
+
+            // On close
+            _fighterUI.onClose = () => {
+                if (_fighterUI && _fighterUI.game) {
+                    _fighterUI.game.destroy();
+                }
+                _fighterGame = null;
+                _fighterUI = null;
+            };
+
+            _fighterUI.setBalance(game.coins);
+            _fighterUI.show();
+            manager.addLog('system', '\ud83c\udfae Pixel Fighter m\u1edf!', 'info');
+            showToast('\ud83c\udfae Ch\u00e0o m\u1eebng \u0111\u1ebfn Pixel Fighter!', 'info');
+        }
+
+        // HUD button & keyboard shortcut for Fighter
+        const btnFighter = document.getElementById('btnFighterGame');
+        if (btnFighter) {
+            btnFighter.onclick = () => {
+                if (!_fighterUI || !_fighterUI.overlay.classList.contains('show')) {
+                    openFighterGame();
+                }
+            };
+        }
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'g' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                const tag = (e.target || {}).tagName;
+                if (tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') {
+                    if (!_fighterUI || !_fighterUI.overlay.classList.contains('show')) {
+                        openFighterGame();
+                    }
+                }
+            }
+        });
+
+        // === FLAPPY HELICOPTER SYSTEM ===
+        let _heliUI = null;
+        let _heliGame = null;
+
+        function openFlappyHeli() {
+            const activeGame = isAnyMinigameActive();
+            if (activeGame) { showMinigameLockToast(activeGame); return; }
+            if (_heliUI && _heliUI.overlay.classList.contains('show')) return;
+
+            const overlayEl = document.getElementById('flappyHeliOverlay');
+            _heliUI = new FlappyHeliUI(overlayEl);
+
+            // Validate and deduct coins on play
+            _heliUI.onPlayRequest = (betAmount) => {
+                if (!game.canAfford(betAmount)) {
+                    showToast('💸 Không đủ tiền! Cần ' + betAmount + 'Ⓒ', 'error');
+                    return false;
+                }
+                game.spend(betAmount, 'Flappy Heli bet');
+                _heliUI.setBalance(game.coins);
+                return true;
+            };
+
+            // Handle results
+            _heliUI.onResultCallback = (result) => {
+                if (result.win) {
+                    game._heliWon = true; // Achievement tracking
+                    game.earn(result.payout, 'Flappy Heli win');
+                    manager.addLog('system', '🚁 Heli: Score ' + result.score + '! +' + result.payout + 'Ⓒ', 'success');
+                    if (result.isLegendary) {
+                        showToast('🏆🚁 LEGENDARY PILOT! +' + result.payout + 'Ⓒ', 'success');
+                        engine.spawnInteractionFx(30, 10, '🚁');
+                    } else {
+                        showToast('🚁 Score: ' + result.score + '! +' + result.payout + 'Ⓒ', 'success');
+                    }
+                } else {
+                    manager.addLog('system', '🚁 Heli: Rơi! Score ' + result.score + ' -' + result.bet + 'Ⓒ', 'info');
+                }
+                _heliUI.setBalance(game.coins);
+                refreshHUD();
+            };
+
+            // On close
+            _heliUI.onClose = () => {
+                if (_heliUI && _heliUI.game) {
+                    _heliUI.game.destroy();
+                }
+                _heliGame = null;
+                _heliUI = null;
+            };
+
+            _heliUI.setBalance(game.coins);
+            _heliUI.show();
+            manager.addLog('system', '🚁 Flappy Heli mở!', 'info');
+            showToast('🚁 Chào mừng đến Flappy Heli!', 'info');
+        }
+
+        // Keyboard shortcut for Flappy Heli (V key)
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'v' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                const tag = (e.target || {}).tagName;
+                if (tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') {
+                    if (!_heliUI || !_heliUI.overlay.classList.contains('show')) {
+                        openFlappyHeli();
+                    }
+                }
+            }
+        });
+
+        // === ROAD RACER SYSTEM ===
+        let _racerUI = null;
+
+        function openRoadRacer() {
+            const activeGame = isAnyMinigameActive();
+            if (activeGame) { showMinigameLockToast(activeGame); return; }
+            if (_racerUI && _racerUI.overlay.classList.contains('show')) return;
+
+            const overlayEl = document.getElementById('roadRacerOverlay');
+            _racerUI = new RoadRacerUI(overlayEl);
+
+            // Validate and deduct coins on play
+            _racerUI.onPlayRequest = (betAmount) => {
+                if (!game.canAfford(betAmount)) {
+                    showToast('💸 Không đủ tiền! Cần ' + betAmount + 'Ⓒ', 'error');
+                    return false;
+                }
+                game.spend(betAmount, 'Road Racer bet');
+                _racerUI.setBalance(game.coins);
+                return true;
+            };
+
+            // Handle results
+            _racerUI.onResultCallback = (result) => {
+                if (result.win) {
+                    game._racerWon = true; // Achievement tracking
+                    game.earn(result.payout, 'Road Racer win');
+                    manager.addLog('system', '🏎️ Racer: Score ' + result.score + '! +' + result.payout + 'Ⓒ', 'success');
+                    if (result.score >= 80) {
+                        showToast('🏆🏎️ LEGENDARY DRIVER! +' + result.payout + 'Ⓒ', 'success');
+                        engine.spawnInteractionFx(30, 10, '🏎️');
+                    } else {
+                        showToast('🏎️ Score: ' + result.score + '! +' + result.payout + 'Ⓒ', 'success');
+                    }
+                } else {
+                    manager.addLog('system', '🏎️ Racer: Tai nạn! Score ' + result.score + ' -' + result.bet + 'Ⓒ', 'info');
+                }
+                _racerUI.setBalance(game.coins);
+                refreshHUD();
+            };
+
+            // On close
+            _racerUI.onClose = () => {
+                if (_racerUI && _racerUI.game) {
+                    _racerUI.game.destroy();
+                }
+                _racerUI = null;
+            };
+
+            _racerUI.setBalance(game.coins);
+            _racerUI.show();
+            manager.addLog('system', '🏎️ Road Racer mở!', 'info');
+            showToast('🏎️ Chào mừng đến Road Racer!', 'info');
+        }
+
+        // Keyboard shortcut for Road Racer (T key)
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 't' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                const tag = (e.target || {}).tagName;
+                if (tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') {
+                    if (!_racerUI || !_racerUI.overlay.classList.contains('show')) {
+                        openRoadRacer();
+                    }
+                }
+            }
+        });
+
+        // Agent auto-play Road Racer
+        manager.onRoadRacerRequest = (agent) => {
+            if (_racerUI && _racerUI.overlay.classList.contains('show')) {
+                agent._isPlayingRacer = false;
+                return;
+            }
+            openRoadRacer();
+            // Auto-start a game after a short delay
+            setTimeout(() => {
+                if (_racerUI && _racerUI.game && !_racerUI.game.running) {
+                    _racerUI._doStart();
+                }
+                // Auto-close after the game ends (max ~15 seconds)
+                setTimeout(() => {
+                    agent._isPlayingRacer = false;
+                    if (_racerUI) _racerUI.hide();
+                }, 12000 + Math.random() * 5000);
+            }, 2000);
+        };
+
+        // HUD button & keyboard shortcut for Cafe
+        const btnCafe = document.getElementById('btnCafeGame');
+        if (btnCafe) {
+            btnCafe.onclick = () => {
+                if (!_cafeUI || !_cafeUI.overlay.classList.contains('show')) {
+                    openCafeGame([]);
+                }
+            };
+        }
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'b' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                const tag = (e.target || {}).tagName;
+                if (tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') {
+                    if (!_cafeUI || !_cafeUI.overlay.classList.contains('show')) {
+                        openCafeGame([]);
+                    }
+                }
+            }
+        });
     }
 
     // ============ HUD ============
@@ -1560,6 +1964,102 @@
                 // Activate the tool
                 editor.setTool(tool);
             });
+        });
+
+        // ====== BOTTOM COMMAND BAR ======
+        // Pause / Resume
+        document.getElementById('cmdPause')?.addEventListener('click', () => {
+            game.isPaused = !game.isPaused;
+            const dot = document.getElementById('cmdPauseDot');
+            const label = document.getElementById('cmdPauseLabel');
+            const btn = document.getElementById('cmdPause');
+            if (dot) {
+                dot.classList.toggle('cmd-dot-on', !game.isPaused);
+                dot.classList.toggle('cmd-dot-off', game.isPaused);
+            }
+            if (label) label.textContent = game.isPaused ? 'Paused' : 'On';
+            if (btn) btn.classList.toggle('active', game.isPaused);
+            // Sync old pause button too
+            const oldPause = document.getElementById('btnPauseGame');
+            if (oldPause) {
+                oldPause.textContent = game.isPaused ? '▶' : '⏸';
+                oldPause.classList.toggle('paused', game.isPaused);
+            }
+            game.sfx.click();
+        });
+
+        // About — open shortcut overlay as a quick-help
+        document.getElementById('cmdAbout')?.addEventListener('click', () => {
+            const el = document.getElementById('shortcutOverlay');
+            if (el) el.style.display = 'flex';
+            game.sfx.click();
+        });
+
+        // Settings
+        document.getElementById('cmdSettings')?.addEventListener('click', () => {
+            document.getElementById('settingsOverlay')?.classList.add('active');
+            game.sfx.click();
+        });
+
+        // Layout
+        document.getElementById('cmdLayout')?.addEventListener('click', () => {
+            if (editor) editor.toggle();
+            game.sfx.click();
+        });
+
+        // Fit view
+        document.getElementById('cmdFit')?.addEventListener('click', () => {
+            if (engine) engine.fitView();
+            game.sfx.click();
+        });
+
+        // Agents — switch to agent tab in management panel
+        document.getElementById('cmdAgents')?.addEventListener('click', () => {
+            const tab = document.querySelector('[data-tab="agents"]');
+            if (tab) tab.click();
+            // Open management panel on mobile
+            document.querySelector('.management-panel')?.classList.add('panel-open');
+            game.sfx.click();
+        });
+
+        // Contracts
+        document.getElementById('cmdContracts')?.addEventListener('click', () => {
+            openContractBoard();
+            game.sfx.click();
+        });
+
+        // Hire
+        document.getElementById('cmdHire')?.addEventListener('click', () => {
+            document.getElementById('btnAddAgent')?.click();
+        });
+
+        // Farm
+        document.getElementById('cmdFarm')?.addEventListener('click', () => {
+            toggleFarmOverlay();
+            game.sfx.click();
+        });
+
+        // Shop (PixelMart)
+        document.getElementById('cmdShop')?.addEventListener('click', () => {
+            openItemShop();
+            game.sfx?.click?.();
+        });
+
+        // Research (Tech Tree)
+        document.getElementById('cmdResearch')?.addEventListener('click', () => {
+            openTechTreeModal();
+        });
+
+        // Speed cycle 1x → 2x → 3x → 1x
+        document.getElementById('cmdSpeed')?.addEventListener('click', () => {
+            const speeds = [1, 2, 3];
+            game.gameSpeed = speeds[(speeds.indexOf(game.gameSpeed) + 1) % speeds.length];
+            updateSpeedDisplay();
+            // Update cmd-bar speed label
+            const lbl = document.getElementById('cmdSpeedLabel');
+            if (lbl) lbl.textContent = `${game.gameSpeed}×`;
+            document.getElementById('cmdSpeed').classList.toggle('active', game.gameSpeed > 1);
+            game.sfx.click();
         });
     }
 
@@ -2315,7 +2815,6 @@
                     document.getElementById('btnContracts')?.click();
                     break;
                 case 'b':
-                    document.getElementById('btnCafeGame')?.click();
                     break;
                 case 'h':
                     document.getElementById('btnAddAgent')?.click();
@@ -2341,12 +2840,20 @@
                 case 'f':
                     toggleFarmOverlay();
                     break;
+                case 'p':
+                    openItemShop();
+                    break;
+                case 'i':
+                    _invHotbarCollapsed = !_invHotbarCollapsed;
+                    document.getElementById('inventoryHotbar')?.classList.toggle('collapsed', _invHotbarCollapsed);
+                    break;
                 case 'escape':
                     // Close all modals (with null safety)
                     document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
                     document.getElementById('notifCenter')?.style.setProperty('display', 'none');
                     document.getElementById('farmOverlay')?.style.setProperty('display', 'none');
                     if (_cafeUI) _cafeUI.hide();
+                    if (_shopUI) _shopUI.hide();
                     break;
                 case '?':
                 case '/':
@@ -2415,6 +2922,108 @@
     // ============ FARM UI SYSTEM ============
 
     let _selectedSeedId = null;
+
+    // ═══ PIXELMART SHOP ═══
+    function openItemShop() {
+        if (_shopUI && !_shopUI.isVisible()) {
+            _shopUI.show();
+            game.sfx?.click?.();
+        }
+    }
+
+    // ═══ INVENTORY HOTBAR ═══
+    let _invHotbarCollapsed = false;
+
+    function initInventoryHotbar() {
+        // Toggle collapse
+        const toggle = document.getElementById('invHotbarToggle');
+        if (toggle) {
+            toggle.addEventListener('click', () => {
+                _invHotbarCollapsed = !_invHotbarCollapsed;
+                document.getElementById('inventoryHotbar')?.classList.toggle('collapsed', _invHotbarCollapsed);
+            });
+        }
+        // Shop button
+        const shopBtn = document.getElementById('invHotbarShopBtn');
+        if (shopBtn) {
+            shopBtn.addEventListener('click', () => openItemShop());
+        }
+        // Context menu suppression on hotbar
+        document.getElementById('invHotbarItems')?.addEventListener('contextmenu', e => e.preventDefault());
+    }
+
+    function refreshInventoryHotbar() {
+        if (!_shopManager) return;
+        const container = document.getElementById('invHotbarItems');
+        const countEl = document.getElementById('invHotbarCount');
+        if (!container) return;
+
+        const items = _shopManager.getInventoryItems();
+        if (countEl) countEl.textContent = items.length;
+
+        if (items.length === 0) {
+            container.innerHTML = '<div class="inv-hotbar-empty">Chưa có vật phẩm — Mua tại 🏪 PixelMart [P]</div>';
+            return;
+        }
+
+        // Sort: consumables first, then by rarity
+        const rarityOrder = { epic: 0, rare: 1, uncommon: 2, common: 3 };
+        const catOrder = { consumable: 0, booster: 1, tool: 2, farm: 3, decoration: 4, special: 5 };
+        items.sort((a, b) => (catOrder[a.category] || 9) - (catOrder[b.category] || 9)
+            || (rarityOrder[a.rarity] || 9) - (rarityOrder[b.rarity] || 9));
+
+        let html = '';
+        items.forEach(item => {
+            const isUsable = item.category === 'consumable' || item.category === 'booster';
+            const actionText = isUsable ? '🖱️ Click: Dùng · Chuột phải: Bán' : '🖱️ Chuột phải: Bán';
+
+            html += `<div class="inv-slot rarity-${item.rarity}" data-item-id="${item.id}" title="">
+                <span class="inv-slot-icon">${item.icon}</span>
+                ${item.owned > 1 ? `<span class="inv-slot-qty">x${item.owned}</span>` : ''}
+                <div class="inv-slot-tooltip">
+                    <div class="inv-tooltip-name" style="color:${_shopManager.catalog.getRarityInfo(item.rarity).color}">${item.name}</div>
+                    <div class="inv-tooltip-desc">${item.description}</div>
+                    <div class="inv-tooltip-sell">💰 Bán: ${item.sellPrice}Ⓒ</div>
+                    <div class="inv-tooltip-action">${actionText}</div>
+                </div>
+            </div>`;
+        });
+        container.innerHTML = html;
+
+        // Bind click events
+        container.querySelectorAll('.inv-slot').forEach(slot => {
+            const itemId = slot.dataset.itemId;
+            const item = _shopManager.catalog.getById(itemId);
+            if (!item) return;
+
+            // Left click = use (consumable/booster only)
+            if (item.category === 'consumable' || item.category === 'booster') {
+                slot.addEventListener('click', () => {
+                    const result = _shopManager.useItem(itemId, null, manager);
+                    if (result.success) {
+                        showToast(`${item.icon} ${result.msg}`, 'success');
+                        refreshInventoryHotbar();
+                        if (_shopUI && _shopUI.isVisible()) _shopUI.refresh?.();
+                    } else {
+                        showToast(`❌ ${result.msg}`, 'error');
+                    }
+                });
+            }
+
+            // Right click = sell 1
+            slot.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                const result = _shopManager.sellItem(itemId, 1);
+                if (result.success) {
+                    showToast(`${item.icon} ${result.msg}`, 'info');
+                    refreshInventoryHotbar();
+                    if (_shopUI && _shopUI.isVisible()) _shopUI.refresh?.();
+                } else {
+                    showToast(`❌ ${result.msg}`, 'error');
+                }
+            });
+        });
+    }
 
     function toggleFarmOverlay() {
         const el = document.getElementById('farmOverlay');

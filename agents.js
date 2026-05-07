@@ -599,8 +599,29 @@ class AgentManager {
                     }
                 }
 
+                // === ROAD RACER: Random chance for agents to play road racer ===
+                if (!agent._isRoaming && !agent._isPlayingPoker && !agent._isPlayingBilliard
+                    && !agent._isPlayingSlot && !agent._isTrading && !agent._isFarming && !agent._isPlayingRacer
+                    && Math.random() < 0.001) {
+                    if (this.onRoadRacerRequest) {
+                        agent._isPlayingRacer = true;
+                        this.addLog(agent.name, `🏎️ Đi lái xe thử vận may!`, 'info');
+                        if (this.engine) {
+                            // Go to red sports car in outdoor area (rx+18, ry+3)
+                            const success = this.engine.sendAgentTo(agent.id, 19, 4, () => {
+                                this.engine.showSpeechBubble(agent.id, '🏎️ Đua xe nào!', 3000);
+                                this.engine.spawnInteractionFx(19, 4, '🏎️');
+                                this.onRoadRacerRequest(agent);
+                            });
+                            if (!success) {
+                                agent._isPlayingRacer = false;
+                            }
+                        }
+                    }
+                }
+
                 // === FREE ROAMING: Visit furniture/interaction points ===
-                if (this.engine && !agent._isRoaming && !agent._isFarming && Math.random() < 0.006) {
+                if (this.engine && !agent._isRoaming && !agent._isFarming && !agent._isPlayingRacer && Math.random() < 0.006) {
                     const point = this.engine.getRandomInteraction();
                     if (point) {
                         agent._isRoaming = true;

@@ -149,7 +149,7 @@ class GameState {
         this.coinPopups = []; // { amount, x, y, life }
 
         // === ROOM UNLOCK SYSTEM ===
-        this.unlockedRooms = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]; // All rooms unlocked
+        this.unlockedRooms = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]; // All rooms unlocked
 
         // Room catalog — positions auto-calculated by pixel-engine
         this.roomCatalog = [
@@ -620,6 +620,7 @@ class GameState {
                 availableContracts: this.availableContracts,
                 activeContracts: this.activeContracts,
                 unlockedRooms: this.unlockedRooms,
+                shopData: this._shopData || null,
                 savedAt: new Date().toISOString(),
             };
             localStorage.setItem('pixelAgentGameState', JSON.stringify(data));
@@ -644,8 +645,9 @@ class GameState {
                 nextContractId: d.nextContractId ?? 1, gameSpeed: d.gameSpeed ?? 1,
                 availableContracts: d.availableContracts ?? [],
                 activeContracts: d.activeContracts ?? [],
-                unlockedRooms: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+                unlockedRooms: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
             });
+            this._shopData = d.shopData || null;
             return true;
         } catch (e) { console.warn('Failed to load game:', e); return false; }
     }

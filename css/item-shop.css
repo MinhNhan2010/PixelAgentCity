@@ -1,0 +1,574 @@
+/* ═══════════════════════════════════════════════════════
+   item-shop.css — PixelMart Shop UI Styles
+   Pixel art aesthetic with glassmorphism and neon accents
+   ═══════════════════════════════════════════════════════ */
+
+/* ═══ OVERLAY ═══ */
+.pixelmart-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10, 14, 26, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+.pixelmart-overlay.show {
+    opacity: 1;
+}
+
+/* ═══ MAIN PANEL ═══ */
+.pixelmart-panel {
+    position: relative;
+    width: 90vw;
+    max-width: 860px;
+    max-height: 85vh;
+    background: linear-gradient(145deg, #0f1629 0%, #1a1a3e 50%, #0f1629 100%);
+    border: 2px solid rgba(78, 205, 196, 0.3);
+    border-radius: 16px;
+    box-shadow:
+        0 0 40px rgba(78, 205, 196, 0.15),
+        0 0 80px rgba(155, 89, 182, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: pmSlideIn 0.35s ease-out;
+}
+
+@keyframes pmSlideIn {
+    from { transform: translateY(30px) scale(0.97); opacity: 0; }
+    to   { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* ═══ HEADER ═══ */
+.pixelmart-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: linear-gradient(135deg, #e94560 0%, #0f3460 60%, #1a1a3e 100%);
+    border-bottom: 2px solid rgba(233, 69, 96, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+.pixelmart-header::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.06) 2px,
+        rgba(0,0,0,0.06) 4px
+    );
+    pointer-events: none;
+}
+.pixelmart-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+.pixelmart-logo {
+    font-size: 24px;
+    filter: drop-shadow(0 0 6px rgba(255,217,61,0.5));
+    animation: pmLogoGlow 2s ease-in-out infinite;
+}
+@keyframes pmLogoGlow {
+    0%, 100% { filter: drop-shadow(0 0 6px rgba(255,217,61,0.3)); }
+    50%      { filter: drop-shadow(0 0 12px rgba(255,217,61,0.7)); }
+}
+.pixelmart-name {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 14px;
+    color: #fff;
+    text-shadow: 0 0 10px rgba(233, 69, 96, 0.5);
+    letter-spacing: 1px;
+}
+.pixelmart-sub {
+    font-size: 10px;
+    color: rgba(255,255,255,0.5);
+    font-family: 'Inter', sans-serif;
+}
+.pixelmart-coins {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(0,0,0,0.35);
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 217, 61, 0.3);
+}
+.pixelmart-coin-icon { font-size: 16px; }
+.pixelmart-coin-val {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 12px;
+    color: #ffd93d;
+    text-shadow: 0 0 6px rgba(255,217,61,0.4);
+    min-width: 50px;
+    text-align: right;
+}
+.pixelmart-coin-label {
+    color: rgba(255,217,61,0.6);
+    font-size: 12px;
+}
+.pixelmart-close {
+    width: 32px;
+    height: 32px;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.pixelmart-close:hover {
+    background: rgba(233, 69, 96, 0.5);
+    border-color: #e94560;
+    transform: scale(1.1);
+}
+
+/* ═══ TABS ═══ */
+.pixelmart-tabs {
+    display: flex;
+    gap: 2px;
+    padding: 8px 12px;
+    background: rgba(0,0,0,0.25);
+    border-bottom: 1px solid rgba(78,205,196,0.1);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.pixelmart-tabs::-webkit-scrollbar { display: none; }
+
+.pm-tab {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.04);
+    color: rgba(255,255,255,0.5);
+    font-size: 11px;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.pm-tab:hover {
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.8);
+}
+.pm-tab.active {
+    background: rgba(78,205,196,0.12);
+    border-color: var(--tab-color, #4ecdc4);
+    color: var(--tab-color, #4ecdc4);
+    box-shadow: 0 0 8px rgba(78,205,196,0.15);
+}
+.pm-tab-icon { font-size: 14px; }
+.pm-tab-name { font-weight: 600; }
+.pm-tab-count {
+    font-size: 9px;
+    background: rgba(255,255,255,0.1);
+    padding: 1px 5px;
+    border-radius: 4px;
+}
+
+/* ═══ BODY LAYOUT ═══ */
+.pixelmart-body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+}
+
+/* ═══ ITEM GRID ═══ */
+.pixelmart-items {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    align-content: start;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(78,205,196,0.3) transparent;
+}
+.pixelmart-items::-webkit-scrollbar { width: 6px; }
+.pixelmart-items::-webkit-scrollbar-thumb {
+    background: rgba(78,205,196,0.3);
+    border-radius: 3px;
+}
+
+.pm-item {
+    background: linear-gradient(160deg, rgba(22,33,62,0.9), rgba(15,20,40,0.95));
+    border: 1px solid rgba(78,205,196,0.15);
+    border-radius: 10px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: all 0.25s ease;
+    cursor: default;
+    position: relative;
+    overflow: hidden;
+}
+.pm-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--rarity-color, #4ecdc4), transparent);
+    opacity: 0.6;
+}
+.pm-item:hover {
+    border-color: var(--rarity-color, #4ecdc4);
+    box-shadow: var(--rarity-glow, 0 0 8px rgba(78,205,196,0.2));
+    transform: translateY(-2px);
+}
+.pm-item-disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.pm-item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.pm-item-icon {
+    font-size: 28px;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+.pm-item-rarity {
+    font-size: 8px;
+    font-family: 'Press Start 2P', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.pm-item-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: #e6e6e6;
+    font-family: 'Inter', sans-serif;
+}
+.pm-item-desc {
+    font-size: 10px;
+    color: rgba(255,255,255,0.4);
+    line-height: 1.4;
+    min-height: 28px;
+}
+.pm-item-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-top: auto;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+}
+.pm-item-price {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    color: #ffd93d;
+}
+.pm-price-red { color: #ff6b6b !important; }
+.pm-item-owned {
+    font-size: 10px;
+    color: rgba(78,205,196,0.7);
+}
+
+.pm-buy-btn {
+    padding: 4px 10px;
+    border: 1px solid rgba(78,205,196,0.4);
+    border-radius: 6px;
+    background: rgba(78,205,196,0.12);
+    color: #4ecdc4;
+    font-size: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Inter', sans-serif;
+}
+.pm-buy-btn:hover:not(.disabled) {
+    background: rgba(78,205,196,0.25);
+    border-color: #4ecdc4;
+    box-shadow: 0 0 8px rgba(78,205,196,0.3);
+    transform: scale(1.05);
+}
+.pm-buy-btn.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* ═══ RARITY ANIMATIONS ═══ */
+.pm-rarity-rare .pm-item-icon { animation: pmRareGlow 3s ease-in-out infinite; }
+.pm-rarity-epic .pm-item-icon { animation: pmEpicGlow 2s ease-in-out infinite; }
+@keyframes pmRareGlow {
+    0%, 100% { filter: drop-shadow(0 0 4px rgba(155,89,182,0.3)); }
+    50%      { filter: drop-shadow(0 0 10px rgba(155,89,182,0.6)); }
+}
+@keyframes pmEpicGlow {
+    0%, 100% { filter: drop-shadow(0 0 4px rgba(230,126,34,0.4)) brightness(1); }
+    50%      { filter: drop-shadow(0 0 14px rgba(230,126,34,0.7)) brightness(1.1); }
+}
+
+/* ═══ SIDEBAR ═══ */
+.pixelmart-sidebar {
+    width: 220px;
+    border-left: 1px solid rgba(78,205,196,0.1);
+    background: rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(78,205,196,0.2) transparent;
+}
+.pixelmart-sidebar::-webkit-scrollbar { width: 4px; }
+.pixelmart-sidebar::-webkit-scrollbar-thumb {
+    background: rgba(78,205,196,0.2);
+    border-radius: 2px;
+}
+
+.pixelmart-inventory-header,
+.pixelmart-daily-header {
+    padding: 10px 12px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: #4ecdc4;
+    border-bottom: 1px solid rgba(78,205,196,0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.pixelmart-daily-header {
+    color: #e67e22;
+    border-top: 1px solid rgba(230,126,34,0.15);
+    margin-top: auto;
+}
+.pixelmart-inv-count {
+    background: rgba(78,205,196,0.2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 8px;
+}
+
+/* ═══ INVENTORY ITEMS ═══ */
+.pixelmart-inventory {
+    padding: 6px;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 100px;
+}
+.pm-inv-empty {
+    text-align: center;
+    color: rgba(255,255,255,0.25);
+    font-size: 11px;
+    padding: 20px 10px;
+    font-style: italic;
+}
+.pm-inv-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    border-radius: 6px;
+    transition: background 0.15s;
+}
+.pm-inv-item:hover {
+    background: rgba(78,205,196,0.08);
+}
+.pm-inv-icon { font-size: 16px; }
+.pm-inv-name {
+    flex: 1;
+    font-size: 10px;
+    color: #c8c8c8;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.pm-inv-qty {
+    font-size: 9px;
+    color: rgba(78,205,196,0.7);
+    font-family: 'Press Start 2P', monospace;
+}
+.pm-inv-actions {
+    display: flex;
+    gap: 3px;
+}
+.pm-inv-btn {
+    width: 22px;
+    height: 22px;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 4px;
+    background: rgba(255,255,255,0.05);
+    color: #fff;
+    font-size: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+}
+.pm-inv-btn:hover {
+    background: rgba(78,205,196,0.2);
+    border-color: rgba(78,205,196,0.4);
+    transform: scale(1.1);
+}
+
+/* ═══ DAILY SPECIALS ═══ */
+.pixelmart-daily {
+    padding: 6px;
+}
+.pm-daily-empty {
+    text-align: center;
+    color: rgba(230,126,34,0.4);
+    font-size: 10px;
+    padding: 10px;
+}
+.pm-daily-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(230,126,34,0.15);
+    margin-bottom: 4px;
+    background: rgba(230,126,34,0.04);
+    transition: all 0.2s;
+}
+.pm-daily-item:hover {
+    border-color: var(--rarity-color, #e67e22);
+    background: rgba(230,126,34,0.08);
+}
+.pm-daily-icon { font-size: 20px; }
+.pm-daily-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.pm-daily-name {
+    font-size: 10px;
+    color: #e6e6e6;
+    font-weight: 600;
+}
+.pm-daily-price {
+    font-size: 8px;
+    color: #ffd93d;
+    font-family: 'Press Start 2P', monospace;
+}
+.pm-daily-buy {
+    width: 28px;
+    height: 28px;
+    border: 1px solid rgba(230,126,34,0.4);
+    border-radius: 6px;
+    background: rgba(230,126,34,0.15);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.pm-daily-buy:hover:not(.disabled) {
+    background: rgba(230,126,34,0.3);
+    transform: scale(1.1);
+    box-shadow: 0 0 8px rgba(230,126,34,0.3);
+}
+.pm-daily-buy.disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+/* ═══ SHOP STATS ═══ */
+.pixelmart-stats {
+    padding: 8px 12px;
+    border-top: 1px solid rgba(78,205,196,0.08);
+}
+.pm-stat-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    color: rgba(255,255,255,0.35);
+    padding: 2px 0;
+    font-family: 'Inter', sans-serif;
+}
+.pm-stat-row span:last-child {
+    color: rgba(78,205,196,0.5);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+}
+
+/* ═══ FEEDBACK TOAST ═══ */
+.pm-feedback {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 100;
+    pointer-events: none;
+    white-space: nowrap;
+}
+.pm-feedback-show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+.pm-feedback-success {
+    background: rgba(46, 204, 113, 0.2);
+    border: 1px solid rgba(46, 204, 113, 0.4);
+    color: #2ecc71;
+    box-shadow: 0 0 16px rgba(46,204,113,0.2);
+}
+.pm-feedback-error {
+    background: rgba(255, 107, 107, 0.2);
+    border: 1px solid rgba(255, 107, 107, 0.4);
+    color: #ff6b6b;
+    box-shadow: 0 0 16px rgba(255,107,107,0.2);
+}
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width: 768px) {
+    .pixelmart-panel {
+        width: 96vw;
+        max-height: 92vh;
+        border-radius: 12px;
+    }
+    .pixelmart-body {
+        flex-direction: column;
+    }
+    .pixelmart-sidebar {
+        width: 100%;
+        border-left: none;
+        border-top: 1px solid rgba(78,205,196,0.1);
+        max-height: 200px;
+    }
+    .pixelmart-items {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    }
+    .pixelmart-name { font-size: 11px; }
+    .pixelmart-sub { display: none; }
+    .pm-tab-name { display: none; }
+    .pm-tab-count { display: none; }
+    .pm-tab { padding: 6px 10px; }
+}
