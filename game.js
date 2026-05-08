@@ -149,7 +149,7 @@ class GameState {
         this.coinPopups = []; // { amount, x, y, life }
 
         // === ROOM UNLOCK SYSTEM ===
-        this.unlockedRooms = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]; // All rooms unlocked
+        this.unlockedRooms = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]; // All rooms unlocked
 
         // Room catalog — positions auto-calculated by pixel-engine
         this.roomCatalog = [
@@ -168,6 +168,8 @@ class GameState {
             { id: 12, name: 'Thang Máy',          icon: '🛗', cost: 300,  level: 2, w: 6,  h: 6,  floor: 'metal',  desc: 'Kết nối các tầng, di chuyển nhanh', bonus: 'Travel speed' },
             { id: 13, name: 'Tầng Thượng',        icon: '🌆', cost: 1500, level: 6, w: 18, h: 10, floor: 'concrete', desc: 'Sân thượng ngắm cảnh, kính thiên văn', bonus: 'Premium mood + XP' },
             { id: 14, name: 'Quán Cafe',           icon: '☕', cost: 400,  level: 2, w: 16, h: 12, floor: 'wood',   desc: 'Quán cà phê ấm cúng, trà sữa, bánh ngọt', bonus: 'Energy + Mood' },
+            { id: 15, name: 'PixelMart',            icon: '🏪', cost: 600,  level: 3, w: 22, h: 14, floor: 'tile',   desc: 'Siêu thị mua sắm vật phẩm', bonus: 'Items + Buffs' },
+            { id: 16, name: 'Công Viên',            icon: '🌳', cost: 1000, level: 4, w: 34, h: 24, floor: 'grass',  desc: 'Công viên xanh với vườn hoa, sân chơi, hồ cá, sân khấu', bonus: 'Mood + Energy + Rest' },
         ];
 
         // Sound
@@ -645,7 +647,7 @@ class GameState {
                 nextContractId: d.nextContractId ?? 1, gameSpeed: d.gameSpeed ?? 1,
                 availableContracts: d.availableContracts ?? [],
                 activeContracts: d.activeContracts ?? [],
-                unlockedRooms: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+                unlockedRooms: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
             });
             this._shopData = d.shopData || null;
             return true;

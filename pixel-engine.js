@@ -238,6 +238,7 @@ class PixelEngine {
             13:{w:28,h:14,f:'rooftop'},      // Rooftop
             14:{w:24,h:16,f:'cafe_wood'},    // Cafe
             15:{w:22,h:14,f:'mart_tile'},          // PixelMart Shop
+            16:{w:34,h:24,f:'park_grass'},          // Public Park
         };
 
         // ═══ SCENE: INDOOR (Building) — Elevator now lives here ═══
@@ -265,6 +266,11 @@ class PixelEngine {
         // ═══ SCENE: PIXELMART SHOP ═══
         if (this._unlockedRooms.includes(15)) {
             this._buildScene('shop', [15], [], roomDefs, LX + 2, RX, PAD, '🏪');
+        }
+
+        // ═══ SCENE: PUBLIC PARK ═══
+        if (this._unlockedRooms.includes(16)) {
+            this._buildScene('park', [16], [], roomDefs, LX + 1, RX, PAD, '🏞️');
         }
         // Activate default scene
         const defaultScene = this.scenes['indoor'] || this.scenes[Object.keys(this.scenes)[0]];
@@ -486,7 +492,8 @@ class PixelEngine {
                     outdoor: '🏞️ NGOÀI TRỜI',
                     rooftop: '🌆 TẦNG THƯỢNG',
                     cafe: '☕ QUÁN CAFE',
-                    shop: '🏪 PIXELMART'
+                    shop: '🏪 PIXELMART',
+                    park: '🌳 CÔNG VIÊN'
                 }[tr.target] || tr.target.toUpperCase();
                 this.ctx.fillText(label, this.canvas.width / 2, this.canvas.height / 2);
                 this.ctx.textAlign = 'start';
@@ -927,6 +934,7 @@ class PixelEngine {
                     {id:'elev_rooftop',type:'elevator',tx:rx+3,ty:ry+4,emoji:'🌆',label:'→ Tầng thượng',effect:'elevator_rooftop'},
                     {id:'elev_cafe',type:'elevator',tx:rx+3,ty:ry+5,emoji:'☕',label:'→ Quán Cafe',effect:'elevator_cafe'},
                     {id:'elev_shop',type:'elevator',tx:rx+3,ty:ry+6,emoji:'🏪',label:'→ PixelMart',effect:'elevator_shop'},
+                    {id:'elev_park',type:'elevator',tx:rx+3,ty:ry+7,emoji:'🌳',label:'→ Công Viên',effect:'elevator_park'},
                 );
                 break;
             }
@@ -1130,6 +1138,207 @@ class PixelEngine {
                 f.push({t:'npc',x:(rx+4)*T,y:(ry+3)*T,charIndex:3,emoji:'🛒',wanderRange:3,speeches:['Xin mời!','Hôm nay giảm giá!','Đồ tươi mới về!','Thanh toán ở đây!']});
                 f.push({t:'npc',x:(rx+8)*T,y:(ry+6)*T,charIndex:1,emoji:'📦',wanderRange:4,speeches:['Hàng chính hãng!','Mua 2 giảm 20%!','Đồ rare nè!','Sản phẩm mới!']});
                 f.push({t:'npc',x:(rx+16)*T,y:(ry+6)*T,charIndex:5,emoji:'🧊',wanderRange:2,speeches:['Kem ngon lắm!','Đồ đông lạnh đây!','Fresh & Cool!']});
+                break;
+            }
+            case 16: { // Công Viên — Public Park (34×24)
+                // ═══════════════════════════════════════════════
+                //  LAYOUT (34 cols × 24 rows) — 6 themed zones
+                //  Rows 0-5:   Grand Entrance + Statue + Topiary
+                //  Rows 6-11:  Flower Garden + Zen Garden
+                //  Rows 12-17: Playground + Koi Pond
+                //  Rows 18-23: Music Gazebo + Rest Areas
+                // ═══════════════════════════════════════════════
+
+                // ═══ ZONE 1: GRAND ENTRANCE (rows 0-5) ═══
+                // Tree-lined entrance boulevard
+                f.push({t:'tree',x:rx*T,y:ry*T});
+                f.push({t:'tree',x:(rx+6)*T,y:ry*T});
+                f.push({t:'tree',x:(rx+12)*T,y:ry*T});
+                f.push({t:'tree',x:(rx+22)*T,y:ry*T});
+                f.push({t:'tree',x:(rx+28)*T,y:ry*T});
+                f.push({t:'tree',x:(rx+33)*T,y:ry*T});
+                // Park entrance sign
+                f.push({t:'park_gate',x:(rx+15)*T,y:ry*T});
+                // Street lamps along entrance path
+                f.push({t:'street_lamp',x:(rx+3)*T,y:(ry+1)*T});
+                f.push({t:'street_lamp',x:(rx+31)*T,y:(ry+1)*T});
+                // Memorial statue centerpiece
+                f.push({t:'park_statue',x:(rx+16)*T,y:(ry+2)*T});
+                // Topiary hedges flanking statue
+                f.push({t:'topiary',x:(rx+10)*T,y:(ry+2)*T});
+                f.push({t:'topiary',x:(rx+12)*T,y:(ry+2)*T});
+                f.push({t:'topiary',x:(rx+21)*T,y:(ry+2)*T});
+                f.push({t:'topiary',x:(rx+23)*T,y:(ry+2)*T});
+                // Welcome benches
+                f.push({t:'bench',x:(rx+5)*T,y:(ry+3)*T});
+                f.push({t:'bench',x:(rx+28)*T,y:(ry+3)*T});
+                // Flower pots along entrance
+                f.push({t:'orchid',x:(rx+8)*T,y:(ry+4)*T});
+                f.push({t:'orchid',x:(rx+25)*T,y:(ry+4)*T});
+                // Bird feeders
+                f.push({t:'bird_bath',x:(rx+2)*T,y:(ry+4)*T});
+                f.push({t:'bird_bath',x:(rx+32)*T,y:(ry+4)*T});
+
+                // ═══ ZONE 2: FLOWER GARDEN (rows 6-11, left) ═══
+                f.push({t:'flower_bed',x:(rx+1)*T,y:(ry+6)*T,color:'#e74c3c'});
+                f.push({t:'flower_bed',x:(rx+4)*T,y:(ry+6)*T,color:'#f39c12'});
+                f.push({t:'flower_bed',x:(rx+7)*T,y:(ry+6)*T,color:'#9b59b6'});
+                f.push({t:'flower_bed',x:(rx+10)*T,y:(ry+6)*T,color:'#3498db'});
+                f.push({t:'flower_bed',x:(rx+1)*T,y:(ry+9)*T,color:'#ff6b9d'});
+                f.push({t:'flower_bed',x:(rx+4)*T,y:(ry+9)*T,color:'#ffd93d'});
+                f.push({t:'flower_bed',x:(rx+7)*T,y:(ry+9)*T,color:'#00b894'});
+                f.push({t:'flower_bed',x:(rx+10)*T,y:(ry+9)*T,color:'#e91e63'});
+                f.push({t:'bench',x:(rx+3)*T,y:(ry+8)*T});
+                f.push({t:'bench',x:(rx+9)*T,y:(ry+8)*T});
+                f.push({t:'fountain',x:(rx+6)*T,y:(ry+11)*T});
+                f.push({t:'street_lamp',x:(rx+1)*T,y:(ry+7)*T});
+                f.push({t:'street_lamp',x:(rx+12)*T,y:(ry+7)*T});
+                f.push({t:'animal_bird',x:(rx+3)*T,y:(ry+7)*T,birdColor:'#f39c12',bellyColor:'#fdebd0'});
+                f.push({t:'animal_bird',x:(rx+8)*T,y:(ry+10)*T,birdColor:'#e91e63',bellyColor:'#fce4ec'});
+
+                // ═══ ZONE 3: ZEN GARDEN (rows 6-11, right) ═══
+                f.push({t:'zen_rock',x:(rx+18)*T,y:(ry+7)*T});
+                f.push({t:'zen_rock',x:(rx+22)*T,y:(ry+9)*T});
+                f.push({t:'zen_rock',x:(rx+20)*T,y:(ry+10)*T});
+                f.push({t:'bonsai',x:(rx+16)*T,y:(ry+6)*T});
+                f.push({t:'bonsai',x:(rx+25)*T,y:(ry+6)*T});
+                f.push({t:'bamboo',x:(rx+15)*T,y:(ry+8)*T});
+                f.push({t:'bamboo',x:(rx+26)*T,y:(ry+8)*T});
+                f.push({t:'bench',x:(rx+17)*T,y:(ry+11)*T});
+                f.push({t:'bench',x:(rx+23)*T,y:(ry+11)*T});
+                f.push({t:'street_lamp',x:(rx+15)*T,y:(ry+6)*T});
+                f.push({t:'street_lamp',x:(rx+26)*T,y:(ry+6)*T});
+                f.push({t:'succulent',x:(rx+19)*T,y:(ry+8)*T});
+                f.push({t:'succulent',x:(rx+24)*T,y:(ry+7)*T});
+                f.push({t:'lamp_lantern',x:(rx+17)*T,y:(ry+7)*T});
+                f.push({t:'lamp_lantern',x:(rx+24)*T,y:(ry+10)*T});
+                f.push({t:'hanging_plant',x:(rx+28)*T,y:(ry+6)*T});
+                f.push({t:'hanging_plant',x:(rx+30)*T,y:(ry+6)*T});
+                f.push({t:'hanging_plant',x:(rx+32)*T,y:(ry+6)*T});
+
+                // ═══ ZONE 4: PLAYGROUND (rows 12-17, left) ═══
+                f.push({t:'playground_swing',x:(rx+2)*T,y:(ry+13)*T});
+                f.push({t:'playground_slide',x:(rx+6)*T,y:(ry+13)*T});
+                f.push({t:'playground_seesaw',x:(rx+10)*T,y:(ry+13)*T});
+                f.push({t:'sandbox',x:(rx+3)*T,y:(ry+16)*T});
+                f.push({t:'bench',x:(rx+1)*T,y:(ry+15)*T});
+                f.push({t:'bench',x:(rx+12)*T,y:(ry+15)*T});
+                f.push({t:'fruit_tree',x:rx*T,y:(ry+12)*T,fruit:'cherry'});
+                f.push({t:'fruit_tree',x:(rx+13)*T,y:(ry+12)*T,fruit:'apple'});
+                f.push({t:'street_lamp',x:(rx+5)*T,y:(ry+12)*T});
+                f.push({t:'street_lamp',x:(rx+10)*T,y:(ry+12)*T});
+                f.push({t:'animal_cat',x:(rx+8)*T,y:(ry+16)*T,catColor:'#e67e22',stripeColor:'#d68910'});
+                f.push({t:'animal_dog',x:(rx+11)*T,y:(ry+17)*T,dogColor:'#c0392b',lightColor:'#e74c3c'});
+
+                // ═══ ZONE 5: GRAND LAKE + DOCK + FISHING BOATS (rows 12-19, right) ═══
+                // Lake body: 14 cols × 6 rows (cols 17-30, rows 13-18)
+                f.push({t:'park_lake',x:(rx+17)*T,y:(ry+13)*T,w:14,h:6});
+                // Lotus flowers & water lilies ON the lake surface
+                f.push({t:'lotus',x:(rx+21)*T,y:(ry+14)*T});
+                f.push({t:'lotus',x:(rx+26)*T,y:(ry+16)*T});
+                f.push({t:'lotus',x:(rx+29)*T,y:(ry+15)*T});
+                f.push({t:'water_lily',x:(rx+23)*T,y:(ry+17)*T});
+                f.push({t:'water_lily',x:(rx+19)*T,y:(ry+16)*T});
+                f.push({t:'water_lily',x:(rx+27)*T,y:(ry+14)*T});
+                // Wooden dock / pier (on west shore, extends into lake)
+                f.push({t:'park_dock',x:(rx+17)*T,y:(ry+14)*T});
+                // Fishing boats (inside lake, away from dock)
+                f.push({t:'fishing_boat',x:(rx+23)*T,y:(ry+14)*T,variant:0}); // Red boat
+                f.push({t:'fishing_boat',x:(rx+28)*T,y:(ry+16)*T,variant:1}); // Blue boat
+                // Willow trees on SHORE (outside lake)
+                f.push({t:'willow_tree',x:(rx+15)*T,y:(ry+12)*T});
+                f.push({t:'willow_tree',x:(rx+31)*T,y:(ry+12)*T});
+                // Cattails on shore edge (outside lake)
+                f.push({t:'cattail',x:(rx+16)*T,y:(ry+15)*T});
+                f.push({t:'cattail',x:(rx+16)*T,y:(ry+17)*T});
+                f.push({t:'cattail',x:(rx+31)*T,y:(ry+15)*T});
+                f.push({t:'cattail',x:(rx+31)*T,y:(ry+17)*T});
+                // Shore benches (on land, north of lake)
+                f.push({t:'bench',x:(rx+19)*T,y:(ry+12)*T});
+                f.push({t:'bench',x:(rx+27)*T,y:(ry+12)*T});
+                // Shore benches (south of lake)
+                f.push({t:'bench',x:(rx+20)*T,y:(ry+19)*T});
+                f.push({t:'bench',x:(rx+26)*T,y:(ry+19)*T});
+                // Street lamps on shore
+                f.push({t:'street_lamp',x:(rx+15)*T,y:(ry+14)*T});
+                f.push({t:'street_lamp',x:(rx+32)*T,y:(ry+14)*T});
+                f.push({t:'street_lamp',x:(rx+15)*T,y:(ry+18)*T});
+                f.push({t:'street_lamp',x:(rx+32)*T,y:(ry+18)*T});
+                // Decorative fern and rocks on shore
+                f.push({t:'fern',x:(rx+16)*T,y:(ry+13)*T});
+                f.push({t:'fern',x:(rx+31)*T,y:(ry+13)*T});
+                f.push({t:'zen_rock',x:(rx+32)*T,y:(ry+16)*T});
+                f.push({t:'zen_rock',x:(rx+15)*T,y:(ry+16)*T});
+
+                // ═══ ZONE 6: MUSIC GAZEBO + REST (rows 20-23) ═══
+                f.push({t:'park_gazebo',x:(rx+14)*T,y:(ry+20)*T});
+                f.push({t:'park_stage',x:(rx+19)*T,y:(ry+20)*T});
+                f.push({t:'bench',x:(rx+12)*T,y:(ry+22)*T});
+                f.push({t:'bench',x:(rx+15)*T,y:(ry+22)*T});
+                f.push({t:'bench',x:(rx+22)*T,y:(ry+22)*T});
+                f.push({t:'bench',x:(rx+25)*T,y:(ry+22)*T});
+                // Picnic area (left)
+                f.push({t:'parasol',x:(rx+2)*T,y:(ry+19)*T});
+                f.push({t:'table_small',x:(rx+2)*T,y:(ry+21)*T});
+                f.push({t:'bench',x:(rx+4)*T,y:(ry+21)*T});
+                f.push({t:'parasol',x:(rx+7)*T,y:(ry+19)*T});
+                f.push({t:'table_small',x:(rx+7)*T,y:(ry+21)*T});
+                f.push({t:'bench',x:(rx+9)*T,y:(ry+21)*T});
+                // Snack area (right, south of lake — on dry land)
+                f.push({t:'vending',x:(rx+28)*T,y:(ry+20)*T});
+                f.push({t:'vending',x:(rx+30)*T,y:(ry+20)*T});
+                f.push({t:'sofa',x:(rx+28)*T,y:(ry+22)*T});
+                f.push({t:'table_low',x:(rx+30)*T,y:(ry+22)*T});
+                f.push({t:'armchair',x:(rx+32)*T,y:(ry+22)*T});
+                // Edge trees
+                f.push({t:'tree',x:rx*T,y:(ry+18)*T});
+                f.push({t:'tree',x:(rx+33)*T,y:(ry+18)*T});
+                f.push({t:'fruit_tree',x:rx*T,y:(ry+23)*T,fruit:'orange'});
+                f.push({t:'fruit_tree',x:(rx+33)*T,y:(ry+23)*T,fruit:'cherry'});
+                // Street lamps
+                f.push({t:'street_lamp',x:(rx+1)*T,y:(ry+18)*T});
+                f.push({t:'street_lamp',x:(rx+11)*T,y:(ry+18)*T});
+                f.push({t:'street_lamp',x:(rx+23)*T,y:(ry+18)*T});
+                f.push({t:'street_lamp',x:(rx+32)*T,y:(ry+18)*T});
+                // Bottom flower row
+                f.push({t:'flower_bed',x:(rx+5)*T,y:(ry+23)*T,color:'#f1c40f'});
+                f.push({t:'flower_bed',x:(rx+10)*T,y:(ry+23)*T,color:'#e74c3c'});
+                f.push({t:'flower_bed',x:(rx+15)*T,y:(ry+23)*T,color:'#9b59b6'});
+                f.push({t:'flower_bed',x:(rx+20)*T,y:(ry+23)*T,color:'#3498db'});
+                f.push({t:'flower_bed',x:(rx+25)*T,y:(ry+23)*T,color:'#00b894'});
+                f.push({t:'flower_bed',x:(rx+30)*T,y:(ry+23)*T,color:'#ff6b9d'});
+
+                // ═══ INTERACTION POINTS ═══
+                this.interactionPoints.push(
+                    {id:'park1',type:'plant',tx:rx+17,ty:ry+3,emoji:'🗿',label:'Tượng đài tưởng niệm',effect:'mood'},
+                    {id:'park2',type:'plant',tx:rx+3,ty:ry+7,emoji:'🌹',label:'Vườn hoa hồng',effect:'mood'},
+                    {id:'park3',type:'plant',tx:rx+8,ty:ry+10,emoji:'🌻',label:'Vườn hoa hướng dương',effect:'mood'},
+                    {id:'park4',type:'plant',tx:rx+7,ty:ry+12,emoji:'⛲',label:'Đài phun nước vườn',effect:'mood'},
+                    {id:'park5',type:'plant',tx:rx+20,ty:ry+8,emoji:'🪨',label:'Vườn Thiền Zen',effect:'mood'},
+                    {id:'park6',type:'plant',tx:rx+18,ty:ry+8,emoji:'🎋',label:'Rừng trúc',effect:'rest'},
+                    {id:'park7',type:'treadmill',tx:rx+3,ty:ry+14,emoji:'🎠',label:'Xích đu',effect:'energy'},
+                    {id:'park8',type:'treadmill',tx:rx+7,ty:ry+14,emoji:'🛝',label:'Cầu trượt',effect:'energy'},
+                    {id:'park9',type:'treadmill',tx:rx+11,ty:ry+14,emoji:'⚖️',label:'Bập bênh',effect:'energy'},
+                    {id:'park10',type:'fishing',tx:rx+24,ty:ry+15,emoji:'🎣',label:'Câu cá trên hồ',effect:'fishing'},
+                    {id:'park10b',type:'pond',tx:rx+18,ty:ry+15,emoji:'🚣',label:'Bến thuyền',effect:'rest'},
+                    {id:'park10c',type:'pond',tx:rx+29,ty:ry+17,emoji:'🛶',label:'Thuyền câu cá',effect:'mood'},
+                    {id:'park10d',type:'plant',tx:rx+22,ty:ry+15,emoji:'🪷',label:'Hoa Sen trên hồ',effect:'mood'},
+                    {id:'park10e',type:'plant',tx:rx+20,ty:ry+17,emoji:'🌺',label:'Hoa Súng',effect:'mood'},
+                    {id:'park11',type:'sofa',tx:rx+16,ty:ry+21,emoji:'🎵',label:'Sân khấu âm nhạc',effect:'mood'},
+                    {id:'park12',type:'parasol',tx:rx+3,ty:ry+20,emoji:'🧺',label:'Picnic ngoài trời',effect:'rest'},
+                    {id:'park13',type:'parasol',tx:rx+8,ty:ry+20,emoji:'🍱',label:'Picnic gia đình',effect:'rest'},
+                    {id:'park14',type:'vending',tx:rx+29,ty:ry+21,emoji:'🥤',label:'Máy bán nước',effect:'energy'},
+                    {id:'park15',type:'fruit',tx:rx+1,ty:ry+24,emoji:'🍊',label:'Hái trái cây',effect:'energy'},
+                    // Back to building
+                    {id:'elev_back_park',type:'elevator',tx:rx+1,ty:ry+1,emoji:'🏢',label:'→ Về tòa nhà',effect:'elevator_indoor'},
+                );
+
+                // ═══ NPCs ═══
+                f.push({t:'npc',x:(rx+8)*T,y:(ry+4)*T,charIndex:2,emoji:'🧹',wanderRange:5,speeches:['Giữ sạch nhé!','Cỏ mọc đẹp quá!','Hoa nở rồi!','Đẹp quá trời!']});
+                f.push({t:'npc',x:(rx+20)*T,y:(ry+9)*T,charIndex:0,emoji:'🧘',wanderRange:3,speeches:['Om...','Tĩnh tâm...','Zen garden~','Hít thở sâu!']});
+                f.push({t:'npc',x:(rx+5)*T,y:(ry+15)*T,charIndex:4,emoji:'👶',wanderRange:4,speeches:['Wheee!','Đu nữa đi!','Chơi nào!','Vui quá!']});
+                f.push({t:'npc',x:(rx+16)*T,y:(ry+20)*T,charIndex:3,emoji:'🎸',wanderRange:3,speeches:['♪ La la la~','Hát cùng tôi!','Nhạc hay quá!','Encore!']});
+                f.push({t:'npc',x:(rx+19)*T,y:(ry+14)*T,charIndex:5,emoji:'🎣',wanderRange:2,speeches:['Cá cắn câu rồi!','Im lặng nhé...','Câu được con to!','Hồ hôm nay đẹp!']});
                 break;
             }
             case 13: { // Tầng Thượng — Rooftop Terrace (28×14)
@@ -1351,7 +1560,46 @@ class PixelEngine {
                             this.px(px, py + Math.floor(T * 0.45), T, 2, '#27AE60');
                             this.px(px, py + Math.floor(T * 0.45) + 2, T, 1, '#219A52');
                         } else {
-                        // Check if near rooftop
+                        // Check if near park
+                        const isNearPark = (
+                            adj(0,-1)==='park_grass'||adj(0,1)==='park_grass'||adj(-1,0)==='park_grass'||adj(1,0)==='park_grass'
+                        );
+                        if (isNearPark) {
+                            // ═══ Wrought Iron Fence ═══
+                            // Stone base (bottom 30%)
+                            const baseH = Math.floor(T * 0.28);
+                            this.px(px, py + T - baseH, T, baseH, '#6B6560');
+                            this.px(px, py + T - baseH, T, 1, '#8A857F'); // top edge highlight
+                            this.px(px, py + T - 1, T, 1, '#4A4540'); // bottom shadow
+                            // Stone texture
+                            const stSeed = (x * 11 + y * 7) % 5;
+                            if (stSeed < 3) this.px(px + stSeed * 3 + 1, py + T - baseH + 2, 3, 2, '#7A756F');
+                            // Sky/background behind fence (transparent greenish)
+                            this.px(px, py, T, T - baseH, 'rgba(60,120,60,0.15)');
+                            // Horizontal top rail (thick iron bar)
+                            this.px(px, py + 1, T, 2, '#2C2C2C');
+                            this.px(px, py + 1, T, 1, '#3C3C3C'); // highlight
+                            // Second horizontal rail (middle)
+                            const midY = py + Math.floor((T - baseH) * 0.55);
+                            this.px(px, midY, T, 1, '#2C2C2C');
+                            // Vertical iron bars (every 3px)
+                            for (let bar = 1; bar < T - 1; bar += 3) {
+                                // Main bar
+                                this.px(px + bar, py + 3, 1, T - baseH - 3, '#1A1A1A');
+                                this.px(px + bar + 1, py + 3, 1, T - baseH - 3, '#2A2A2A'); // slight highlight
+                                // Pointed finial (spear tip) on top
+                                this.px(px + bar, py, 2, 2, '#1A1A1A');
+                                this.px(px + bar, py, 1, 1, '#3A3A3A'); // tip highlight
+                            }
+                            // Main posts (thicker, every 2 tiles)
+                            if (x % 2 === 0) {
+                                this.px(px, py, 3, T - baseH, '#1A1A1A');
+                                this.px(px + 1, py, 1, T - baseH, '#333');
+                                // Post cap (decorative ball)
+                                this.px(px, py - 1, 3, 2, '#2C2C2C');
+                                this.px(px + 1, py - 1, 1, 1, '#444');
+                            }
+                        } else {
                         const isNearRooftop = (
                             adj(0,-1)==='rooftop'||adj(0,1)==='rooftop'||adj(-1,0)==='rooftop'||adj(1,0)==='rooftop'
                         );
@@ -1442,6 +1690,7 @@ class PixelEngine {
                             }
                         }
                         }
+                        }
                     }
                     continue;
                 }
@@ -1468,6 +1717,44 @@ class PixelEngine {
                     // Tiny flower dots (very sparse)
                     if (seed === 3) this.px(px + 5, py + 8, 1, 1, '#f1c40f');
                     if (seed === 11) this.px(px + 10, py + 3, 1, 1, '#e8e0d0');
+                    continue;
+                }
+
+                // ═══ Park grass floor (lush, with stone path accents) ═══
+                if (fl === 'park_grass') {
+                    // Rich vibrant green base
+                    this.px(px, py, T, T, '#3d8b37');
+                    const seed = (x * 11 + y * 7) % 19;
+                    // Grass variation patches
+                    if (seed < 6) this.px(px + (seed % 4) * 3, py + (seed % 3) * 4, 5, 3, '#4ca847');
+                    if (seed > 10) this.px(px + ((seed+2) % 4) * 3, py + ((seed+1) % 3) * 4, 4, 4, '#2e7328');
+                    if (seed % 4 === 0) this.px(px + 1, py + 5, 3, 2, '#56b84f');
+                    // Stone path tiles (sparse, for walkway feel)
+                    if ((x + y) % 7 === 0) {
+                        this.px(px + 2, py + 2, T - 4, T - 4, '#A09888');
+                        this.px(px + 3, py + 3, T - 6, T - 6, '#B0A898');
+                        this.px(px + 2, py + 2, T - 4, 1, '#C0B8A8');
+                    }
+                    // Grass blade details
+                    if ((x + y) % 3 === 0) {
+                        this.px(px + 4, py + 1, 1, 2, '#56b84f');
+                        this.px(px + 10, py + 8, 1, 2, '#4ca847');
+                    }
+                    if ((x + y) % 5 === 2) {
+                        this.px(px + 8, py + 3, 1, 2, '#2e7328');
+                        this.px(px + 2, py + 10, 1, 2, '#56b84f');
+                    }
+                    // Wildflower dots (more colorful than outdoor)
+                    if (seed === 2) this.px(px + 6, py + 7, 1, 1, '#ff6b9d');
+                    if (seed === 7) this.px(px + 3, py + 4, 1, 1, '#f1c40f');
+                    if (seed === 13) this.px(px + 9, py + 2, 1, 1, '#9b59b6');
+                    if (seed === 16) this.px(px + 12, py + 10, 1, 1, '#3498db');
+                    // Small clover patches
+                    if (seed === 5) {
+                        this.px(px + 5, py + 9, 2, 1, '#45a345');
+                        this.px(px + 4, py + 10, 1, 1, '#45a345');
+                        this.px(px + 7, py + 10, 1, 1, '#45a345');
+                    }
                     continue;
                 }
 
@@ -1658,9 +1945,37 @@ class PixelEngine {
                 const px = x * T;
                 const py = y * T;
                 const isGrass = map[y][x] === 'grass';
+                const isParkGrass = map[y][x] === 'park_grass';
                 
                 if (!hasFloor(x, y - 1)) {
-                    if (isGrass) {
+                    if (isParkGrass) {
+                        // ═══ Wrought Iron Fence — north edge ═══
+                        // Stone base
+                        const baseH = Math.floor(T * 0.25);
+                        this.px(px, py - baseH, T, baseH, '#6B6560');
+                        this.px(px, py - baseH, T, 1, '#8A857F');
+                        // Iron bars
+                        for (let bar = 2; bar < T - 1; bar += 3) {
+                            this.px(px + bar, py - T + 2, 1, T - baseH - 2, '#1A1A1A');
+                            this.px(px + bar + 1, py - T + 2, 1, T - baseH - 2, '#2A2A2A');
+                            // Pointed finial
+                            this.px(px + bar, py - T + 1, 2, 2, '#1A1A1A');
+                            this.px(px + bar, py - T, 1, 1, '#333');
+                        }
+                        // Top rail
+                        this.px(px, py - T + 3, T, 2, '#2C2C2C');
+                        this.px(px, py - T + 3, T, 1, '#3C3C3C');
+                        // Middle rail
+                        this.px(px, py - Math.floor(T * 0.4), T, 1, '#2C2C2C');
+                        // Main posts every 2 tiles
+                        if (x % 2 === 0) {
+                            this.px(px, py - T, 3, T, '#1A1A1A');
+                            this.px(px + 1, py - T, 1, T, '#333');
+                            // Post cap ball
+                            this.px(px, py - T - 2, 3, 3, '#2C2C2C');
+                            this.px(px + 1, py - T - 2, 1, 1, '#444');
+                        }
+                    } else if (isGrass) {
                         // Wooden fence for outdoor — north edge
                         // Fence post
                         this.px(px + 2, py - T + 2, 2, T + 2, '#8B6914');
@@ -1692,7 +2007,24 @@ class PixelEngine {
                     }
                 }
                 
-                if (isGrass) {
+                if (isParkGrass) {
+                    // Iron fence edges for park — south/left/right
+                    if (!hasFloor(x, y + 1)) {
+                        this.px(px, (y + 1) * T - 3, T, 3, '#6B6560');
+                        this.px(px, (y + 1) * T - 3, T, 1, '#2C2C2C');
+                        for (let bar = 2; bar < T - 1; bar += 3) {
+                            this.px(px + bar, (y + 1) * T - 8, 1, 5, '#1A1A1A');
+                        }
+                    }
+                    if (!hasFloor(x - 1, y)) {
+                        this.px(x * T - 1, y * T, 3, T, '#1A1A1A');
+                        this.px(x * T, y * T, 1, T, '#333');
+                    }
+                    if (!hasFloor(x + 1, y)) {
+                        this.px((x + 1) * T - 2, y * T, 3, T, '#1A1A1A');
+                        this.px((x + 1) * T - 1, y * T, 1, T, '#333');
+                    }
+                } else if (isGrass) {
                     // Fence edges for outdoor — south/left/right
                     if (!hasFloor(x, y + 1)) {
                         this.px(px, (y + 1) * T - 3, T, 3, '#A0794A');
@@ -1736,6 +2068,8 @@ class PixelEngine {
             12: '🛗 THANG MÁY',
             13: '🌆 TẦNG THƯỢNG',
             14: '☕ QUÁN CAFE',
+            15: '🏪 PIXELMART',
+            16: '🌳 CÔNG VIÊN',
         };
 
         ctx.save();
@@ -1923,6 +2257,26 @@ class PixelEngine {
             case 'drink_cooler': this.drawDrinkCooler(x, y); break;
             case 'checkout_counter': this.drawCheckoutCounter(x, y); break;
             case 'mart_sign': this.drawMartSign(x, y); break;
+            // Park furniture
+            case 'park_gate': this.drawParkGate(x, y); break;
+            case 'park_statue': this.drawParkStatue(x, y); break;
+            case 'topiary': this.drawTopiary(x, y); break;
+            case 'zen_rock': this.drawZenRock(x, y); break;
+            case 'playground_swing': this.drawPlaygroundSwing(x, y); break;
+            case 'playground_slide': this.drawPlaygroundSlide(x, y); break;
+            case 'playground_seesaw': this.drawPlaygroundSeesaw(x, y); break;
+            case 'sandbox': this.drawSandbox(x, y); break;
+            case 'park_bridge': this.drawParkBridge(x, y); break;
+            case 'park_gazebo': this.drawParkGazebo(x, y); break;
+            case 'park_stage': this.drawParkStage(x, y); break;
+            // Lake & fishing
+            case 'park_lake': this.drawParkLake(x, y, f); break;
+            case 'park_dock': this.drawParkDock(x, y); break;
+            case 'fishing_boat': this.drawFishingBoat(x, y, f); break;
+            case 'willow_tree': this.drawWillowTree(x, y); break;
+            case 'cattail': this.drawCattail(x, y); break;
+            case 'lotus': this.drawLotus(x, y); break;
+            case 'water_lily': this.drawWaterLily(x, y); break;
         }
     }
 
@@ -5015,6 +5369,500 @@ class PixelEngine {
         this.px(x + 6, y + 15, 4, 1, 'rgba(255,200,100,0.4)');
         this.px(x + 7, y + 15, 2, 1, 'rgba(255,220,120,0.5)');
     }
+
+    // ═══════════════════════════════════════
+    //  PARK FURNITURE DRAWING METHODS
+    // ═══════════════════════════════════════
+
+    drawParkGate(x, y) {
+        // Grand entrance arch
+        // Left pillar
+        this.px(x, y + 2, 4, 14, '#8B7355');
+        this.px(x + 1, y + 2, 2, 14, '#A0896B');
+        // Right pillar
+        this.px(x + 28, y + 2, 4, 14, '#8B7355');
+        this.px(x + 29, y + 2, 2, 14, '#A0896B');
+        // Arch top bar
+        this.px(x, y, 32, 3, '#6B5340');
+        this.px(x + 1, y + 1, 30, 1, '#8B7355');
+        // Decorative caps on pillars
+        this.px(x - 1, y + 1, 6, 2, '#5C4433');
+        this.px(x + 27, y + 1, 6, 2, '#5C4433');
+        // Sign banner "CÔNG VIÊN"
+        this.px(x + 6, y + 3, 20, 6, '#2d6b30');
+        this.px(x + 7, y + 4, 18, 4, '#3d8b37');
+        // Gold text line (decorative)
+        this.px(x + 9, y + 5, 14, 2, '#ffd93d');
+        this.px(x + 10, y + 5, 12, 1, '#ffed4a');
+        // Lanterns on gate
+        this.px(x + 2, y + 4, 2, 3, '#ff6b6b');
+        this.px(x + 2, y + 4, 2, 1, '#ff9f43');
+        this.px(x + 28, y + 4, 2, 3, '#ff6b6b');
+        this.px(x + 28, y + 4, 2, 1, '#ff9f43');
+    }
+
+    drawParkStatue(x, y) {
+        // Stone pedestal
+        this.px(x + 2, y + 12, 12, 4, '#8B8682');
+        this.px(x + 3, y + 12, 10, 1, '#A09C98');
+        this.px(x + 1, y + 14, 14, 2, '#7A7672');
+        this.px(x + 0, y + 15, 16, 1, '#6A6662');
+        // Pedestal plate
+        this.px(x + 4, y + 13, 8, 1, '#B0ACA8');
+        // Statue body (abstract figure)
+        this.px(x + 5, y + 4, 6, 8, '#9A9690');
+        this.px(x + 6, y + 4, 4, 8, '#A8A4A0');
+        // Head
+        this.px(x + 6, y + 1, 4, 4, '#A8A4A0');
+        this.px(x + 7, y + 1, 2, 3, '#B0ACA8');
+        // Arms outstretched
+        this.px(x + 2, y + 5, 4, 2, '#9A9690');
+        this.px(x + 10, y + 5, 4, 2, '#9A9690');
+        // Highlight shimmer
+        const shimmer = Math.sin(this.elapsed * 0.003) * 0.15 + 0.2;
+        this.px(x + 7, y + 2, 1, 2, `rgba(255,255,255,${shimmer.toFixed(2)})`);
+        this.px(x + 6, y + 5, 1, 4, `rgba(255,255,255,${(shimmer * 0.7).toFixed(2)})`);
+    }
+
+    drawTopiary(x, y) {
+        // Terracotta pot
+        this.px(x + 3, y + 12, 10, 4, '#A0522D');
+        this.px(x + 4, y + 12, 8, 1, '#C06030');
+        this.px(x + 2, y + 11, 12, 2, '#8B4513');
+        // Stem
+        this.px(x + 7, y + 6, 2, 6, '#5C4033');
+        // Round topiary ball
+        this.px(x + 3, y + 1, 10, 6, '#2d7a2d');
+        this.px(x + 4, y + 0, 8, 7, '#348c34');
+        this.px(x + 5, y + 0, 6, 1, '#3d9e3d');
+        // Highlight
+        this.px(x + 5, y + 1, 3, 2, '#45b045');
+        this.px(x + 4, y + 2, 2, 1, '#3d9e3d');
+    }
+
+    drawZenRock(x, y) {
+        // Large zen garden rock
+        this.px(x + 2, y + 6, 12, 6, '#7A7570');
+        this.px(x + 3, y + 4, 10, 8, '#8A8580');
+        this.px(x + 4, y + 3, 8, 3, '#9A9590');
+        this.px(x + 5, y + 2, 6, 2, '#A0A098');
+        // Highlight
+        this.px(x + 4, y + 3, 3, 2, '#B0ACA8');
+        this.px(x + 5, y + 3, 2, 1, '#C0BCB8');
+        // Shadow
+        this.px(x + 3, y + 10, 10, 2, '#5A5550');
+        // Sand raking pattern around rock
+        this.px(x - 2, y + 12, 20, 1, '#D4C8A0');
+        this.px(x - 1, y + 13, 18, 1, '#C8BC98');
+        this.px(x, y + 14, 16, 1, '#D4C8A0');
+    }
+
+    drawPlaygroundSwing(x, y) {
+        // Top bar (metal frame)
+        this.px(x, y, 16, 2, '#4A6080');
+        this.px(x + 1, y, 14, 1, '#5A7090');
+        // Left A-frame leg
+        this.px(x, y + 2, 2, 14, '#4A6080');
+        this.px(x + 1, y + 2, 1, 14, '#5A7090');
+        // Right A-frame leg
+        this.px(x + 14, y + 2, 2, 14, '#4A6080');
+        this.px(x + 14, y + 2, 1, 14, '#5A7090');
+        // Swing chains
+        const swingOffset = Math.sin(this.elapsed * 0.005) * 2;
+        this.px(x + 5 + swingOffset, y + 2, 1, 10, '#888');
+        this.px(x + 10 - swingOffset, y + 2, 1, 10, '#888');
+        // Swing seat
+        this.px(x + 4 + swingOffset, y + 11, 4, 2, '#C0522D');
+        this.px(x + 9 - swingOffset, y + 11, 4, 2, '#C0522D');
+        // Ground
+        this.px(x, y + 15, 16, 1, '#8B7355');
+    }
+
+    drawPlaygroundSlide(x, y) {
+        // Slide platform (top)
+        this.px(x, y + 2, 6, 4, '#4A6080');
+        this.px(x + 1, y + 2, 4, 1, '#5A7090');
+        // Ladder
+        this.px(x, y + 5, 2, 11, '#4A6080');
+        this.px(x + 4, y + 5, 2, 11, '#4A6080');
+        // Ladder rungs
+        for (let i = 0; i < 4; i++) {
+            this.px(x + 1, y + 6 + i * 3, 4, 1, '#5A7090');
+        }
+        // Slide chute (diagonal)
+        this.px(x + 5, y + 3, 3, 2, '#f39c12');
+        this.px(x + 7, y + 5, 3, 2, '#f39c12');
+        this.px(x + 9, y + 7, 3, 2, '#f39c12');
+        this.px(x + 11, y + 9, 3, 2, '#f39c12');
+        this.px(x + 13, y + 11, 3, 3, '#f39c12');
+        // Slide highlight
+        this.px(x + 6, y + 3, 1, 2, '#ffd93d');
+        this.px(x + 8, y + 5, 1, 2, '#ffd93d');
+        this.px(x + 10, y + 7, 1, 2, '#ffd93d');
+        this.px(x + 12, y + 9, 1, 2, '#ffd93d');
+        // Slide end curve
+        this.px(x + 14, y + 14, 2, 2, '#e08e0b');
+    }
+
+    drawPlaygroundSeesaw(x, y) {
+        // Fulcrum (triangle support)
+        this.px(x + 6, y + 12, 4, 4, '#4A6080');
+        this.px(x + 7, y + 10, 2, 2, '#5A7090');
+        this.px(x + 7, y + 10, 2, 1, '#6A80A0');
+        // Board (tilting)
+        const tilt = Math.sin(this.elapsed * 0.004) * 1.5;
+        this.px(x + 1, y + 9 + tilt, 14, 2, '#A0522D');
+        this.px(x + 2, y + 9 + tilt, 12, 1, '#C06030');
+        // Handles
+        this.px(x + 2, y + 7 + tilt, 2, 3, '#4A6080');
+        this.px(x + 12, y + 7 - tilt, 2, 3, '#4A6080');
+        // Seats
+        this.px(x + 1, y + 8 + tilt, 3, 2, '#e74c3c');
+        this.px(x + 12, y + 8 - tilt, 3, 2, '#3498db');
+    }
+
+    drawSandbox(x, y) {
+        // Wooden border
+        this.px(x, y, 16, 2, '#8B7355');
+        this.px(x, y + 14, 16, 2, '#8B7355');
+        this.px(x, y + 2, 2, 12, '#8B7355');
+        this.px(x + 14, y + 2, 2, 12, '#8B7355');
+        // Sand fill
+        this.px(x + 2, y + 2, 12, 12, '#F0D8A0');
+        this.px(x + 3, y + 3, 10, 10, '#E8D098');
+        // Sand texture
+        this.px(x + 4, y + 5, 3, 2, '#F5E0A8');
+        this.px(x + 8, y + 8, 3, 2, '#F5E0A8');
+        this.px(x + 5, y + 10, 2, 2, '#E0C890');
+        // Bucket toy
+        this.px(x + 10, y + 4, 3, 4, '#e74c3c');
+        this.px(x + 10, y + 4, 3, 1, '#ff6b6b');
+        // Shovel toy
+        this.px(x + 4, y + 7, 1, 4, '#3498db');
+        this.px(x + 3, y + 10, 3, 2, '#5dade2');
+    }
+
+    drawParkBridge(x, y) {
+        // Wooden planks (horizontal bridge)
+        this.px(x, y + 2, 16, 8, '#8B7355');
+        this.px(x + 1, y + 3, 14, 6, '#A0896B');
+        // Plank lines
+        for (let i = 0; i < 7; i++) {
+            this.px(x + 1 + i * 2, y + 3, 1, 6, '#7A6345');
+        }
+        // Railings
+        this.px(x, y, 16, 2, '#6B5340');
+        this.px(x, y + 10, 16, 2, '#6B5340');
+        // Railing posts
+        this.px(x + 2, y, 2, 3, '#5C4433');
+        this.px(x + 7, y, 2, 3, '#5C4433');
+        this.px(x + 12, y, 2, 3, '#5C4433');
+        this.px(x + 2, y + 9, 2, 3, '#5C4433');
+        this.px(x + 7, y + 9, 2, 3, '#5C4433');
+        this.px(x + 12, y + 9, 2, 3, '#5C4433');
+        // Water underneath shimmer
+        const wv = Math.sin(this.elapsed * 0.006) * 0.1 + 0.3;
+        this.px(x - 2, y + 4, 20, 4, `rgba(100,180,220,${wv.toFixed(2)})`);
+    }
+
+    drawParkGazebo(x, y) {
+        // Roof (pagoda-style)
+        this.px(x + 2, y, 28, 3, '#8B0000');
+        this.px(x + 4, y + 1, 24, 2, '#A52A2A');
+        this.px(x + 0, y + 3, 32, 2, '#6B0000');
+        this.px(x + 1, y + 3, 30, 1, '#8B0000');
+        // Roof peak
+        this.px(x + 12, y - 2, 8, 3, '#A52A2A');
+        this.px(x + 14, y - 3, 4, 2, '#8B0000');
+        this.px(x + 15, y - 4, 2, 2, '#ffd93d');
+        // Pillars
+        this.px(x + 2, y + 5, 3, 11, '#D4C8A0');
+        this.px(x + 3, y + 5, 1, 11, '#E0D4B0');
+        this.px(x + 27, y + 5, 3, 11, '#D4C8A0');
+        this.px(x + 28, y + 5, 1, 11, '#E0D4B0');
+        // Middle pillars
+        this.px(x + 14, y + 5, 2, 11, '#D4C8A0');
+        // Floor
+        this.px(x + 2, y + 14, 28, 2, '#C0B090');
+        this.px(x + 3, y + 14, 26, 1, '#D0C0A0');
+        // Steps
+        this.px(x + 0, y + 15, 32, 1, '#B0A080');
+        // Inner bench
+        this.px(x + 6, y + 11, 8, 3, '#8B7355');
+        this.px(x + 18, y + 11, 8, 3, '#8B7355');
+    }
+
+    drawParkStage(x, y) {
+        // Stage platform
+        this.px(x, y + 10, 16, 6, '#5C4033');
+        this.px(x + 1, y + 10, 14, 1, '#7A5A48');
+        this.px(x + 1, y + 11, 14, 4, '#6B4A3D');
+        // Stage front (lighter)
+        this.px(x, y + 14, 16, 2, '#4A3328');
+        // Microphone stand
+        this.px(x + 7, y + 5, 2, 6, '#888');
+        this.px(x + 6, y + 4, 4, 2, '#666');
+        this.px(x + 7, y + 3, 2, 2, '#aaa');
+        // Speaker left
+        this.px(x + 1, y + 6, 4, 5, '#333');
+        this.px(x + 2, y + 7, 2, 3, '#555');
+        this.px(x + 2, y + 8, 2, 1, '#222');
+        // Speaker right
+        this.px(x + 11, y + 6, 4, 5, '#333');
+        this.px(x + 12, y + 7, 2, 3, '#555');
+        this.px(x + 12, y + 8, 2, 1, '#222');
+        // Stage lights (animated glow)
+        const stageGlow = (Math.sin(this.elapsed * 0.01) * 0.2 + 0.4).toFixed(2);
+        this.px(x + 3, y + 2, 3, 2, `rgba(255,100,100,${stageGlow})`);
+        this.px(x + 10, y + 2, 3, 2, `rgba(100,100,255,${stageGlow})`);
+        this.px(x + 6, y + 1, 4, 2, `rgba(255,255,100,${stageGlow})`);
+    }
+
+    drawParkLake(x, y, item) {
+        const w = (item.w || 16) * this.T;
+        const h = (item.h || 8) * this.T;
+        // Deep water base
+        this.px(x, y, w, h, '#1a6b8a');
+        // Water gradient layers (lighter toward center)
+        this.px(x + 4, y + 4, w - 8, h - 8, '#1e7e9e');
+        this.px(x + 10, y + 10, w - 20, h - 20, '#2290b0');
+        this.px(x + 16, y + 14, w - 32, h - 28, '#28a0c0');
+        // Animated wave ripples
+        const t = this.elapsed;
+        for (let wy = 0; wy < h; wy += 12) {
+            const waveOff = Math.sin(t * 0.004 + wy * 0.05) * 6;
+            this.px(x + 8 + waveOff, y + wy, 30, 2, 'rgba(100,200,240,0.3)');
+            this.px(x + 40 - waveOff, y + wy + 6, 25, 1, 'rgba(120,210,250,0.25)');
+        }
+        // Light reflections (sparkle)
+        const sp1 = Math.sin(t * 0.007) * 0.3 + 0.4;
+        const sp2 = Math.sin(t * 0.009 + 1) * 0.3 + 0.3;
+        const sp3 = Math.sin(t * 0.005 + 2) * 0.25 + 0.35;
+        this.px(x + 30, y + 20, 4, 2, `rgba(255,255,255,${sp1.toFixed(2)})`);
+        this.px(x + 80, y + 35, 3, 2, `rgba(255,255,255,${sp2.toFixed(2)})`);
+        this.px(x + 55, y + 50, 4, 2, `rgba(255,255,255,${sp3.toFixed(2)})`);
+        this.px(x + 130, y + 25, 3, 1, `rgba(255,255,255,${sp2.toFixed(2)})`);
+        this.px(x + 170, y + 60, 3, 2, `rgba(255,255,255,${sp1.toFixed(2)})`);
+        // Koi fish (animated swimming)
+        const fishX1 = Math.sin(t * 0.003) * 12;
+        const fishX2 = Math.cos(t * 0.004 + 1) * 10;
+        // Orange koi
+        this.px(x + 50 + fishX1, y + 30, 6, 3, '#ff8c42');
+        this.px(x + 49 + fishX1, y + 31, 2, 1, '#ff6b21'); // tail
+        this.px(x + 56 + fishX1, y + 31, 1, 1, '#222'); // eye
+        // White koi
+        this.px(x + 120 + fishX2, y + 50, 5, 3, '#f0e6d0');
+        this.px(x + 119 + fishX2, y + 51, 2, 1, '#e0d0b0'); // tail
+        this.px(x + 121 + fishX2, y + 50, 2, 1, '#e74c3c'); // red spot
+        // Shore edges (sand/gravel)
+        this.px(x, y, w, 3, '#8B7E66');
+        this.px(x, y + h - 3, w, 3, '#8B7E66');
+        this.px(x, y, 3, h, '#8B7E66');
+        this.px(x + w - 3, y, 3, h, '#8B7E66');
+        // Shore highlight
+        this.px(x + 3, y + 3, w - 6, 1, '#5da0b8');
+        this.px(x + 3, y + h - 4, w - 6, 1, '#5da0b8');
+    }
+
+    drawParkDock(x, y) {
+        // Dock runs vertically into the lake (4 tiles wide, 6 tiles long)
+        const dw = 3 * this.T;
+        const dh = 4 * this.T;
+        // Main planks
+        this.px(x, y, dw, dh, '#8B7355');
+        this.px(x + 2, y, dw - 4, dh, '#A0896B');
+        // Plank lines (horizontal)
+        for (let py = 0; py < dh; py += 6) {
+            this.px(x, y + py, dw, 1, '#6B5340');
+        }
+        // Plank grain texture
+        for (let py = 3; py < dh; py += 12) {
+            this.px(x + 4, y + py, dw - 8, 1, '#B09878');
+        }
+        // Support posts (4 corners + middle)
+        this.px(x - 2, y, 3, 4, '#5C4033');
+        this.px(x + dw - 1, y, 3, 4, '#5C4033');
+        this.px(x - 2, y + dh - 4, 3, 4, '#5C4033');
+        this.px(x + dw - 1, y + dh - 4, 3, 4, '#5C4033');
+        // Middle posts
+        this.px(x - 2, y + Math.floor(dh / 2), 3, 4, '#5C4033');
+        this.px(x + dw - 1, y + Math.floor(dh / 2), 3, 4, '#5C4033');
+        // Post tops (rope tie)
+        this.px(x - 1, y - 1, 2, 2, '#4A3328');
+        this.px(x + dw, y - 1, 2, 2, '#4A3328');
+        // Rope between posts
+        this.px(x - 1, y + 1, 1, dh - 2, '#8B8060');
+        this.px(x + dw, y + 1, 1, dh - 2, '#8B8060');
+        // Mooring cleats at end of dock
+        this.px(x + 6, y + dh - 3, 6, 2, '#666');
+        this.px(x + 7, y + dh - 4, 4, 1, '#888');
+        this.px(x + dw - 14, y + dh - 3, 6, 2, '#666');
+        this.px(x + dw - 13, y + dh - 4, 4, 1, '#888');
+        // Dock shadow on water
+        this.px(x + 2, y + dh, dw - 4, 3, 'rgba(0,40,60,0.25)');
+    }
+
+    drawFishingBoat(x, y, item) {
+        const variant = item?.variant || 0;
+        const boatColor = variant === 0 ? '#C0392B' : '#2980B9';
+        const boatLight = variant === 0 ? '#E74C3C' : '#3498DB';
+        const boatDark = variant === 0 ? '#922B21' : '#1F618D';
+        // Boat hull
+        this.px(x + 2, y + 6, 20, 8, boatColor);
+        this.px(x + 3, y + 6, 18, 2, boatLight); // top edge
+        this.px(x + 3, y + 12, 18, 2, boatDark); // bottom shadow
+        // Bow (pointed front)
+        this.px(x, y + 8, 3, 4, boatColor);
+        this.px(x, y + 8, 2, 1, boatLight);
+        // Stern (flat back)
+        this.px(x + 21, y + 7, 3, 6, boatDark);
+        this.px(x + 22, y + 7, 1, 6, boatColor);
+        // Inner hull (wood bottom)
+        this.px(x + 4, y + 8, 16, 4, '#A0896B');
+        this.px(x + 5, y + 9, 14, 2, '#8B7355');
+        // Seat planks
+        this.px(x + 6, y + 8, 2, 4, '#6B5340');
+        this.px(x + 14, y + 8, 2, 4, '#6B5340');
+        // Fishing rod (extends out the side)
+        this.px(x + 8, y + 2, 1, 6, '#5C4033'); // rod
+        this.px(x + 8, y + 1, 3, 1, '#5C4033'); // rod tip
+        this.px(x + 10, y + 1, 1, 1, '#6B5340'); // reel
+        // Fishing line
+        this.px(x + 11, y + 1, 1, 8, '#aaa');
+        this.px(x + 11, y + 8, 1, 2, '#aaa');
+        // Float/bobber
+        const bob = Math.sin(this.elapsed * 0.008) * 1.5;
+        this.px(x + 11, y + 9 + bob, 2, 2, '#ff4444');
+        this.px(x + 11, y + 10 + bob, 2, 1, '#fff');
+        // Water reflection under boat
+        const wr = Math.sin(this.elapsed * 0.005) * 0.1 + 0.2;
+        this.px(x + 1, y + 14, 22, 3, `rgba(30,100,140,${wr.toFixed(2)})`);
+        // Gentle rocking
+        const rock = Math.sin(this.elapsed * 0.003) * 0.5;
+        this.px(x - 1, y + 13 + rock, 26, 1, `rgba(100,180,220,${(wr + 0.1).toFixed(2)})`);
+    }
+
+    drawWillowTree(x, y) {
+        // Trunk
+        this.px(x + 6, y + 8, 4, 10, '#5C4033');
+        this.px(x + 7, y + 8, 2, 10, '#6B4A3D');
+        // Trunk roots
+        this.px(x + 4, y + 16, 3, 2, '#5C4033');
+        this.px(x + 9, y + 16, 3, 2, '#5C4033');
+        // Main canopy (wide and drooping)
+        this.px(x + 1, y, 14, 10, '#2d7a2d');
+        this.px(x + 2, y + 1, 12, 8, '#348c34');
+        this.px(x + 4, y, 8, 2, '#3d9e3d');
+        // Canopy highlight
+        this.px(x + 4, y + 1, 5, 3, '#45b045');
+        this.px(x + 3, y + 2, 3, 2, '#3d9e3d');
+        // Weeping fronds (hanging down from canopy) — animated
+        const sway = Math.sin(this.elapsed * 0.003);
+        for (let f = 0; f < 5; f++) {
+            const fx = x + 2 + f * 3 + sway * (f % 2 === 0 ? 1 : -1);
+            const fLen = 6 + (f % 3) * 2;
+            this.px(fx, y + 8, 1, fLen, '#2d7a2d');
+            this.px(fx + 1, y + 9, 1, fLen - 1, '#45b045');
+        }
+        // Shadow at base
+        this.px(x + 2, y + 17, 12, 1, 'rgba(0,60,0,0.2)');
+    }
+
+    drawCattail(x, y) {
+        // Tall reed stems (cluster of 3)
+        this.px(x + 3, y + 4, 1, 12, '#5a8a3d');
+        this.px(x + 7, y + 2, 1, 14, '#4a7a2d');
+        this.px(x + 11, y + 5, 1, 11, '#5a8a3d');
+        // Cattail heads (brown fuzzy tops)
+        this.px(x + 2, y + 1, 3, 4, '#6B4513');
+        this.px(x + 2, y + 1, 3, 1, '#8B5A2B');
+        this.px(x + 6, y, 3, 3, '#6B4513');
+        this.px(x + 6, y, 3, 1, '#8B5A2B');
+        this.px(x + 10, y + 2, 3, 4, '#6B4513');
+        this.px(x + 10, y + 2, 3, 1, '#8B5A2B');
+        // Leaves (sway slightly)
+        const sway = Math.sin(this.elapsed * 0.004) * 1;
+        this.px(x + 1 + sway, y + 8, 4, 1, '#4a7a2d');
+        this.px(x + 5 - sway, y + 6, 5, 1, '#5a8a3d');
+        this.px(x + 9 + sway, y + 9, 4, 1, '#4a7a2d');
+        // Base water/mud
+        this.px(x, y + 15, 14, 1, '#5a7a5a');
+    }
+
+    drawLotus(x, y) {
+        // ═══ Hoa Sen (Lotus Flower) ═══
+        // Water ripple underneath
+        const t = this.elapsed;
+        const ripple = Math.sin(t * 0.005) * 0.15 + 0.25;
+        this.px(x - 2, y + 10, 20, 3, `rgba(100,200,240,${ripple.toFixed(2)})`);
+        // Lotus pad (large round leaf)
+        this.px(x + 1, y + 6, 14, 7, '#2d8a4e');
+        this.px(x + 2, y + 7, 12, 5, '#3ca55e');
+        this.px(x + 3, y + 8, 10, 3, '#48b868');
+        // Pad notch (V-shape cut)
+        this.px(x + 7, y + 6, 2, 2, 'rgba(26,107,138,0.6)');
+        // Pad veins
+        this.px(x + 5, y + 8, 6, 1, '#2d8a4e');
+        this.px(x + 8, y + 7, 1, 4, '#2d8a4e');
+        // Stem rising from pad
+        this.px(x + 7, y + 3, 2, 4, '#3a7a3a');
+        // Flower petals (layered, pink/white)
+        // Back petals (darker pink)
+        this.px(x + 3, y + 1, 4, 3, '#e07090');
+        this.px(x + 9, y + 1, 4, 3, '#e07090');
+        this.px(x + 5, y, 6, 2, '#d06080');
+        // Front petals (lighter pink)
+        this.px(x + 4, y + 2, 3, 2, '#f0a0b8');
+        this.px(x + 9, y + 2, 3, 2, '#f0a0b8');
+        this.px(x + 6, y + 1, 4, 2, '#f8b8c8');
+        // Inner petals (white/cream)
+        this.px(x + 6, y + 2, 4, 2, '#fff0e8');
+        this.px(x + 7, y + 1, 2, 2, '#ffe8d8');
+        // Golden center (pistil)
+        this.px(x + 7, y + 2, 2, 1, '#ffd93d');
+        this.px(x + 7, y + 1, 2, 1, '#f0c420');
+        // Subtle floating motion
+        const bob = Math.sin(t * 0.004 + x * 0.1) * 0.5;
+        this.px(x + 1, y + 12 + bob, 14, 1, `rgba(80,180,220,${(ripple * 0.5).toFixed(2)})`);
+    }
+
+    drawWaterLily(x, y) {
+        // ═══ Hoa Súng (Water Lily) ═══
+        const t = this.elapsed;
+        // Water surface ripple
+        const ripple = Math.sin(t * 0.006 + y * 0.1) * 0.12 + 0.2;
+        this.px(x - 1, y + 9, 18, 2, `rgba(100,200,240,${ripple.toFixed(2)})`);
+        // Lily pad (flat, round, darker green)
+        this.px(x + 2, y + 5, 12, 6, '#1a7040');
+        this.px(x + 3, y + 6, 10, 4, '#238a50');
+        this.px(x + 4, y + 7, 8, 2, '#2ca060');
+        // Pad notch
+        this.px(x + 8, y + 5, 2, 2, 'rgba(26,107,138,0.5)');
+        // Pad edge highlight
+        this.px(x + 3, y + 5, 10, 1, '#30a068');
+        // Pad veins
+        this.px(x + 7, y + 6, 1, 3, '#1a7040');
+        this.px(x + 4, y + 7, 8, 1, '#1a7040');
+        // Small flower sitting flat on pad
+        // Petals (lavender/purple)
+        this.px(x + 5, y + 3, 2, 2, '#b388d9');
+        this.px(x + 9, y + 3, 2, 2, '#b388d9');
+        this.px(x + 7, y + 2, 2, 2, '#c8a0e8');
+        this.px(x + 6, y + 4, 4, 1, '#a070c0');
+        // Inner petals (lighter)
+        this.px(x + 7, y + 3, 2, 2, '#d8c0f0');
+        // Center (yellow)
+        this.px(x + 7, y + 3, 2, 1, '#ffd93d');
+        this.px(x + 7, y + 4, 2, 1, '#f0c420');
+        // Tiny bud nearby
+        this.px(x + 12, y + 6, 2, 2, '#c890d8');
+        this.px(x + 12, y + 5, 2, 1, '#b080c0');
+        this.px(x + 12, y + 7, 1, 1, '#2a8050');
+        // Gentle floating bob
+        const bob = Math.sin(t * 0.005 + x * 0.15) * 0.5;
+        this.px(x + 2, y + 10 + bob, 12, 1, `rgba(80,180,220,${(ripple * 0.4).toFixed(2)})`);
+    }
+
     // ============ CLEANUP ============
     destroy() {
         this._destroyed = true;

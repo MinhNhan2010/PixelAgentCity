@@ -15,6 +15,7 @@
         rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="css/item-shop.css">
+    <link rel="stylesheet" href="mobile.css">
 </head>
 
 <body>
@@ -291,6 +292,7 @@
                 <button class="zone-btn" data-zone="outdoor" title="Sân Ngoài Trời">🏞️ Ngoài Trời</button>
                 <button class="zone-btn" data-zone="cafe" title="Quán Cafe">☕ Quán Cafe</button>
                 <button class="zone-btn" data-zone="shop" title="PixelMart">🏪 PixelMart</button>
+                <button class="zone-btn" data-zone="park" title="Công Viên">🌳 Công Viên</button>
             </div>
             <div class="office-viewport" id="officeViewport">
                 <canvas id="officeCanvas"></canvas>
@@ -707,6 +709,9 @@
     <!-- Road Racer Overlay -->
     <div class="rr-overlay" id="roadRacerOverlay"></div>
 
+    <!-- Fishing Game Overlay -->
+    <div class="fg-overlay" id="fishingGameOverlay"></div>
+
     <!-- Gold Trading Overlay -->
     <div class="gold-overlay" id="goldTradeOverlay"></div>
 
@@ -1016,6 +1021,8 @@
     <script src="flappy-heli-ui.js"></script>
     <script src="road-racer.js"></script>
     <script src="road-racer-ui.js"></script>
+    <script src="fishing-game.js"></script>
+    <script src="fishing-game-ui.js"></script>
     <script src="gold-trading.js"></script>
     <script src="gold-trading-ui.js"></script>
     <script src="tech-tree.js"></script>
@@ -1048,6 +1055,7 @@
             }, { passive: true });
         })();
     </script>
+    <script src="mobile-controls.js"></script>
 </body>
 
 </html>

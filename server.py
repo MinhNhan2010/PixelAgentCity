@@ -559,4 +559,7 @@ if __name__ == "__main__":
     # Generate initial contracts
     with state_lock:
         contract_mgr.generate_contracts(3)
-    socketio.run(app, host="0.0.0.0", port=5000, debug=True, allow_unsafe_werkzeug=True)
+    # Read PORT from environment (for Cloud Run / Render / Heroku)
+    port = int(os.environ.get("PORT", 5000))
+    debug_mode = os.environ.get("FLASK_ENV", "development") == "development"
+    socketio.run(app, host="0.0.0.0", port=port, debug=debug_mode, allow_unsafe_werkzeug=True)

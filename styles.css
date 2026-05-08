@@ -10634,3 +10634,168 @@ kbd:hover {
     .rr-stats { flex-direction: column; gap: 2px; }
     .rr-play-btn { font-size: 9px; padding: 8px 20px; }
 }
+
+/* ============================================
+   FISHING & LIFE MINIGAME STYLES
+   ============================================ */
+.fg-overlay {
+    display: none; position: fixed; inset: 0; z-index: 5000;
+    background: rgba(5, 10, 25, 0.88);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    justify-content: center; align-items: center;
+    animation: fgFadeIn 0.3s ease;
+}
+.fg-overlay.show { display: flex; }
+@keyframes fgFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.fg-container {
+    width: 400px; max-width: 96vw; max-height: 96vh;
+    background: linear-gradient(145deg, #0a1a2f 0%, #0f2540 40%, #0a1525 100%);
+    border: 2px solid rgba(52, 152, 219, 0.35);
+    box-shadow: 0 0 40px rgba(52,152,219,0.15), 0 20px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+    overflow-y: auto; overflow-x: hidden;
+    animation: fgSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    scrollbar-width: thin; scrollbar-color: rgba(52,152,219,0.3) transparent;
+}
+@keyframes fgSlideIn { from { transform: translateY(30px) scale(0.95); opacity: 0; } to { transform: none; opacity: 1; } }
+
+.fg-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, rgba(52,152,219,0.18) 0%, rgba(41,128,185,0.08) 100%);
+    border-bottom: 2px solid rgba(52,152,219,0.3);
+    position: relative;
+}
+.fg-header::after {
+    content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, #3498db, #1abc9c, #3498db, transparent);
+    animation: fgGlow 3s ease infinite;
+}
+@keyframes fgGlow { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+.fg-title { display: flex; align-items: center; gap: 8px; }
+.fg-title-icon { font-size: 20px; filter: drop-shadow(0 0 6px rgba(52,152,219,0.5)); }
+.fg-title-text {
+    font-family: 'Press Start 2P', monospace; font-size: 13px;
+    background: linear-gradient(135deg, #3498db, #1abc9c);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; letter-spacing: 2px;
+}
+.fg-close-btn {
+    width: 32px; height: 32px;
+    background: rgba(255,107,107,0.1); border: 1px solid rgba(255,107,107,0.3);
+    color: #ff6b6b; font-size: 16px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;
+}
+.fg-close-btn:hover {
+    background: rgba(255,107,107,0.25); border-color: #ff6b6b;
+    transform: scale(1.1); box-shadow: 0 0 12px rgba(255,107,107,0.3);
+}
+
+.fg-body { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+
+.fg-canvas-wrap {
+    position: relative;
+    border: 2px solid rgba(52,152,219,0.25);
+    background: #060e1a; overflow: hidden;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 0 12px rgba(52,152,219,0.1);
+}
+.fg-canvas-wrap canvas {
+    width: 100%; display: block; image-rendering: pixelated; cursor: pointer;
+}
+
+.fg-score-bar {
+    display: flex; justify-content: space-around; padding: 8px 0;
+    background: rgba(52,152,219,0.05); border: 1px solid rgba(52,152,219,0.15);
+}
+.fg-score-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.fg-score-label { font-family: 'Press Start 2P', monospace; font-size: 7px; color: #8892b0; text-transform: uppercase; }
+.fg-score-val { font-family: 'Press Start 2P', monospace; font-size: 14px; color: #3498db; text-shadow: 0 0 8px rgba(52,152,219,0.4); }
+.fg-score-val.fg-best { color: #ffd93d; text-shadow: 0 0 8px rgba(255,217,61,0.4); }
+
+.fg-controls { display: flex; flex-direction: column; gap: 8px; }
+.fg-bet-section { display: flex; align-items: center; gap: 8px; }
+.fg-bet-label { font-family: 'Press Start 2P', monospace; font-size: 7px; color: #8892b0; white-space: nowrap; }
+.fg-bet-btns { display: flex; gap: 4px; flex: 1; }
+.fg-bet-btn {
+    flex: 1; padding: 6px 4px;
+    font-family: 'Press Start 2P', monospace; font-size: 8px;
+    background: rgba(15,30,50,0.8); color: #8892b0;
+    border: 1px solid rgba(52,152,219,0.15);
+    cursor: pointer; transition: all 0.2s ease; text-align: center;
+}
+.fg-bet-btn:hover { background: rgba(52,152,219,0.1); border-color: rgba(52,152,219,0.4); color: #3498db; }
+.fg-bet-btn.active {
+    background: rgba(52,152,219,0.2); border-color: #3498db; color: #3498db;
+    box-shadow: 0 0 8px rgba(52,152,219,0.2);
+}
+
+.fg-action-btns { display: flex; justify-content: center; }
+.fg-play-btn {
+    padding: 10px 32px;
+    font-family: 'Press Start 2P', monospace; font-size: 11px;
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    color: #fff; border: none; cursor: pointer;
+    text-transform: uppercase; letter-spacing: 2px; transition: all 0.2s ease;
+    box-shadow: 0 4px 0 #1a5276, 0 6px 12px rgba(0,0,0,0.4);
+    position: relative; overflow: hidden;
+}
+.fg-play-btn::before {
+    content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+    background: linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.1) 50%, transparent 60%);
+    animation: fgShine 3s infinite;
+}
+@keyframes fgShine { 0% { transform: translateX(-100%) rotate(45deg); } 100% { transform: translateX(100%) rotate(45deg); } }
+.fg-play-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 #1a5276, 0 8px 16px rgba(0,0,0,0.5), 0 0 20px rgba(52,152,219,0.3);
+}
+.fg-play-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #1a5276, 0 3px 6px rgba(0,0,0,0.3); }
+
+.fg-payout-table {
+    background: rgba(10,25,50,0.6); border: 1px solid rgba(52,152,219,0.1); padding: 8px;
+}
+.fg-payout-title {
+    font-family: 'Press Start 2P', monospace; font-size: 7px; color: #ffd93d;
+    margin-bottom: 6px; text-align: center;
+}
+.fg-payout-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+.fg-payout-row {
+    display: flex; justify-content: space-between; padding: 3px 8px;
+    font-size: 10px; color: #8892b0;
+    background: rgba(255,255,255,0.02); border: 1px solid rgba(52,152,219,0.05);
+}
+.fg-payout-row .fg-mul {
+    font-family: 'Press Start 2P', monospace; font-size: 8px; color: #1abc9c;
+    text-shadow: 0 0 4px rgba(26,188,156,0.3);
+}
+.fg-payout-row.fg-common { color: #6a7a8a; }
+
+.fg-footer {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 8px; background: rgba(52,152,219,0.03);
+    border: 1px solid rgba(52,152,219,0.1); border-radius: 4px;
+}
+.fg-balance { font-family: 'Press Start 2P', monospace; font-size: 8px; color: #8892b0; }
+.fg-balance-val { color: #ffd93d; font-size: 10px; text-shadow: 0 0 6px rgba(255,217,61,0.4); }
+.fg-stats { display: flex; gap: 10px; font-size: 10px; color: #8892b0; }
+.fg-stat b { font-family: 'Press Start 2P', monospace; font-size: 8px; }
+.fg-win-val { color: #1abc9c; }
+.fg-lose-val { color: #ff6b6b; }
+
+.fg-history { display: flex; flex-wrap: wrap; gap: 4px; min-height: 20px; }
+.fg-hist-item {
+    padding: 3px 8px; font-family: 'Press Start 2P', monospace; font-size: 7px;
+    border: 1px solid; animation: fgHistPop 0.3s ease;
+}
+@keyframes fgHistPop { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.fg-hist-win { background: rgba(26,188,156,0.1); border-color: rgba(26,188,156,0.3); color: #1abc9c; }
+.fg-hist-lose { background: rgba(255,107,107,0.1); border-color: rgba(255,107,107,0.3); color: #ff6b6b; }
+
+@media (max-width: 480px) {
+    .fg-container { max-width: 100%; border-radius: 0; }
+    .fg-payout-grid { grid-template-columns: 1fr; }
+    .fg-bet-btns { flex-wrap: wrap; }
+    .fg-stats { flex-direction: column; gap: 2px; }
+    .fg-play-btn { font-size: 9px; padding: 8px 20px; }
+}

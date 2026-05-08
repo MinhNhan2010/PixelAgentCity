@@ -746,6 +746,12 @@
                     openRoadRacer();
                 }
             }
+            if (point.type === 'fishing') {
+                // Open Fishing & Life minigame
+                if (!_fishingUI || !_fishingUI.overlay.classList.contains('show')) {
+                    openFishingGame();
+                }
+            }
             // ═══ ELEVATOR SCENE SWITCHING ═══
             if (point.type === 'elevator') {
                 const effectToScene = {
@@ -754,6 +760,7 @@
                     'elevator_cafe': 'cafe',
                     'elevator_indoor': 'indoor',
                     'elevator_shop': 'shop',
+                    'elevator_park': 'park',
                 };
                 const targetScene = effectToScene[point.effect];
                 if (targetScene && engine.scenes[targetScene]) {
@@ -886,6 +893,7 @@
             if (_fighterUI && _fighterUI.overlay.classList.contains('show')) return '🥊 Pixel Fighter';
             if (_heliUI && _heliUI.overlay.classList.contains('show')) return '🚁 Flappy Heli';
             if (_racerUI && _racerUI.overlay.classList.contains('show')) return '🏎️ Road Racer';
+            if (_fishingUI && _fishingUI.overlay.classList.contains('show')) return '🎣 Fishing & Life';
             return null;
         }
 
@@ -1438,6 +1446,73 @@
                 }, 12000 + Math.random() * 5000);
             }, 2000);
         };
+
+        // === FISHING & LIFE SYSTEM ===
+        let _fishingUI = null;
+
+        function openFishingGame() {
+            const activeGame = isAnyMinigameActive();
+            if (activeGame) { showMinigameLockToast(activeGame); return; }
+            if (_fishingUI && _fishingUI.overlay.classList.contains('show')) return;
+
+            const overlayEl = document.getElementById('fishingGameOverlay');
+            _fishingUI = new FishingGameUI(overlayEl);
+
+            // Validate and deduct coins on play
+            _fishingUI.onPlayRequest = (betAmount) => {
+                if (!game.canAfford(betAmount)) {
+                    showToast('💸 Không đủ tiền! Cần ' + betAmount + 'Ⓒ', 'error');
+                    return false;
+                }
+                game.spend(betAmount, 'Fishing bet');
+                _fishingUI.setBalance(game.coins);
+                return true;
+            };
+
+            // Handle results
+            _fishingUI.onResultCallback = (result) => {
+                if (result.win) {
+                    game._fishingWon = true;
+                    game.earn(result.payout, 'Fishing win');
+                    manager.addLog('system', '🎣 Câu được: ' + result.fish.name + ' ' + result.fish.weight + 'kg! +' + result.payout + 'Ⓒ', 'success');
+                    if (result.payout >= result.bet * 5) {
+                        showToast('🏆🎣 CÁ HIẾM! ' + result.fish.emoji + ' +' + result.payout + 'Ⓒ', 'success');
+                        engine.spawnInteractionFx(30, 10, '🎣');
+                    } else {
+                        showToast('🎣 ' + result.fish.name + ' ' + result.fish.weight + 'kg! +' + result.payout + 'Ⓒ', 'success');
+                    }
+                } else {
+                    manager.addLog('system', '🎣 Cá thoát! -' + result.bet + 'Ⓒ', 'info');
+                }
+                _fishingUI.setBalance(game.coins);
+                refreshHUD();
+            };
+
+            // On close
+            _fishingUI.onClose = () => {
+                if (_fishingUI && _fishingUI.game) {
+                    _fishingUI.game.destroy();
+                }
+                _fishingUI = null;
+            };
+
+            _fishingUI.setBalance(game.coins);
+            _fishingUI.show();
+            manager.addLog('system', '🎣 Fishing & Life mở!', 'info');
+            showToast('🎣 Chào mừng đến Fishing & Life!', 'info');
+        }
+
+        // Keyboard shortcut for Fishing (F key)
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'f' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                const tag = (e.target || {}).tagName;
+                if (tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') {
+                    if (!_fishingUI || !_fishingUI.overlay.classList.contains('show')) {
+                        openFishingGame();
+                    }
+                }
+            }
+        });
 
         // HUD button & keyboard shortcut for Cafe
         const btnCafe = document.getElementById('btnCafeGame');
