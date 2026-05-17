@@ -1,0 +1,349 @@
+{
+  "coins": 521,
+  "total_earned": 36,
+  "total_spent": 10,
+  "day": 1,
+  "day_progress": 0.0,
+  "level": 1,
+  "xp": 0,
+  "reputation": 3.0,
+  "speed": 1,
+  "paused": false,
+  "agents": {},
+  "tasks": {},
+  "contracts": {},
+  "farm_plots": [],
+  "inventory": [],
+  "achievements": {},
+  "tech_tree": {},
+  "contracts_completed": 0,
+  "contracts_failed": 0,
+  "total_tasks_done": 0,
+  "mini_game_scores": {},
+  "mini_game_flags": {
+    "billiards_played": true,
+    "fish_caught": true
+  },
+  "mini_game_history": [
+    {
+      "game": "billiards",
+      "time": 1778578524.8300052,
+      "result": {
+        "winner": {
+          "id": "p1",
+          "name": "Agent A",
+          "role": "coder",
+          "emoji": "🤖"
+        },
+        "turns": 5,
+        "groups": {
+          "p1": "stripes",
+          "p2": "solids"
+        },
+        "pocketed": {
+          "p1": [
+            14,
+            15
+          ],
+          "p2": []
+        },
+        "history": [
+          {
+            "turn": 1,
+            "playerId": "p1",
+            "player": "Agent A",
+            "made": false,
+            "foul": false
+          },
+          {
+            "turn": 2,
+            "playerId": "p2",
+            "player": "Agent B",
+            "made": false,
+            "foul": false
+          },
+          {
+            "turn": 3,
+            "playerId": "p1",
+            "player": "Agent A",
+            "made": true,
+            "foul": false,
+            "ball": 14,
+            "group": "stripes"
+          },
+          {
+            "turn": 4,
+            "playerId": "p1",
+            "player": "Agent A",
+            "made": true,
+            "foul": false,
+            "ball": 15,
+            "group": "stripes"
+          },
+          {
+            "turn": 5,
+            "playerId": "p1",
+            "player": "Agent A",
+            "made": false,
+            "foul": false
+          }
+        ],
+        "table": {
+          "solids": [],
+          "stripes": [
+            14,
+            15
+          ],
+          "eight_pocketed": false
+        }
+      }
+    },
+    {
+      "game": "cafe",
+      "time": 1778578524.8300052,
+      "result": {
+        "recipe": {
+          "id": "espresso",
+          "emoji": "☕",
+          "name": "Espresso",
+          "difficulty": 0.35,
+          "baseMul": 2,
+          "targetSize": 0.3
+        },
+        "bet": 10,
+        "payout": 5,
+        "netGain": -5,
+        "win": false,
+        "name": "😅 Espresso hơi tệ...",
+        "isPerfect": false,
+        "totalStars": 3,
+        "maxStars": 9,
+        "avgAccuracy": 0.4673333333333333,
+        "stepResults": [
+          0.838,
+          0.042,
+          0.522
+        ],
+        "targets": [
+          {
+            "start": 0.326,
+            "end": 0.626,
+            "stop": 0.5
+          },
+          {
+            "start": 0.221,
+            "end": 0.506,
+            "stop": 0.5
+          },
+          {
+            "start": 0.429,
+            "end": 0.699,
+            "stop": 0.5
+          }
+        ]
+      }
+    },
+    {
+      "game": "fishing",
+      "time": 1778578524.8300052,
+      "result": {
+        "win": true,
+        "bet": 10,
+        "payout": 36,
+        "netGain": 26,
+        "fish": {
+          "name": "Cá Lóc",
+          "emoji": "🐟",
+          "weight": 2.2,
+          "difficulty": 3
+        },
+        "escaped": false
+      }
+    }
+  ],
+  "slot_stats": {
+    "totalSpins": 0,
+    "totalWon": 0,
+    "totalLost": 0,
+    "history": []
+  },
+  "gold_price": 100.0,
+  "gold_history": [
+    100.0
+  ],
+  "gold_holdings": 0.0,
+  "cafe_stats": {
+    "totalGames": 1,
+    "totalWon": 0,
+    "totalLost": 10,
+    "perfectDrinks": 0,
+    "history": [
+      {
+        "recipe": {
+          "id": "espresso",
+          "emoji": "☕",
+          "name": "Espresso",
+          "difficulty": 0.35,
+          "baseMul": 2,
+          "targetSize": 0.3
+        },
+        "bet": 10,
+        "payout": 5,
+        "netGain": -5,
+        "win": false,
+        "name": "😅 Espresso hơi tệ...",
+        "isPerfect": false,
+        "totalStars": 3,
+        "maxStars": 9,
+        "avgAccuracy": 0.4673333333333333,
+        "stepResults": [
+          0.838,
+          0.042,
+          0.522
+        ],
+        "targets": [
+          {
+            "start": 0.326,
+            "end": 0.626,
+            "stop": 0.5
+          },
+          {
+            "start": 0.221,
+            "end": 0.506,
+            "stop": 0.5
+          },
+          {
+            "start": 0.429,
+            "end": 0.699,
+            "stop": 0.5
+          }
+        ]
+      }
+    ]
+  },
+  "fishing_stats": {
+    "totalGames": 1,
+    "totalCaught": 1,
+    "totalWon": 36,
+    "totalLost": 0,
+    "bestCatch": {
+      "name": "Cá Lóc",
+      "weight": 2.2,
+      "value": 36
+    },
+    "inventory": [
+      {
+        "name": "Cá Lóc",
+        "weight": 2.2,
+        "value": 36
+      }
+    ]
+  },
+  "billiards_stats": {
+    "totalGames": 1,
+    "wins": 1,
+    "history": [
+      {
+        "winner": {
+          "id": "p1",
+          "name": "Agent A",
+          "role": "coder",
+          "emoji": "🤖"
+        },
+        "turns": 5,
+        "groups": {
+          "p1": "stripes",
+          "p2": "solids"
+        },
+        "pocketed": {
+          "p1": [
+            14,
+            15
+          ],
+          "p2": []
+        },
+        "history": [
+          {
+            "turn": 1,
+            "playerId": "p1",
+            "player": "Agent A",
+            "made": false,
+            "foul": false
+          },
+          {
+            "turn": 2,
+            "playerId": "p2",
+            "player": "Agent B",
+            "made": false,
+            "foul": false
+          },
+          {
+            "turn": 3,
+            "playerId": "p1",
+            "player": "Agent A",
+            "made": true,
+            "foul": false,
+            "ball": 14,
+            "group": "stripes"
+          },
+          {
+            "turn": 4,
+            "playerId": "p1",
+            "player": "Agent A",
+            "made": true,
+            "foul": false,
+            "ball": 15,
+            "group": "stripes"
+          },
+          {
+            "turn": 5,
+            "playerId": "p1",
+            "player": "Agent A",
+            "made": false,
+            "foul": false
+          }
+        ],
+        "table": {
+          "solids": [],
+          "stripes": [
+            14,
+            15
+          ],
+          "eight_pocketed": false
+        }
+      }
+    ]
+  },
+  "achievement_unlocked": [],
+  "tech_unlocked": [],
+  "tech_current_research": null,
+  "tech_research_progress": 0.0,
+  "shop_inventory": {},
+  "shop_equipped_items": {},
+  "shop_active_buffs": [],
+  "shop_global_bonuses": {},
+  "shop_daily_specials": [],
+  "shop_last_refresh_day": -1,
+  "shop_agent_buy_tracker": {},
+  "shop_stats": {
+    "totalPurchases": 0,
+    "totalSpent": 0,
+    "totalSold": 0,
+    "totalEarned": 0,
+    "itemsUsed": 0
+  },
+  "layout_map": [],
+  "layout_furniture": [],
+  "layout_desk_slots": [],
+  "layout_undo_stack": [],
+  "layout_redo_stack": [],
+  "layout_saved_at": null,
+  "unlocked_rooms": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "created_at": 1778578524.8300052,
+  "last_saved": 1778578524.8300052
+}

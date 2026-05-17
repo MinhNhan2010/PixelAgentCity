@@ -15,7 +15,11 @@ class ItemShopUI {
     // ═══ SHOW / HIDE ═══
     show() {
         if (!this._built) this._buildHTML();
-        this.shop.refreshDailySpecials();
+        if (this._pythonCoreActive()) {
+            window.PythonBridge.refreshDailyShop?.().then(() => this._notifyPythonInvalidated());
+        } else {
+            this.shop.refreshDailySpecials();
+        }
         this.render();
         this.overlay.classList.add('show');
         this.overlay.style.display = 'flex';
@@ -251,7 +255,36 @@ class ItemShopUI {
     }
 
     // ═══ ACTION HANDLERS ═══
-    _onBuy(itemId) {
+    _pythonCoreActive() {
+        return !!(window.__pixelAgentUsePythonCore && window.PythonBridge?.isServerMode?.());
+    }
+
+    _notifyPythonInvalidated() {
+        window.dispatchEvent(new CustomEvent('python-core-state-invalidated'));
+    }
+
+    _isSuccess(result) {
+        return !!(result && (result.success || result.status === 'ok'));
+    }
+
+    _resultMsg(result, fallback) {
+        return result?.msg || result?.message || fallback;
+    }
+
+    async _onBuy(itemId) {
+        if (this._pythonCoreActive()) {
+            const result = await window.PythonBridge.buyItem(itemId, 1);
+            if (this._isSuccess(result)) {
+                this._showFeedback(this._resultMsg(result, 'Purchased.'), 'success');
+                if (this.onBuy) this.onBuy(result);
+                this._notifyPythonInvalidated();
+            } else {
+                this._showFeedback(this._resultMsg(result, 'Purchase failed.'), 'error');
+            }
+            this.render();
+            return;
+        }
+
         const result = this.shop.buyItem(itemId);
         if (result.success) {
             this._showFeedback(result.msg, 'success');
@@ -262,7 +295,20 @@ class ItemShopUI {
         this.render();
     }
 
-    _onSell(itemId) {
+    async _onSell(itemId) {
+        if (this._pythonCoreActive()) {
+            const result = await window.PythonBridge.sellItem(itemId, 1);
+            if (this._isSuccess(result)) {
+                this._showFeedback(this._resultMsg(result, 'Sold.'), 'success');
+                if (this.onSell) this.onSell(result);
+                this._notifyPythonInvalidated();
+            } else {
+                this._showFeedback(this._resultMsg(result, 'Sell failed.'), 'error');
+            }
+            this.render();
+            return;
+        }
+
         const result = this.shop.sellItem(itemId);
         if (result.success) {
             this._showFeedback(result.msg, 'success');
@@ -273,7 +319,19 @@ class ItemShopUI {
         this.render();
     }
 
-    _onUse(itemId) {
+    async _onUse(itemId) {
+        if (this._pythonCoreActive()) {
+            const result = await window.PythonBridge.useItem(itemId, null);
+            if (this._isSuccess(result)) {
+                this._showFeedback(this._resultMsg(result, 'Used.'), 'success');
+                this._notifyPythonInvalidated();
+            } else {
+                this._showFeedback(this._resultMsg(result, 'Use failed.'), 'error');
+            }
+            this.render();
+            return;
+        }
+
         if (this.onUseItem) {
             this.onUseItem(itemId);
         }

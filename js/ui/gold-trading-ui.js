@@ -30,8 +30,14 @@ class GoldTradingUI {
 
     _startTicking() {
         // Price tick every 2 seconds
-        this._tickTimer = setInterval(() => {
-            this.gold.tick(1);
+        this._tickTimer = setInterval(async () => {
+            if (window.__pixelAgentUsePythonCore && window.PythonBridge?.isServerMode?.()) {
+                const state = await window.PythonBridge.goldTick();
+                this.gold.applyPythonState?.(state);
+                window.dispatchEvent(new CustomEvent('python-core-state-invalidated'));
+            } else {
+                this.gold.tick(1);
+            }
             this._updateAll();
         }, 2000);
         // Chart redraw every 1s

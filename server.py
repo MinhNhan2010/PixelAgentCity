@@ -30,6 +30,28 @@ from game_engine.farm_manager import FarmManager
 from game_engine.mini_games import MiniGameTracker
 from game_engine.save_manager import SaveManager
 from game_engine.analytics import GameAnalytics
+from game_engine.achievements import AchievementManager
+from game_engine.tech_tree import TechTreeManager
+from game_engine.item_shop import ItemShopManager
+from game_engine.layout_editor import LayoutEditorManager
+from game_engine.chatbox import ChatboxManager
+from game_engine.statistics import StatsDashboard
+from game_engine.error_handler import error_handler
+from game_engine.game_app import (
+    ROOM_CATALOG,
+    SOUND_EVENTS,
+    get_office_bonuses,
+    get_rep_stars,
+    get_difficulty_badge,
+    format_coins,
+    get_time_of_day,
+    get_night_overlay_alpha,
+)
+from game_engine.pixel_engine_bridge import (
+    buy_room,
+    get_bridge_status,
+)
+
 
 
 # ═══════════════════════════════════════════════════════
@@ -52,7 +74,13 @@ contract_mgr = ContractManager(game_state)
 farm_mgr = FarmManager(game_state)
 mini_games = MiniGameTracker(game_state)
 save_mgr = SaveManager()
+layout_mgr = LayoutEditorManager(game_state)
+chatbox_mgr = ChatboxManager(game_state)
+stats_dashboard = StatsDashboard(game_state)
 analytics = GameAnalytics(game_state)
+achievement_mgr = AchievementManager(game_state)
+tech_tree_mgr = TechTreeManager(game_state)
+item_shop_mgr = ItemShopManager(game_state)
 
 # Lock for thread-safe game state access
 state_lock = threading.Lock()
@@ -105,6 +133,18 @@ def get_summary():
             "success_rate": game_state.success_rate,
             "paused": game_state.paused,
             "speed": game_state.speed,
+        })
+
+
+@app.route("/api/agents/logs", methods=["GET"])
+def get_agent_logs():
+    """Get JS-style agent activity logs."""
+    limit = int(request.args.get("limit", 100))
+    with state_lock:
+        return jsonify({
+            "logs": game_state.agent_logs[:limit],
+            "stats": game_state.agent_stats,
+            "performance": game_state.agent_performance_history[-30:],
         })
 
 
@@ -324,6 +364,76 @@ def gold_tick():
         return jsonify(mini_games.gold_trading.get_status())
 
 
+@app.route("/api/minigames/billiards", methods=["POST"])
+def play_billiards():
+    data = request.get_json(force=True) if request.is_json else {}
+    with state_lock:
+        return jsonify(mini_games.play_billiards(data.get("players"), data.get("turns", 24)))
+
+
+@app.route("/api/minigames/cafe", methods=["POST"])
+def play_cafe():
+    data = request.get_json(force=True) if request.is_json else {}
+    with state_lock:
+        return jsonify(mini_games.play_cafe(data.get("bet", 10), data.get("recipe", "espresso"), data.get("stops")))
+
+
+@app.route("/api/minigames/fishing", methods=["POST"])
+def play_fishing():
+    data = request.get_json(force=True) if request.is_json else {}
+    with state_lock:
+        return jsonify(mini_games.play_fishing(data.get("bet", 10), data.get("skill", 0.65)))
+
+
+
+@app.route("/api/minigames/fishing/score", methods=["POST"])
+def submit_fishing_score():
+    data = request.get_json(force=True) if request.is_json else {}
+    with state_lock:
+        return jsonify(mini_games.submit_fishing_result(data.get("bet", 10), data.get("fish_name", ""), data.get("won", False), data.get("weight", 0.0)))
+
+@app.route("/api/minigames/fighter", methods=["POST"])
+def play_fighter():
+    data = request.get_json(force=True) if request.is_json else {}
+    with state_lock:
+        return jsonify(mini_games.play_fighter(data.get("bet", 10), data.get("fighter", "pixel_ryu")))
+
+
+
+@app.route("/api/minigames/fighter/score", methods=["POST"])
+def submit_fighter_score():
+    data = request.get_json(force=True) if request.is_json else {}
+    with state_lock:
+        return jsonify(mini_games.submit_fighter_result(data.get("bet", 10), data.get("fighter", "pixel_ryu"), data.get("won", False), data.get("perfect", False)))
+
+@app.route("/api/minigames/flappy", methods=["POST"])
+def play_flappy():
+    data = request.get_json(force=True) if request.is_json else {}
+    with state_lock:
+        return jsonify(mini_games.play_flappy(data.get("bet", 10), data.get("skill", 0.55)))
+
+
+@app.route("/api/minigames/flappy/score", methods=["POST"])
+def submit_flappy_score():
+    data = request.get_json(force=True) if request.is_json else {}
+    with state_lock:
+        return jsonify(mini_games.submit_flappy_score(data.get("bet", 10), data.get("score", 0)))
+
+
+@app.route("/api/minigames/road-racer", methods=["POST"])
+def play_road_racer():
+    data = request.get_json(force=True) if request.is_json else {}
+    with state_lock:
+        return jsonify(mini_games.play_racer(data.get("bet", 10), data.get("skill", 0.55)))
+
+
+@app.route("/api/minigames/road-racer/score", methods=["POST"])
+def submit_road_racer_score():
+    data = request.get_json(force=True) if request.is_json else {}
+    with state_lock:
+        return jsonify(mini_games.submit_racer_score(data.get("bet", 10), data.get("score", 0), data.get("coins", 0)))
+
+
 @app.route("/api/minigames/scores", methods=["GET"])
 def mini_game_scores():
     with state_lock:
@@ -336,6 +446,147 @@ def record_mini_score():
     with state_lock:
         result = mini_games.record_score(data.get("game", ""), data.get("score", 0))
         return jsonify(result)
+
+
+# ═══════════════════════════════════════════════════════
+# REST API — ACHIEVEMENTS / TECH TREE / PIXELMART
+# ═══════════════════════════════════════════════════════
+
+@app.route("/api/achievements", methods=["GET"])
+def list_achievements():
+    with state_lock:
+        newly = achievement_mgr.check()
+        return jsonify({"achievements": achievement_mgr.get_all(), "progress": achievement_mgr.get_progress(), "newly_unlocked": newly})
+
+
+@app.route("/api/achievements/check", methods=["POST"])
+def check_achievements():
+    with state_lock:
+        newly = achievement_mgr.check()
+        return jsonify({"newly_unlocked": newly, "progress": achievement_mgr.get_progress()})
+
+
+@app.route("/api/tech", methods=["GET"])
+def tech_status():
+    with state_lock:
+        return jsonify(tech_tree_mgr.get_status())
+
+
+@app.route("/api/tech/research", methods=["POST"])
+def start_tech_research():
+    data = request.get_json(force=True)
+    with state_lock:
+        result = tech_tree_mgr.start_research(data.get("tech_id", ""))
+        return jsonify(result), (200 if result.get("success") else 400)
+
+
+@app.route("/api/tech/cancel", methods=["POST"])
+def cancel_tech_research():
+    with state_lock:
+        result = tech_tree_mgr.cancel_research()
+        return jsonify(result), (200 if result.get("success") else 400)
+
+
+@app.route("/api/tech/tick", methods=["POST"])
+def tick_tech_research():
+    with state_lock:
+        researcher_count = sum(1 for a in game_state.agents.values() if a.role in {"data_scientist", "ai_engineer", "cto"})
+        return jsonify(tech_tree_mgr.tick_research(researcher_count))
+
+
+@app.route("/api/shop", methods=["GET"])
+def shop_status():
+    with state_lock:
+        return jsonify(item_shop_mgr.get_status())
+
+
+@app.route("/api/shop/buy", methods=["POST"])
+def shop_buy():
+    data = request.get_json(force=True)
+    with state_lock:
+        result = item_shop_mgr.buy_item(data.get("item_id", ""), data.get("qty", 1))
+        return jsonify(result), (200 if result.get("success") else 400)
+
+
+@app.route("/api/shop/sell", methods=["POST"])
+def shop_sell():
+    data = request.get_json(force=True)
+    with state_lock:
+        result = item_shop_mgr.sell_item(data.get("item_id", ""), data.get("qty", 1))
+        return jsonify(result), (200 if result.get("success") else 400)
+
+
+@app.route("/api/shop/use", methods=["POST"])
+def shop_use():
+    data = request.get_json(force=True)
+    with state_lock:
+        result = item_shop_mgr.use_item(data.get("item_id", ""), data.get("agent_id"))
+        return jsonify(result), (200 if result.get("success") else 400)
+
+
+@app.route("/api/shop/daily", methods=["POST"])
+def shop_refresh_daily():
+    with state_lock:
+        return jsonify({"daily_specials": item_shop_mgr.refresh_daily_specials()})
+
+
+@app.route("/api/layout", methods=["GET"])
+def layout_status():
+    with state_lock:
+        return jsonify(layout_mgr.status())
+
+
+@app.route("/api/layout/place", methods=["POST"])
+def layout_place():
+    data = request.get_json(force=True)
+    with state_lock:
+        result = layout_mgr.place_furniture(data.get("type", ""), int(data.get("tx", 0)), int(data.get("ty", 0)))
+        return jsonify(result), (200 if result.get("success") else 400)
+
+
+@app.route("/api/layout/erase", methods=["POST"])
+def layout_erase():
+    data = request.get_json(force=True)
+    with state_lock:
+        result = layout_mgr.erase_at(int(data.get("tx", 0)), int(data.get("ty", 0)))
+        return jsonify(result), (200 if result.get("success") else 400)
+
+
+@app.route("/api/layout/floor", methods=["POST"])
+def layout_floor():
+    data = request.get_json(force=True)
+    with state_lock:
+        result = layout_mgr.paint_floor(int(data.get("tx", 0)), int(data.get("ty", 0)), data.get("floor", "wood"))
+        return jsonify(result), (200 if result.get("success") else 400)
+
+
+@app.route("/api/layout/wall", methods=["POST"])
+def layout_wall():
+    data = request.get_json(force=True)
+    with state_lock:
+        result = layout_mgr.paint_wall(int(data.get("tx", 0)), int(data.get("ty", 0)))
+        return jsonify(result), (200 if result.get("success") else 400)
+
+
+@app.route("/api/layout/undo", methods=["POST"])
+def layout_undo():
+    with state_lock:
+        result = layout_mgr.undo()
+        return jsonify(result), (200 if result.get("success") else 400)
+
+
+@app.route("/api/layout/redo", methods=["POST"])
+def layout_redo():
+    with state_lock:
+        result = layout_mgr.redo()
+        return jsonify(result), (200 if result.get("success") else 400)
+
+
+@app.route("/api/layout/apply", methods=["POST"])
+def layout_apply():
+    data = request.get_json(force=True)
+    with state_lock:
+        return jsonify(layout_mgr.apply_layout(data))
 
 
 # ═══════════════════════════════════════════════════════
@@ -353,7 +604,7 @@ def save_game():
 
 @app.route("/api/load", methods=["POST"])
 def load_game():
-    global game_state, agent_mgr, economy_mgr, contract_mgr, farm_mgr, mini_games, analytics
+    global game_state, agent_mgr, economy_mgr, contract_mgr, farm_mgr, mini_games, analytics, achievement_mgr, tech_tree_mgr, item_shop_mgr, layout_mgr, chatbox_mgr, stats_dashboard
     data = request.get_json(force=True) if request.is_json else {}
     slot = data.get("slot", "auto")
     with state_lock:
@@ -366,6 +617,12 @@ def load_game():
             farm_mgr = FarmManager(game_state)
             mini_games = MiniGameTracker(game_state)
             analytics = GameAnalytics(game_state)
+            achievement_mgr = AchievementManager(game_state)
+            tech_tree_mgr = TechTreeManager(game_state)
+            item_shop_mgr = ItemShopManager(game_state)
+            layout_mgr = LayoutEditorManager(game_state)
+            chatbox_mgr = ChatboxManager(game_state)
+            stats_dashboard = StatsDashboard(game_state)
             socketio.emit("game_loaded", {"message": msg})
             return jsonify({"status": "ok", "message": msg, "state": game_state.to_dict()})
         return jsonify({"status": "error", "message": msg}), 404
@@ -393,13 +650,124 @@ def get_agent_perf():
 
 
 # ═══════════════════════════════════════════════════════
+# REST API — JS PARITY MODULES
+# ═══════════════════════════════════════════════════════
+
+@app.route("/api/chat/open", methods=["POST"])
+def chat_open():
+    data = request.get_json(force=True)
+    with state_lock:
+        return jsonify(chatbox_mgr.open_with_agent(data.get("agent_id", "")))
+
+
+@app.route("/api/chat/send", methods=["POST"])
+def chat_send():
+    data = request.get_json(force=True)
+    with state_lock:
+        return jsonify(chatbox_mgr.send_message(data.get("agent_id", ""), data.get("text", ""), data.get("key")))
+
+
+@app.route("/api/chat/history", methods=["GET"])
+def chat_history():
+    agent_id = request.args.get("agent_id")
+    with state_lock:
+        return jsonify({"messages": chatbox_mgr.get_history(agent_id), "summary": chatbox_mgr.get_summary()})
+
+
+@app.route("/api/statistics", methods=["GET"])
+def js_statistics():
+    with state_lock:
+        return jsonify({"summary": stats_dashboard.get_summary(), "history": stats_dashboard.save_data()})
+
+
+@app.route("/api/statistics/record", methods=["POST"])
+def js_statistics_record():
+    with state_lock:
+        stats_dashboard.record_day()
+        return jsonify({"status": "ok", "history": stats_dashboard.save_data()})
+
+
+@app.route("/api/errors", methods=["GET", "DELETE"])
+def errors_api():
+    if request.method == "DELETE":
+        error_handler.clear_errors()
+        return jsonify({"status": "ok"})
+    return jsonify({"errors": error_handler.get_errors()})
+
+
+@app.route("/api/errors/log", methods=["POST"])
+def errors_log():
+    data = request.get_json(force=True)
+    entry = error_handler.log(data.get("type", "client"), data.get("message", ""))
+    return jsonify({"status": "ok", "entry": entry})
+
+
+@app.route("/api/app/metadata", methods=["GET"])
+def app_metadata():
+    day_timer = game_state.day_progress * 120
+    return jsonify({
+        "rooms": ROOM_CATALOG,
+        "soundEvents": SOUND_EVENTS,
+        "officeBonuses": get_office_bonuses(game_state.layout_furniture),
+        "repStars": get_rep_stars(game_state.reputation),
+        "difficultyBadges": {d: get_difficulty_badge(d) for d in ["easy", "medium", "hard", "epic"]},
+        "coinsFormatted": format_coins(game_state.coins),
+        "timeOfDay": get_time_of_day(day_timer),
+        "nightOverlayAlpha": get_night_overlay_alpha(day_timer),
+    })
+
+
+# ═══════════════════════════════════════════════════════
+# REST API — BRIDGE / ROOMS / EXTRA ENDPOINTS
+# ═══════════════════════════════════════════════════════
+
+@app.route("/api/rooms/buy", methods=["POST"])
+def room_buy():
+    data = request.get_json(force=True)
+    with state_lock:
+        result = buy_room(game_state, int(data.get("room_id", 0)))
+        return jsonify(result), (200 if result.get("success") else 400)
+
+
+@app.route("/api/bridge", methods=["GET"])
+def bridge_status():
+    with state_lock:
+        return jsonify(get_bridge_status(game_state))
+
+
+@app.route("/api/agents/<agent_id>", methods=["GET"])
+def get_single_agent(agent_id):
+    with state_lock:
+        info = agent_mgr.get_agent_info(agent_id)
+        if info:
+            return jsonify(info)
+        return jsonify({"error": "Agent not found"}), 404
+
+
+@app.route("/api/agents/<agent_id>/assign", methods=["POST"])
+def assign_task_to_agent(agent_id):
+    data = request.get_json(force=True)
+    with state_lock:
+        ok, msg = agent_mgr.assign_task(agent_id, data.get("task_id", ""))
+        return jsonify({"status": "ok" if ok else "error", "message": msg}), (200 if ok else 400)
+
+
+@app.route("/api/game/day-progress", methods=["POST"])
+def update_day_progress():
+    data = request.get_json(force=True) if request.is_json else {}
+    with state_lock:
+        game_state.day_progress = max(0.0, min(1.0, float(data.get("progress", game_state.day_progress))))
+        return jsonify({"day_progress": game_state.day_progress})
+
+
+# ═══════════════════════════════════════════════════════
 # REST API — GAME CONTROL
 # ═══════════════════════════════════════════════════════
 
 @app.route("/api/game/new", methods=["POST"])
 def new_game():
     """Start a new game."""
-    global game_state, agent_mgr, economy_mgr, contract_mgr, farm_mgr, mini_games, analytics
+    global game_state, agent_mgr, economy_mgr, contract_mgr, farm_mgr, mini_games, analytics, achievement_mgr, tech_tree_mgr, item_shop_mgr, layout_mgr, chatbox_mgr, stats_dashboard
     with state_lock:
         game_state = GameState()
         agent_mgr = AgentManager(game_state)
@@ -408,6 +776,12 @@ def new_game():
         farm_mgr = FarmManager(game_state)
         mini_games = MiniGameTracker(game_state)
         analytics = GameAnalytics(game_state)
+        achievement_mgr = AchievementManager(game_state)
+        tech_tree_mgr = TechTreeManager(game_state)
+        item_shop_mgr = ItemShopManager(game_state)
+        layout_mgr = LayoutEditorManager(game_state)
+        chatbox_mgr = ChatboxManager(game_state)
+        stats_dashboard = StatsDashboard(game_state)
         contract_mgr.generate_contracts(3)
         return jsonify({"status": "ok", "message": "🎮 New game started!", "state": game_state.to_dict()})
 
@@ -464,6 +838,16 @@ def next_day():
         # Weather change
         weather = farm_mgr.change_weather()
         events.append(weather)
+
+        # Research / shop / achievements updates
+        researcher_count = sum(1 for a in game_state.agents.values() if a.role in {"data_scientist", "ai_engineer", "cto"})
+        research_event = tech_tree_mgr.tick_research(researcher_count)
+        if research_event.get("active"):
+            events.append({"type": "research", **research_event})
+        item_shop_mgr.refresh_daily_specials()
+        newly_unlocked = achievement_mgr.check()
+        for ach in newly_unlocked:
+            events.append({"type": "achievement_unlocked", "achievement": ach})
 
         # Analytics snapshot
         analytics.take_daily_snapshot()

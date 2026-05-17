@@ -28,6 +28,12 @@ class AgentRole(str, Enum):
     SECURITY = "security"
     AI_ENGINEER = "ai_engineer"
     CTO = "cto"
+    RESEARCHER = "researcher"
+    FARMER = "farmer"
+    ANALYST = "analyst"
+    BACKEND = "backend"
+    MOBILE = "mobile"
+    WRITER = "writer"
 
 
 class AgentState(str, Enum):
@@ -79,16 +85,18 @@ class CropStage(str, Enum):
 # ═══════════════════════════════════════════════════════
 
 ROLE_CONFIG: Dict[str, Dict[str, Any]] = {
-    "coder":          {"emoji": "💻", "cost": 100, "salary": 15, "speed": 1.0, "unlock_level": 1},
-    "tester":         {"emoji": "🧪", "cost": 120, "salary": 18, "speed": 0.9, "unlock_level": 1},
-    "reviewer":       {"emoji": "👁️", "cost": 140, "salary": 20, "speed": 0.85, "unlock_level": 2},
-    "designer":       {"emoji": "🎨", "cost": 160, "salary": 22, "speed": 0.8, "unlock_level": 2},
-    "devops":         {"emoji": "🔧", "cost": 200, "salary": 28, "speed": 0.75, "unlock_level": 3},
-    "pm":             {"emoji": "📊", "cost": 250, "salary": 35, "speed": 0.7, "unlock_level": 4},
-    "data_scientist": {"emoji": "📈", "cost": 300, "salary": 40, "speed": 0.65, "unlock_level": 5},
-    "security":       {"emoji": "🛡️", "cost": 350, "salary": 45, "speed": 0.6, "unlock_level": 6},
-    "ai_engineer":    {"emoji": "🤖", "cost": 400, "salary": 50, "speed": 0.55, "unlock_level": 7},
-    "cto":            {"emoji": "👔", "cost": 500, "salary": 60, "speed": 0.5, "unlock_level": 8},
+    "coder":      {"emoji": "💻", "cost": 100, "salary": 15, "speed": 1.2, "unlock_level": 1, "name": "Coder"},
+    "tester":     {"emoji": "🧪", "cost": 120, "salary": 14, "speed": 1.0, "unlock_level": 1, "name": "Tester"},
+    "reviewer":   {"emoji": "🔍", "cost": 150, "salary": 18, "speed": 0.9, "unlock_level": 2, "name": "Reviewer"},
+    "designer":   {"emoji": "🎨", "cost": 160, "salary": 20, "speed": 0.8, "unlock_level": 2, "name": "Designer"},
+    "devops":     {"emoji": "🚀", "cost": 200, "salary": 25, "speed": 1.1, "unlock_level": 3, "name": "DevOps"},
+    "researcher": {"emoji": "📚", "cost": 220, "salary": 28, "speed": 0.7, "unlock_level": 3, "name": "Researcher"},
+    "farmer":     {"emoji": "🌾", "cost": 80,  "salary": 10, "speed": 0.7, "unlock_level": 3, "name": "Farmer"},
+    "analyst":    {"emoji": "📊", "cost": 180, "salary": 22, "speed": 0.85, "unlock_level": 4, "name": "Analyst"},
+    "security":   {"emoji": "🛡️", "cost": 250, "salary": 30, "speed": 0.9, "unlock_level": 4, "name": "Security"},
+    "backend":    {"emoji": "⚙️", "cost": 200, "salary": 25, "speed": 1.1, "unlock_level": 5, "name": "Backend"},
+    "mobile":     {"emoji": "📱", "cost": 200, "salary": 22, "speed": 1.0, "unlock_level": 5, "name": "Mobile"},
+    "writer":     {"emoji": "✍️", "cost": 130, "salary": 12, "speed": 0.8, "unlock_level": 5, "name": "Writer"},
 }
 
 MODEL_CONFIG: Dict[str, Dict[str, Any]] = {
@@ -108,16 +116,16 @@ MODEL_CONFIG: Dict[str, Dict[str, Any]] = {
 # ═══════════════════════════════════════════════════════
 
 LEVEL_THRESHOLDS = [
-    {"level": 1,  "name": "Startup Garage",   "xp": 0},
-    {"level": 2,  "name": "Small Studio",     "xp": 100},
-    {"level": 3,  "name": "Growing Team",     "xp": 300},
-    {"level": 4,  "name": "Rising Agency",    "xp": 600},
-    {"level": 5,  "name": "Established Firm",  "xp": 1000},
-    {"level": 6,  "name": "Tech Company",     "xp": 1500},
-    {"level": 7,  "name": "Innovation Lab",   "xp": 2200},
-    {"level": 8,  "name": "AI Powerhouse",    "xp": 3000},
-    {"level": 9,  "name": "Tech Giant",       "xp": 4000},
-    {"level": 10, "name": "Global Empire",    "xp": 5500},
+    {"level": 1,  "name": "Startup Garage", "xp": 0},
+    {"level": 2,  "name": "Small Studio", "xp": 100},
+    {"level": 3,  "name": "Growing Team", "xp": 300},
+    {"level": 4,  "name": "Established Firm", "xp": 600},
+    {"level": 5,  "name": "Pro Agency", "xp": 1000},
+    {"level": 6,  "name": "Tech Company", "xp": 1500},
+    {"level": 7,  "name": "Scale-up", "xp": 2200},
+    {"level": 8,  "name": "Enterprise", "xp": 3000},
+    {"level": 9,  "name": "Corp Giant", "xp": 4000},
+    {"level": 10, "name": "🏆 AI Empire", "xp": 5500},
 ]
 
 
@@ -197,6 +205,10 @@ class Task:
     status: str = "pending"
     assigned_agent_id: Optional[str] = None
     xp_reward: int = 20
+    priority: str = "medium"
+    needs_review: bool = False
+    review_status: Optional[str] = None
+    reviewed_by: Optional[str] = None
     created_at: float = field(default_factory=time.time)
     completed_at: Optional[float] = None
 
@@ -295,7 +307,7 @@ class TechNode:
 class GameState:
     """Complete game state snapshot."""
     # Economy
-    coins: int = 500
+    coins: int = 9999999999
     total_earned: int = 0
     total_spent: int = 0
 
@@ -324,9 +336,103 @@ class GameState:
     contracts_failed: int = 0
     total_tasks_done: int = 0
     mini_game_scores: Dict[str, int] = field(default_factory=dict)
+    mini_game_flags: Dict[str, bool] = field(default_factory=dict)
+    mini_game_history: List[Dict[str, Any]] = field(default_factory=list)
+    slot_stats: Dict[str, Any] = field(default_factory=lambda: {
+        "totalSpins": 0,
+        "totalWon": 0,
+        "totalLost": 0,
+        "history": [],
+    })
+    gold_price: float = 100.0
+    gold_history: List[float] = field(default_factory=lambda: [100.0])
+    gold_holdings: float = 0.0
+    cafe_stats: Dict[str, Any] = field(default_factory=lambda: {
+        "totalGames": 0,
+        "totalWon": 0,
+        "totalLost": 0,
+        "perfectDrinks": 0,
+        "history": [],
+    })
+    fishing_stats: Dict[str, Any] = field(default_factory=lambda: {
+        "totalGames": 0,
+        "totalCaught": 0,
+        "totalWon": 0,
+        "totalLost": 0,
+        "bestCatch": None,
+        "inventory": [],
+    })
+    billiards_stats: Dict[str, Any] = field(default_factory=lambda: {
+        "totalGames": 0,
+        "wins": 0,
+        "history": [],
+    })
+    fighter_stats: Dict[str, Any] = field(default_factory=lambda: {
+        "totalGames": 0,
+        "totalWon": 0,
+        "totalLost": 0,
+        "history": [],
+    })
+    flappy_stats: Dict[str, Any] = field(default_factory=lambda: {
+        "totalGames": 0,
+        "totalWon": 0,
+        "totalLost": 0,
+        "highScore": 0,
+        "history": [],
+    })
+    racer_stats: Dict[str, Any] = field(default_factory=lambda: {
+        "totalGames": 0,
+        "totalWon": 0,
+        "totalLost": 0,
+        "highScore": 0,
+        "coinsCollected": 0,
+        "history": [],
+    })
+    analytics_history: Dict[str, List[Dict[str, Any]]] = field(default_factory=lambda: {
+        "dailyIncome": [],
+        "agentPerformance": [],
+        "contractHistory": [],
+    })
+    agent_stats: Dict[str, Any] = field(default_factory=lambda: {
+        "totalLinesWritten": 0,
+        "totalFilesModified": 0,
+        "totalErrors": 0,
+        "totalCommits": 0,
+        "uptime": 0,
+    })
+    agent_logs: List[Dict[str, Any]] = field(default_factory=list)
+    agent_performance_history: List[Dict[str, Any]] = field(default_factory=list)
+    agent_event_cooldown: int = 0
 
-    # Unlocked rooms
-    unlocked_rooms: List[int] = field(default_factory=lambda: [0, 1, 2, 3])
+    # Converted JS systems
+    achievement_unlocked: List[str] = field(default_factory=list)
+    tech_unlocked: List[str] = field(default_factory=list)
+    tech_current_research: Optional[str] = None
+    tech_research_progress: float = 0.0
+    shop_inventory: Dict[str, int] = field(default_factory=dict)
+    shop_equipped_items: Dict[str, Dict[str, str]] = field(default_factory=dict)
+    shop_active_buffs: List[Dict[str, Any]] = field(default_factory=list)
+    shop_global_bonuses: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    shop_daily_specials: List[str] = field(default_factory=list)
+    shop_last_refresh_day: int = -1
+    shop_agent_buy_tracker: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    shop_stats: Dict[str, int] = field(default_factory=lambda: {
+        "totalPurchases": 0,
+        "totalSpent": 0,
+        "totalSold": 0,
+        "totalEarned": 0,
+        "itemsUsed": 0,
+    })
+
+    # Converted layout editor state
+    layout_map: List[List[Optional[str]]] = field(default_factory=list)
+    layout_furniture: List[Dict[str, Any]] = field(default_factory=list)
+    layout_desk_slots: List[Dict[str, Any]] = field(default_factory=list)
+    layout_undo_stack: List[Dict[str, Any]] = field(default_factory=list)
+    layout_redo_stack: List[Dict[str, Any]] = field(default_factory=list)
+    layout_saved_at: Optional[str] = None
+
+    unlocked_rooms: List[int] = field(default_factory=lambda: list(range(17)))
 
     # Timestamp
     created_at: float = field(default_factory=time.time)
@@ -356,6 +462,41 @@ class GameState:
             "contracts_failed": self.contracts_failed,
             "total_tasks_done": self.total_tasks_done,
             "mini_game_scores": self.mini_game_scores,
+            "mini_game_flags": self.mini_game_flags,
+            "mini_game_history": self.mini_game_history,
+            "slot_stats": self.slot_stats,
+            "gold_price": self.gold_price,
+            "gold_history": self.gold_history,
+            "gold_holdings": self.gold_holdings,
+            "cafe_stats": self.cafe_stats,
+            "fishing_stats": self.fishing_stats,
+            "billiards_stats": self.billiards_stats,
+            "fighter_stats": self.fighter_stats,
+            "flappy_stats": self.flappy_stats,
+            "racer_stats": self.racer_stats,
+            "analytics_history": self.analytics_history,
+            "agent_stats": self.agent_stats,
+            "agent_logs": self.agent_logs,
+            "agent_performance_history": self.agent_performance_history,
+            "agent_event_cooldown": self.agent_event_cooldown,
+            "achievement_unlocked": self.achievement_unlocked,
+            "tech_unlocked": self.tech_unlocked,
+            "tech_current_research": self.tech_current_research,
+            "tech_research_progress": self.tech_research_progress,
+            "shop_inventory": self.shop_inventory,
+            "shop_equipped_items": self.shop_equipped_items,
+            "shop_active_buffs": self.shop_active_buffs,
+            "shop_global_bonuses": self.shop_global_bonuses,
+            "shop_daily_specials": self.shop_daily_specials,
+            "shop_last_refresh_day": self.shop_last_refresh_day,
+            "shop_agent_buy_tracker": self.shop_agent_buy_tracker,
+            "shop_stats": self.shop_stats,
+            "layout_map": self.layout_map,
+            "layout_furniture": self.layout_furniture,
+            "layout_desk_slots": self.layout_desk_slots,
+            "layout_undo_stack": self.layout_undo_stack,
+            "layout_redo_stack": self.layout_redo_stack,
+            "layout_saved_at": self.layout_saved_at,
             "unlocked_rooms": self.unlocked_rooms,
             "created_at": self.created_at,
             "last_saved": self.last_saved,

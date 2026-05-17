@@ -84,6 +84,11 @@ class SlotMachine {
 
         if (this.onSpinStart) this.onSpinStart(this.currentBet);
 
+        if (this._pythonCoreActive()) {
+            this._spinWithPython();
+            return null;
+        }
+
         // Pick results immediately (but reveal staggered)
         const results = [];
         for (let r = 0; r < 3; r++) {
@@ -106,6 +111,67 @@ class SlotMachine {
         });
 
         return results;
+    }
+
+    _pythonCoreActive() {
+        return !!(window.__pixelAgentUsePythonCore && window.PythonBridge?.isServerMode?.() && window.PythonBridge.playSlots);
+    }
+
+    async _spinWithPython() {
+        const serverResult = await window.PythonBridge.playSlots(this.currentBet);
+        if (!serverResult || serverResult.error) {
+            this.isSpinning = false;
+            if (this.onResult) {
+                this.onResult({
+                    reels: [this.symbols[0], this.symbols[1], this.symbols[2]],
+                    bet: this.currentBet,
+                    payout: 0,
+                    netGain: -this.currentBet,
+                    win: false,
+                    name: serverResult?.error || 'Spin failed.',
+                    isJackpot: false,
+                });
+            }
+            return;
+        }
+
+        const result = this._normalizePythonResult(serverResult);
+        this.reels = result.reels;
+
+        const delays = [this.stepDelay, this.stepDelay * 2, this.stepDelay * 3];
+        delays.forEach((d, i) => {
+            setTimeout(() => {
+                if (this.onReelStop) this.onReelStop(i, result.reels[i]);
+                if (i === 2) {
+                    setTimeout(() => this._completeResult(result), 300);
+                }
+            }, d);
+        });
+    }
+
+    _normalizePythonResult(serverResult) {
+        const reels = (serverResult.reels || []).map(entry => {
+            const id = typeof entry === 'string' ? entry : entry?.id;
+            return this.symbols.find(s => s.id === id) || {
+                id: id || 'unknown',
+                emoji: entry?.emoji || '?',
+                name: entry?.name || id || 'Unknown',
+            };
+        });
+        while (reels.length < 3) reels.push(this.symbols[0]);
+
+        const bet = serverResult.bet ?? this.currentBet;
+        const payout = serverResult.payout ?? 0;
+        return {
+            ...serverResult,
+            reels,
+            bet,
+            payout,
+            netGain: serverResult.netGain ?? serverResult.winnings ?? (payout - bet),
+            win: !!serverResult.win,
+            name: serverResult.name || 'No luck this time...',
+            isJackpot: !!(serverResult.isJackpot || serverResult.jackpot),
+        };
     }
 
     _evaluate(results) {
@@ -137,12 +203,6 @@ class SlotMachine {
         const win = payout > 0;
         const netGain = payout - this.currentBet;
 
-        if (win) {
-            this.totalWon += payout;
-        } else {
-            this.totalLost += this.currentBet;
-        }
-
         const result = {
             reels: results,
             bet: this.currentBet,
@@ -153,8 +213,18 @@ class SlotMachine {
             isJackpot: ids[0] === 'jackpot' && ids[1] === 'jackpot' && ids[2] === 'jackpot',
         };
 
+        this._completeResult(result);
+    }
+
+    _completeResult(result) {
         this.history.unshift(result);
         if (this.history.length > 10) this.history.pop();
+
+        if (result.win) {
+            this.totalWon += result.payout;
+        } else {
+            this.totalLost += result.bet;
+        }
 
         this.isSpinning = false;
         if (this.onResult) this.onResult(result);

@@ -233,6 +233,7 @@ class ContractManager:
         """
         Complete a contract and pay reward.
         Returns (success, message, reward).
+        Includes early completion bonus (20-50%).
         """
         contract = self.state.contracts.get(contract_id)
         if not contract:
@@ -251,7 +252,38 @@ class ContractManager:
         contract.completed_day = self.state.day
         self.state.contracts_completed += 1
 
-        return True, f"✅ Contract completed: {contract.title} (+{contract.reward}Ⓒ)", contract.reward
+        # Early completion bonus
+        reward = contract.reward
+        bonus_msg = ""
+        if contract.accepted_day:
+            days_used = self.state.day - contract.accepted_day
+            days_early = contract.deadline_days - days_used
+            if days_early > 0:
+                bonus_pct = min(0.5, days_early * 0.1 + 0.1)  # 20-50%
+                bonus = int(reward * bonus_pct)
+                reward += bonus
+                bonus_msg = f" (+{int(bonus_pct*100)}% early bonus!)"
+
+        # Quality rating (★1-5)
+        rating = self._rate_contract(contract)
+
+        return True, f"✅ Contract completed: {contract.title} (+{reward}Ⓒ){bonus_msg} ★{rating}", reward
+
+    def _rate_contract(self, contract: Contract) -> int:
+        """Rate completed contract quality 1-5 based on speed and task quality."""
+        if not contract.accepted_day:
+            return 3
+        days_used = max(1, self.state.day - contract.accepted_day)
+        speed_ratio = contract.deadline_days / days_used
+        if speed_ratio >= 2.0:
+            return 5
+        if speed_ratio >= 1.5:
+            return 4
+        if speed_ratio >= 1.0:
+            return 3
+        if speed_ratio >= 0.7:
+            return 2
+        return 1
 
     def fail_contract(self, contract_id: str) -> Tuple[bool, str, int]:
         """Fail a contract (deadline passed)."""

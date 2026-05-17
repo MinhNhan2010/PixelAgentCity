@@ -13,9 +13,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;500;600;700&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/item-shop.css">
-    <link rel="stylesheet" href="mobile.css">
+    <link rel="stylesheet" href="css/mobile.css">
 </head>
 
 <body>
@@ -773,13 +773,13 @@
     </div>
 
 
-    <script src="game.js"></script>
-    <script src="pixel-engine.js"></script>
-    <script src="agents.js"></script>
-    <script src="layout-editor.js"></script>
-    <script src="chatbox.js"></script>
-    <script src="poker.js"></script>
-    <script src="poker-ui.js"></script>
+    <script src="js/core/game.js"></script>
+    <script src="js/core/pixel-engine.js"></script>
+    <script src="js/managers/agents.js"></script>
+    <script src="js/managers/layout-editor.js"></script>
+    <script src="js/managers/chatbox.js"></script>
+    <script src="js/minigames/poker.js"></script>
+    <script src="js/ui/poker-ui.js"></script>
     <!-- ========== ROOM SHOP OVERLAY ========== -->
     <div class="room-shop-overlay" id="roomShopOverlay">
         <div class="room-shop-modal">
@@ -1007,32 +1007,32 @@
     </div>
 
     <!-- Error Handler & Utils (must load first) -->
-    <script src="error-handler.js"></script>
-    <script src="statistics.js"></script>
-    <script src="billiards.js"></script>
-    <script src="billiards-ui.js"></script>
-    <script src="slot-machine.js"></script>
-    <script src="slot-machine-ui.js"></script>
-    <script src="cafe-game.js"></script>
-    <script src="cafe-game-ui.js"></script>
-    <script src="fighter-game.js"></script>
-    <script src="fighter-game-ui.js"></script>
-    <script src="flappy-heli.js"></script>
-    <script src="flappy-heli-ui.js"></script>
-    <script src="road-racer.js"></script>
-    <script src="road-racer-ui.js"></script>
-    <script src="fishing-game.js"></script>
-    <script src="fishing-game-ui.js"></script>
-    <script src="gold-trading.js"></script>
-    <script src="gold-trading-ui.js"></script>
-    <script src="tech-tree.js"></script>
-    <script src="achievements.js"></script>
-    <script src="farm.js"></script>
-    <script src="item-catalog.js"></script>
-    <script src="item-shop.js"></script>
-    <script src="item-shop-ui.js"></script>
-    <script src="app.js"></script>
-    <script src="python-bridge.js"></script>
+    <script src="js/core/error-handler.js"></script>
+    <script src="js/managers/statistics.js"></script>
+    <script src="js/minigames/billiards.js"></script>
+    <script src="js/ui/billiards-ui.js"></script>
+    <script src="js/minigames/slot-machine.js"></script>
+    <script src="js/ui/slot-machine-ui.js"></script>
+    <script src="js/minigames/cafe-game.js"></script>
+    <script src="js/ui/cafe-game-ui.js"></script>
+    <script src="js/minigames/fighter-game.js"></script>
+    <script src="js/ui/fighter-game-ui.js"></script>
+    <script src="js/minigames/flappy-heli.js"></script>
+    <script src="js/ui/flappy-heli-ui.js"></script>
+    <script src="js/minigames/road-racer.js"></script>
+    <script src="js/ui/road-racer-ui.js"></script>
+    <script src="js/minigames/fishing-game.js"></script>
+    <script src="js/ui/fishing-game-ui.js"></script>
+    <script src="js/managers/gold-trading.js"></script>
+    <script src="js/ui/gold-trading-ui.js"></script>
+    <script src="js/managers/tech-tree.js"></script>
+    <script src="js/managers/achievements.js"></script>
+    <script src="js/managers/farm.js"></script>
+    <script src="js/managers/item-catalog.js"></script>
+    <script src="js/managers/item-shop.js"></script>
+    <script src="js/ui/item-shop-ui.js"></script>
+    <script src="js/core/app.js"></script>
+    <script src="js/core/python-bridge.js"></script>
     <script>
         // Mobile bottom-sheet panel toggle
         (function () {
@@ -1055,7 +1055,7 @@
             }, { passive: true });
         })();
     </script>
-    <script src="mobile-controls.js"></script>
+    <script src="js/ui/mobile-controls.js"></script>
 </body>
 
 </html>

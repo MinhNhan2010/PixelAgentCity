@@ -16,64 +16,45 @@ from .models import GameState, FarmPlot, InventoryItem, CropStage
 # ═══════════════════════════════════════════════════════
 
 CROPS = {
-    "tomato":    {"emoji": "🍅", "name": "Cà chua",    "cost": 10, "grow_time": 30,  "sell_price": 25,  "xp": 5},
-    "carrot":    {"emoji": "🥕", "name": "Cà rốt",     "cost": 8,  "grow_time": 25,  "sell_price": 20,  "xp": 4},
-    "corn":      {"emoji": "🌽", "name": "Bắp",        "cost": 12, "grow_time": 40,  "sell_price": 30,  "xp": 6},
-    "potato":    {"emoji": "🥔", "name": "Khoai tây",  "cost": 6,  "grow_time": 35,  "sell_price": 18,  "xp": 4},
-    "strawberry":{"emoji": "🍓", "name": "Dâu tây",    "cost": 15, "grow_time": 45,  "sell_price": 40,  "xp": 8},
-    "watermelon":{"emoji": "🍉", "name": "Dưa hấu",    "cost": 20, "grow_time": 60,  "sell_price": 55,  "xp": 10},
-    "pumpkin":   {"emoji": "🎃", "name": "Bí ngô",     "cost": 18, "grow_time": 55,  "sell_price": 50,  "xp": 9},
-    "rice":      {"emoji": "🌾", "name": "Lúa",        "cost": 5,  "grow_time": 50,  "sell_price": 15,  "xp": 3},
-    "coffee":    {"emoji": "☕", "name": "Cà phê",     "cost": 25, "grow_time": 80,  "sell_price": 70,  "xp": 12},
-    "grape":     {"emoji": "🍇", "name": "Nho",        "cost": 22, "grow_time": 70,  "sell_price": 60,  "xp": 11},
+    "tomato":     {"emoji": "🍅", "icon": "🍅", "name": "Cà Chua", "cost": 10, "grow_days": 2, "grow_time": 2, "yield": [2, 4], "sell_price": 15, "category": "vegetable", "color": "#e74c3c", "xp": 5},
+    "carrot":     {"emoji": "🥕", "icon": "🥕", "name": "Cà Rốt", "cost": 8, "grow_days": 2, "grow_time": 2, "yield": [3, 5], "sell_price": 12, "category": "vegetable", "color": "#e67e22", "xp": 4},
+    "corn":       {"emoji": "🌽", "icon": "🌽", "name": "Ngô", "cost": 12, "grow_days": 3, "grow_time": 3, "yield": [2, 4], "sell_price": 18, "category": "vegetable", "color": "#f1c40f", "xp": 6},
+    "potato":     {"emoji": "🥔", "icon": "🥔", "name": "Khoai Tây", "cost": 8, "grow_days": 3, "grow_time": 3, "yield": [3, 6], "sell_price": 10, "category": "vegetable", "color": "#d4a76a", "xp": 4},
+    "strawberry": {"emoji": "🍓", "icon": "🍓", "name": "Dâu Tây", "cost": 20, "grow_days": 3, "grow_time": 3, "yield": [2, 3], "sell_price": 30, "category": "fruit", "color": "#e84393", "xp": 8},
+    "watermelon": {"emoji": "🍉", "icon": "🍉", "name": "Dưa Hấu", "cost": 25, "grow_days": 4, "grow_time": 4, "yield": [1, 2], "sell_price": 45, "category": "fruit", "color": "#27ae60", "xp": 10},
+    "grape":      {"emoji": "🍇", "icon": "🍇", "name": "Nho", "cost": 22, "grow_days": 3, "grow_time": 3, "yield": [2, 4], "sell_price": 28, "category": "fruit", "color": "#8e44ad", "xp": 11},
+    "pumpkin":    {"emoji": "🎃", "icon": "🎃", "name": "Bí Ngô", "cost": 18, "grow_days": 4, "grow_time": 4, "yield": [1, 3], "sell_price": 40, "category": "fruit", "color": "#d35400", "xp": 9},
+    "sunflower":  {"emoji": "🌻", "icon": "🌻", "name": "Hoa Hướng Dương", "cost": 15, "grow_days": 3, "grow_time": 3, "yield": [2, 3], "sell_price": 22, "category": "flower", "color": "#f9ca24", "xp": 6},
+    "rose":       {"emoji": "🌹", "icon": "🌹", "name": "Hoa Hồng", "cost": 30, "grow_days": 4, "grow_time": 4, "yield": [1, 2], "sell_price": 55, "category": "flower", "color": "#c0392b", "xp": 12},
+    "herb":       {"emoji": "🌿", "icon": "🌿", "name": "Thảo Dược", "cost": 25, "grow_days": 3, "grow_time": 3, "yield": [1, 3], "sell_price": 50, "category": "herb", "color": "#2ecc71", "xp": 10},
+    "tea":        {"emoji": "🍵", "icon": "🍵", "name": "Trà Xanh", "cost": 28, "grow_days": 4, "grow_time": 4, "yield": [1, 2], "sell_price": 58, "category": "herb", "color": "#16a085", "xp": 12},
 }
 
 RECIPES = {
-    "salad": {
-        "name": "🥗 Salad tươi",
-        "ingredients": {"tomato": 2, "carrot": 1},
-        "sell_price": 80,
-        "buff": {"mood": 10},
-    },
-    "soup": {
-        "name": "🍲 Canh rau",
-        "ingredients": {"potato": 2, "carrot": 1, "corn": 1},
-        "sell_price": 100,
-        "buff": {"energy": 15},
-    },
-    "smoothie": {
-        "name": "🥤 Sinh tố",
-        "ingredients": {"strawberry": 2, "grape": 1},
-        "sell_price": 120,
-        "buff": {"mood": 15, "energy": 10},
-    },
-    "rice_bowl": {
-        "name": "🍚 Cơm trộn",
-        "ingredients": {"rice": 3, "tomato": 1},
-        "sell_price": 90,
-        "buff": {"energy": 20},
-    },
-    "pumpkin_pie": {
-        "name": "🥧 Bánh bí",
-        "ingredients": {"pumpkin": 2, "strawberry": 1},
-        "sell_price": 150,
-        "buff": {"mood": 20, "energy": 15},
-    },
-    "coffee_latte": {
-        "name": "☕ Cà phê sữa",
-        "ingredients": {"coffee": 2},
-        "sell_price": 180,
-        "buff": {"speed": 1.2},
-    },
+    "salad":       {"name": "Salad Tươi", "icon": "🥗", "ingredients": {"tomato": 1, "carrot": 1}, "effect": "energy", "value": 25, "sell_price": 40, "buff": {"energy": 25}},
+    "soup":        {"name": "Súp Rau Củ", "icon": "🍲", "ingredients": {"potato": 2, "carrot": 1, "corn": 1}, "effect": "energy", "value": 35, "sell_price": 55, "buff": {"energy": 35}},
+    "fruit_juice": {"name": "Nước Ép Trái", "icon": "🧃", "ingredients": {"strawberry": 1, "grape": 1}, "effect": "energy", "value": 30, "sell_price": 50, "buff": {"energy": 30}},
+    "pie":         {"name": "Bánh Bí Ngô", "icon": "🥧", "ingredients": {"pumpkin": 1, "strawberry": 1}, "effect": "mood", "value": 30, "sell_price": 65, "buff": {"mood": 30}},
+    "herbal_tea":  {"name": "Trà Thảo Dược", "icon": "🍵", "ingredients": {"herb": 1, "tea": 1}, "effect": "mood", "value": 40, "sell_price": 80, "buff": {"mood": 40}},
+    "flower_boost":{"name": "Tinh Dầu Hoa", "icon": "💐", "ingredients": {"rose": 1, "sunflower": 1}, "effect": "xp", "value": 20, "sell_price": 70, "buff": {"xp": 20}},
+    "feast":       {"name": "Bữa Tiệc Lớn", "icon": "🍽️", "ingredients": {"tomato": 2, "corn": 1, "potato": 2, "watermelon": 1}, "effect": "all", "value": 15, "sell_price": 120, "buff": {"mood": 15, "energy": 15}},
+    "smoothie":    {"name": "Sinh Tố Dâu", "icon": "🥤", "ingredients": {"strawberry": 2, "grape": 1}, "effect": "energy", "value": 28, "sell_price": 55, "buff": {"energy": 28}},
+}
+
+WEATHER_EFFECTS = {
+    "sunny":  {"grow_bonus": 0, "water_needed": True, "desc": "☀️ Nắng đẹp", "color": "#f9ca24"},
+    "rainy":  {"grow_bonus": 1, "water_needed": False, "desc": "🌧️ Mưa", "color": "#3498db"},
+    "cloudy": {"grow_bonus": 0, "water_needed": True, "desc": "☁️ Mây", "color": "#95a5a6"},
+    "stormy": {"grow_bonus": -1, "water_needed": False, "desc": "⛈️ Bão", "color": "#7f8c8d", "damage_chance": 0.15},
+    "hot":    {"grow_bonus": -0.5, "water_needed": True, "desc": "🔥 Nóng", "color": "#e74c3c", "drought_chance": 0.2},
 }
 
 WEATHER_TYPES = [
-    {"name": "☀️ Nắng đẹp",    "growth_mul": 1.0, "wither_chance": 0.02},
-    {"name": "🌤️ Nắng nhẹ",    "growth_mul": 1.1, "wither_chance": 0.01},
-    {"name": "🌧️ Mưa",         "growth_mul": 1.3, "wither_chance": 0.01},
-    {"name": "⛈️ Bão",          "growth_mul": 0.5, "wither_chance": 0.15},
-    {"name": "🌫️ Sương mù",    "growth_mul": 0.8, "wither_chance": 0.03},
-    {"name": "❄️ Lạnh",         "growth_mul": 0.6, "wither_chance": 0.10},
+    {"id": "sunny", "weight": 35, **WEATHER_EFFECTS["sunny"]},
+    {"id": "rainy", "weight": 25, **WEATHER_EFFECTS["rainy"]},
+    {"id": "cloudy", "weight": 20, **WEATHER_EFFECTS["cloudy"]},
+    {"id": "stormy", "weight": 10, **WEATHER_EFFECTS["stormy"]},
+    {"id": "hot", "weight": 10, **WEATHER_EFFECTS["hot"]},
 ]
 
 
@@ -195,9 +176,10 @@ class FarmManager:
             crop = CROPS.get(plot.crop, {})
             grow_time = crop.get("grow_time", 60)
 
-            # Growth rate (watered crops grow 2x faster)
+            # Growth rate remains compatible with the legacy Python real-time tick,
+            # while sourcing weather semantics from farm.js.
             water_mul = 2.0 if plot.watered else 1.0
-            weather_mul = self.weather.get("growth_mul", 1.0)
+            weather_mul = max(0.0, 1.0 + float(self.weather.get("grow_bonus", 0)))
             growth_per_sec = (100.0 / grow_time) * water_mul * weather_mul
 
             plot.growth += growth_per_sec * delta_seconds
@@ -214,8 +196,9 @@ class FarmManager:
                     "message": f"🌿 {crop.get('emoji', '🌱')} {crop.get('name', plot.crop)} is ready to harvest!"
                 })
 
-            # Wither chance (storm etc)
-            if random.random() < self.weather.get("wither_chance", 0) * delta_seconds:
+            # JS weather hazards: storm damage and hot-weather drought.
+            hazard_chance = self.weather.get("damage_chance", self.weather.get("drought_chance", 0))
+            if hazard_chance and random.random() < hazard_chance * delta_seconds:
                 plot.stage = "withered"
                 events.append({
                     "type": "crop_withered",
@@ -228,12 +211,16 @@ class FarmManager:
     # ─── Weather ──────────────────────────────────
 
     def change_weather(self) -> Dict:
-        """Randomly change weather. Called daily."""
-        self.weather = random.choice(WEATHER_TYPES)
+        """Randomly change weather using the weighted farm.js table."""
+        self.weather = random.choices(
+            WEATHER_TYPES,
+            weights=[w.get("weight", 1) for w in WEATHER_TYPES],
+            k=1,
+        )[0]
         return {
             "type": "weather_change",
-            "weather": self.weather["name"],
-            "message": f"🌤️ Weather: {self.weather['name']}"
+            "weather": self.weather["desc"],
+            "message": f"🌤️ Weather: {self.weather['desc']}"
         }
 
     # ─── Cooking ──────────────────────────────────
@@ -325,7 +312,9 @@ class FarmManager:
             "planted_count": planted,
             "ready_count": ready,
             "produce_count": produce_count,
-            "weather": self.weather["name"],
+            "weather": self.weather.get("id", "sunny"),
+            "weather_desc": self.weather.get("desc", self.weather.get("id", "sunny")),
+            "weather_info": self.weather,
             "crops": CROPS,
             "recipes": {k: {**v, "can_cook": self._can_cook(k)} for k, v in RECIPES.items()},
         }

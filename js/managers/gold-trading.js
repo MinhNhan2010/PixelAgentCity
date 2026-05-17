@@ -169,6 +169,41 @@ class GoldTrading {
         }
     }
 
+    applyPythonState(state) {
+        if (!state) return;
+        this.currentPrice = state.price ?? this.currentPrice;
+        this.openPrice = state.openPrice ?? this.openPrice;
+        this.previousClose = state.previousClose ?? this.previousClose;
+        this.dayHigh = state.dayHigh ?? this.dayHigh;
+        this.dayLow = state.dayLow ?? this.dayLow;
+        this.goldHeld = state.goldHeld ?? this.goldHeld;
+        this.avgBuyPrice = state.avgBuyPrice ?? this.avgBuyPrice;
+        this.realizedPnL = state.realizedPnL ?? this.realizedPnL;
+
+        if (Array.isArray(state.history) && state.history.length) {
+            this.priceHistory = state.history.map((price, idx, arr) => {
+                const close = Number(price);
+                const open = idx > 0 ? Number(arr[idx - 1]) : close;
+                return {
+                    open,
+                    high: Math.max(open, close),
+                    low: Math.min(open, close),
+                    close,
+                    time: Date.now() - (arr.length - idx) * 10000,
+                    volume: 80,
+                };
+            });
+            const last = this.priceHistory[this.priceHistory.length - 1];
+            this._candleOpen = last.close;
+            this._candleHigh = last.close;
+            this._candleLow = last.close;
+        }
+
+        if (state.event && this.onMarketEvent) {
+            this.onMarketEvent({ text: state.event.name || state.event.id || 'Market event' });
+        }
+    }
+
     _tickOnce() {
         this.tickCount++;
 

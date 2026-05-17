@@ -284,7 +284,12 @@ class FlappyHeli {
             try { localStorage.setItem('flappyHeliHigh', String(this.highScore)); } catch(e) {}
         }
 
-        // Calculate payout
+        if (this._pythonCoreActive()) {
+            this._submitScorePython();
+            return;
+        }
+
+        // Calculate payout (Client-side)
         var payout = 0;
         var winName = '';
         var win = false;
@@ -315,10 +320,7 @@ class FlappyHeli {
             win = false;
         }
 
-        if (win) this.totalWon += payout;
-        else this.totalLost += this.currentBet;
-
-        var result = {
+        this._completeGameOver({
             score: this.score,
             highScore: this.highScore,
             bet: this.currentBet,
@@ -327,7 +329,44 @@ class FlappyHeli {
             name: winName,
             isLegendary: this.score >= 30,
             isPerfect: this.score >= 20
-        };
+        });
+    }
+
+    _pythonCoreActive() {
+        return !!(window.__pixelAgentUsePythonCore && window.PythonBridge?.isServerMode?.() && window.PythonBridge.submitFlappyScore);
+    }
+
+    async _submitScorePython() {
+        const serverResult = await window.PythonBridge.submitFlappyScore(this.currentBet, this.score);
+        if (!serverResult || serverResult.error) {
+            this._completeGameOver({
+                score: this.score,
+                highScore: this.highScore,
+                bet: this.currentBet,
+                payout: 0,
+                win: false,
+                name: serverResult?.error || 'Lỗi máy chủ',
+                isLegendary: false,
+                isPerfect: false
+            });
+            return;
+        }
+        
+        this._completeGameOver({
+            score: this.score,
+            highScore: this.highScore,
+            bet: this.currentBet,
+            payout: serverResult.payout,
+            win: serverResult.win,
+            name: serverResult.name,
+            isLegendary: serverResult.isLegendary,
+            isPerfect: serverResult.isPerfect
+        });
+    }
+
+    _completeGameOver(result) {
+        if (result.win) this.totalWon += result.payout;
+        else this.totalLost += result.bet;
 
         this.history.unshift(result);
         if (this.history.length > 10) this.history.pop();

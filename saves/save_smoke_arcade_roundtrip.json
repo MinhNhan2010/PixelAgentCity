@@ -1,0 +1,365 @@
+{
+  "coins": 500,
+  "total_earned": 30,
+  "total_spent": 20,
+  "day": 1,
+  "day_progress": 0.0,
+  "level": 1,
+  "xp": 0,
+  "reputation": 3.0,
+  "speed": 1,
+  "paused": false,
+  "agents": {},
+  "tasks": {},
+  "contracts": {},
+  "farm_plots": [],
+  "inventory": [],
+  "achievements": {},
+  "tech_tree": {},
+  "contracts_completed": 0,
+  "contracts_failed": 0,
+  "total_tasks_done": 0,
+  "mini_game_scores": {},
+  "mini_game_flags": {},
+  "mini_game_history": [
+    {
+      "game": "fighter",
+      "time": 1778579126.814734,
+      "result": {
+        "win": false,
+        "bet": 10,
+        "payout": 0,
+        "netGain": -10,
+        "playerWins": 0,
+        "enemyWins": 2,
+        "playerName": "PixelRyu",
+        "enemyName": "IronSagat",
+        "perfect": false,
+        "rounds": [
+          {
+            "round": 1,
+            "winner": "enemy",
+            "playerHp": 0,
+            "enemyHp": 31,
+            "log": [
+              {
+                "by": "PixelRyu",
+                "special": false,
+                "enemyHp": 101
+              },
+              {
+                "by": "PixelRyu",
+                "special": false,
+                "enemyHp": 94
+              },
+              {
+                "by": "PixelRyu",
+                "special": false,
+                "enemyHp": 85
+              },
+              {
+                "by": "PixelRyu",
+                "special": true,
+                "enemyHp": 62
+              },
+              {
+                "by": "PixelRyu",
+                "special": false,
+                "enemyHp": 52
+              },
+              {
+                "by": "PixelRyu",
+                "special": false,
+                "enemyHp": 42
+              },
+              {
+                "by": "PixelRyu",
+                "special": false,
+                "enemyHp": 31
+              }
+            ]
+          },
+          {
+            "round": 2,
+            "winner": "enemy",
+            "playerHp": 0,
+            "enemyHp": 38,
+            "log": [
+              {
+                "by": "PixelRyu",
+                "special": false,
+                "enemyHp": 98
+              },
+              {
+                "by": "PixelRyu",
+                "special": false,
+                "enemyHp": 90
+              },
+              {
+                "by": "PixelRyu",
+                "special": false,
+                "enemyHp": 82
+              },
+              {
+                "by": "PixelRyu",
+                "special": false,
+                "enemyHp": 71
+              },
+              {
+                "by": "PixelRyu",
+                "special": false,
+                "enemyHp": 59
+              },
+              {
+                "by": "PixelRyu",
+                "special": false,
+                "enemyHp": 47
+              },
+              {
+                "by": "PixelRyu",
+                "special": false,
+                "enemyHp": 38
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "game": "flappy",
+      "time": 1778579126.814734,
+      "result": {
+        "score": 1,
+        "bet": 10,
+        "payout": 0,
+        "netGain": -10,
+        "win": false,
+        "name": "💥 Rơi rồi! -10Ⓒ",
+        "isLegendary": false,
+        "isPerfect": false,
+        "highScore": 1
+      }
+    },
+    {
+      "game": "road_racer",
+      "time": 1778579126.814734,
+      "result": {
+        "score": 40,
+        "bet": 10,
+        "payout": 30,
+        "netGain": 20,
+        "win": true,
+        "name": "🏎️ Pro Racer!",
+        "coinsCollected": 6,
+        "highScore": 40
+      }
+    }
+  ],
+  "slot_stats": {
+    "totalSpins": 0,
+    "totalWon": 0,
+    "totalLost": 0,
+    "history": []
+  },
+  "gold_price": 100.0,
+  "gold_history": [
+    100.0
+  ],
+  "gold_holdings": 0.0,
+  "cafe_stats": {
+    "totalGames": 0,
+    "totalWon": 0,
+    "totalLost": 0,
+    "perfectDrinks": 0,
+    "history": []
+  },
+  "fishing_stats": {
+    "totalGames": 0,
+    "totalCaught": 0,
+    "totalWon": 0,
+    "totalLost": 0,
+    "bestCatch": null,
+    "inventory": []
+  },
+  "billiards_stats": {
+    "totalGames": 0,
+    "wins": 0,
+    "history": []
+  },
+  "fighter_stats": {
+    "totalGames": 1,
+    "totalWon": 0,
+    "totalLost": 10,
+    "history": [
+      {
+        "win": false,
+        "bet": 10,
+        "payout": 0,
+        "netGain": -10,
+        "playerWins": 0,
+        "enemyWins": 2,
+        "playerName": "PixelRyu",
+        "enemyName": "IronSagat",
+        "perfect": false,
+        "rounds": [
+          {
+            "round": 1,
+            "winner": "enemy",
+            "playerHp": 0,
+            "enemyHp": 31,
+            "log": [
+              {
+                "by": "PixelRyu",
+                "special": false,
+                "enemyHp": 101
+              },
+              {
+                "by": "PixelRyu",
+                "special": false,
+                "enemyHp": 94
+              },
+              {
+                "by": "PixelRyu",
+                "special": false,
+                "enemyHp": 85
+              },
+              {
+                "by": "PixelRyu",
+                "special": true,
+                "enemyHp": 62
+              },
+              {
+                "by": "PixelRyu",
+                "special": false,
+                "enemyHp": 52
+              },
+              {
+                "by": "PixelRyu",
+                "special": false,
+                "enemyHp": 42
+              },
+              {
+                "by": "PixelRyu",
+                "special": false,
+                "enemyHp": 31
+              }
+            ]
+          },
+          {
+            "round": 2,
+            "winner": "enemy",
+            "playerHp": 0,
+            "enemyHp": 38,
+            "log": [
+              {
+                "by": "PixelRyu",
+                "special": false,
+                "enemyHp": 98
+              },
+              {
+                "by": "PixelRyu",
+                "special": false,
+                "enemyHp": 90
+              },
+              {
+                "by": "PixelRyu",
+                "special": false,
+                "enemyHp": 82
+              },
+              {
+                "by": "PixelRyu",
+                "special": false,
+                "enemyHp": 71
+              },
+              {
+                "by": "PixelRyu",
+                "special": false,
+                "enemyHp": 59
+              },
+              {
+                "by": "PixelRyu",
+                "special": false,
+                "enemyHp": 47
+              },
+              {
+                "by": "PixelRyu",
+                "special": false,
+                "enemyHp": 38
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "flappy_stats": {
+    "totalGames": 1,
+    "totalWon": 0,
+    "totalLost": 10,
+    "highScore": 1,
+    "history": [
+      {
+        "score": 1,
+        "bet": 10,
+        "payout": 0,
+        "netGain": -10,
+        "win": false,
+        "name": "💥 Rơi rồi! -10Ⓒ",
+        "isLegendary": false,
+        "isPerfect": false,
+        "highScore": 1
+      }
+    ]
+  },
+  "racer_stats": {
+    "totalGames": 1,
+    "totalWon": 30,
+    "totalLost": 0,
+    "highScore": 40,
+    "coinsCollected": 6,
+    "history": [
+      {
+        "score": 40,
+        "bet": 10,
+        "payout": 30,
+        "netGain": 20,
+        "win": true,
+        "name": "🏎️ Pro Racer!",
+        "coinsCollected": 6,
+        "highScore": 40
+      }
+    ]
+  },
+  "achievement_unlocked": [],
+  "tech_unlocked": [],
+  "tech_current_research": null,
+  "tech_research_progress": 0.0,
+  "shop_inventory": {},
+  "shop_equipped_items": {},
+  "shop_active_buffs": [],
+  "shop_global_bonuses": {},
+  "shop_daily_specials": [],
+  "shop_last_refresh_day": -1,
+  "shop_agent_buy_tracker": {},
+  "shop_stats": {
+    "totalPurchases": 0,
+    "totalSpent": 0,
+    "totalSold": 0,
+    "totalEarned": 0,
+    "itemsUsed": 0
+  },
+  "layout_map": [],
+  "layout_furniture": [],
+  "layout_desk_slots": [],
+  "layout_undo_stack": [],
+  "layout_redo_stack": [],
+  "layout_saved_at": null,
+  "unlocked_rooms": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "created_at": 1778579126.814734,
+  "last_saved": 1778579126.814734
+}

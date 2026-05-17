@@ -78,8 +78,23 @@ class SaveManager:
                 item = InventoryItem(**{k: v for k, v in idata.items() if k in InventoryItem.__dataclass_fields__})
                 state.inventory.append(item)
 
-            # Restore mini-game scores
-            state.mini_game_scores = data.get("mini_game_scores", {})
+            # Restore plain data fields added by converted JS systems
+            for key in [
+                "mini_game_scores", "mini_game_flags", "mini_game_history",
+                "slot_stats", "gold_price", "gold_history", "gold_holdings",
+                "cafe_stats", "fishing_stats", "billiards_stats",
+                "fighter_stats", "flappy_stats", "racer_stats", "analytics_history",
+                "agent_stats", "agent_logs", "agent_performance_history", "agent_event_cooldown",
+                "achievement_unlocked",
+                "tech_unlocked", "tech_current_research", "tech_research_progress",
+                "shop_inventory", "shop_equipped_items", "shop_active_buffs",
+                "shop_global_bonuses", "shop_daily_specials", "shop_last_refresh_day",
+                "shop_agent_buy_tracker", "shop_stats",
+                "layout_map", "layout_furniture", "layout_desk_slots",
+                "layout_undo_stack", "layout_redo_stack", "layout_saved_at",
+            ]:
+                if key in data:
+                    setattr(state, key, data[key])
 
             return state, f"📂 Loaded save from slot '{slot}'"
         except Exception as e:

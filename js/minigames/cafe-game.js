@@ -176,6 +176,11 @@ class CafeGame {
     _finishGame() {
         this.isPlaying = false;
 
+        if (this._pythonCoreActive()) {
+            this._submitResultPython();
+            return;
+        }
+
         var avgAccuracy = this.stepResults.reduce(function(a, b) { return a + b; }, 0) / this.stepResults.length;
         var self = this;
         var totalStars = this.stepResults.reduce(function(sum, acc) { return sum + self._getRating(acc).stars; }, 0);
@@ -192,7 +197,6 @@ class CafeGame {
             winName = isPerfect
                 ? '\u2b50 PERFECT ' + this.currentRecipe.name + '!'
                 : '\u2728 Tuy\u1ec7t v\u1eddi! ' + this.currentRecipe.name;
-            if (isPerfect) this.perfectDrinks++;
         } else if (totalStars >= 4) {
             // Decent drink
             payout = Math.floor(this.currentBet * 1.5);
@@ -208,13 +212,8 @@ class CafeGame {
         }
 
         var win = payout > this.currentBet;
-        if (win) {
-            this.totalWon += payout;
-        } else {
-            this.totalLost += this.currentBet;
-        }
-
-        var result = {
+        
+        this._completeGame({
             recipe: this.currentRecipe,
             bet: this.currentBet,
             payout: payout,
@@ -226,7 +225,48 @@ class CafeGame {
             maxStars: maxStars,
             avgAccuracy: avgAccuracy,
             stepResults: this.stepResults.slice()
-        };
+        });
+    }
+
+    _pythonCoreActive() {
+        return !!(window.__pixelAgentUsePythonCore && window.PythonBridge?.isServerMode?.() && window.PythonBridge.playCafe);
+    }
+
+    async _submitResultPython() {
+        const serverResult = await window.PythonBridge.playCafe(this.currentBet, this.currentRecipe.id, this.stepResults);
+        
+        var avgAccuracy = this.stepResults.reduce(function(a, b) { return a + b; }, 0) / this.stepResults.length;
+        var self = this;
+        var totalStars = this.stepResults.reduce(function(sum, acc) { return sum + self._getRating(acc).stars; }, 0);
+        var maxStars = 9;
+        
+        if (!serverResult || serverResult.error) {
+            this._completeGame({
+                recipe: this.currentRecipe, bet: this.currentBet,
+                payout: 0, netGain: -this.currentBet, win: false,
+                name: serverResult?.error || 'Lỗi máy chủ',
+                isPerfect: false, totalStars: totalStars, maxStars: maxStars,
+                avgAccuracy: avgAccuracy, stepResults: this.stepResults.slice()
+            });
+            return;
+        }
+
+        this._completeGame({
+            recipe: this.currentRecipe, bet: this.currentBet,
+            payout: serverResult.payout, netGain: serverResult.netGain, win: serverResult.win,
+            name: serverResult.name, isPerfect: serverResult.isPerfect,
+            totalStars: totalStars, maxStars: maxStars,
+            avgAccuracy: avgAccuracy, stepResults: this.stepResults.slice()
+        });
+    }
+
+    _completeGame(result) {
+        if (result.isPerfect) this.perfectDrinks++;
+        if (result.win) {
+            this.totalWon += result.payout;
+        } else {
+            this.totalLost += this.currentBet;
+        }
 
         this.history.unshift(result);
         if (this.history.length > 10) this.history.pop();

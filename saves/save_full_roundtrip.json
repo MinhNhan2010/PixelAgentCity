@@ -1,0 +1,133 @@
+{
+  "coins": 12345,
+  "total_earned": 0,
+  "total_spent": 0,
+  "day": 1,
+  "day_progress": 0.0,
+  "level": 1,
+  "xp": 0,
+  "reputation": 3.0,
+  "speed": 1,
+  "paused": false,
+  "agents": {},
+  "tasks": {},
+  "contracts": {},
+  "farm_plots": [],
+  "inventory": [],
+  "achievements": {},
+  "tech_tree": {},
+  "contracts_completed": 0,
+  "contracts_failed": 0,
+  "total_tasks_done": 0,
+  "mini_game_scores": {},
+  "mini_game_flags": {},
+  "mini_game_history": [],
+  "slot_stats": {
+    "totalSpins": 0,
+    "totalWon": 0,
+    "totalLost": 0,
+    "history": []
+  },
+  "gold_price": 100.0,
+  "gold_history": [
+    100.0
+  ],
+  "gold_holdings": 0.0,
+  "cafe_stats": {
+    "totalGames": 0,
+    "totalWon": 0,
+    "totalLost": 0,
+    "perfectDrinks": 0,
+    "history": []
+  },
+  "fishing_stats": {
+    "totalGames": 0,
+    "totalCaught": 0,
+    "totalWon": 0,
+    "totalLost": 0,
+    "bestCatch": null,
+    "inventory": []
+  },
+  "billiards_stats": {
+    "totalGames": 0,
+    "wins": 0,
+    "history": []
+  },
+  "fighter_stats": {
+    "totalGames": 1,
+    "totalWon": 0,
+    "totalLost": 0,
+    "history": []
+  },
+  "flappy_stats": {
+    "totalGames": 0,
+    "totalWon": 0,
+    "totalLost": 0,
+    "highScore": 0,
+    "history": []
+  },
+  "racer_stats": {
+    "totalGames": 0,
+    "totalWon": 0,
+    "totalLost": 0,
+    "highScore": 0,
+    "coinsCollected": 0,
+    "history": []
+  },
+  "analytics_history": {
+    "dailyIncome": [
+      {
+        "day": 1,
+        "net": 99
+      }
+    ],
+    "agentPerformance": [],
+    "contractHistory": []
+  },
+  "agent_stats": {
+    "totalLinesWritten": 0,
+    "totalFilesModified": 0,
+    "totalErrors": 0,
+    "totalCommits": 0,
+    "uptime": 77
+  },
+  "agent_logs": [],
+  "agent_performance_history": [],
+  "agent_event_cooldown": 0,
+  "achievement_unlocked": [],
+  "tech_unlocked": [
+    "ai_basics"
+  ],
+  "tech_current_research": null,
+  "tech_research_progress": 0.0,
+  "shop_inventory": {
+    "coffee": 2
+  },
+  "shop_equipped_items": {},
+  "shop_active_buffs": [],
+  "shop_global_bonuses": {},
+  "shop_daily_specials": [],
+  "shop_last_refresh_day": -1,
+  "shop_agent_buy_tracker": {},
+  "shop_stats": {
+    "totalPurchases": 0,
+    "totalSpent": 0,
+    "totalSold": 0,
+    "totalEarned": 0,
+    "itemsUsed": 0
+  },
+  "layout_map": [],
+  "layout_furniture": [],
+  "layout_desk_slots": [],
+  "layout_undo_stack": [],
+  "layout_redo_stack": [],
+  "layout_saved_at": "verification",
+  "unlocked_rooms": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "created_at": 1778586647.1652699,
+  "last_saved": 1778586647.1662693
+}

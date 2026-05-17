@@ -1,0 +1,188 @@
+{
+  "coins": 430,
+  "total_earned": 0,
+  "total_spent": 70,
+  "day": 1,
+  "day_progress": 0.0,
+  "level": 1,
+  "xp": 0,
+  "reputation": 3.0,
+  "speed": 1,
+  "paused": false,
+  "agents": {
+    "01c69ce2": {
+      "id": "01c69ce2",
+      "name": "A",
+      "role": "coder",
+      "model": "gpt-4o-mini",
+      "color": "#4ecdc4",
+      "state": "working",
+      "energy": 99.85,
+      "mood": 86.69012887043428,
+      "experience": 0,
+      "skill_level": 1,
+      "tasks_completed": 0,
+      "tasks_failed": 0,
+      "x": 0.0,
+      "y": 0.0,
+      "target_x": 0.0,
+      "target_y": 0.0,
+      "room_id": 0,
+      "hired_at": 1778581155.9948351,
+      "last_task_time": 0.0,
+      "current_task_id": "t1"
+    }
+  },
+  "tasks": {
+    "t1": {
+      "id": "t1",
+      "contract_id": null,
+      "title": "Build feature",
+      "description": "",
+      "required_role": "coder",
+      "difficulty": 1,
+      "progress": 87.61170155783294,
+      "status": "in_progress",
+      "assigned_agent_id": "01c69ce2",
+      "xp_reward": 20,
+      "priority": "medium",
+      "needs_review": false,
+      "review_status": null,
+      "reviewed_by": null,
+      "created_at": 1778581155.9948351,
+      "completed_at": null
+    }
+  },
+  "contracts": {},
+  "farm_plots": [],
+  "inventory": [],
+  "achievements": {},
+  "tech_tree": {},
+  "contracts_completed": 0,
+  "contracts_failed": 0,
+  "total_tasks_done": 0,
+  "mini_game_scores": {},
+  "mini_game_flags": {},
+  "mini_game_history": [],
+  "slot_stats": {
+    "totalSpins": 0,
+    "totalWon": 0,
+    "totalLost": 0,
+    "history": []
+  },
+  "gold_price": 100.0,
+  "gold_history": [
+    100.0
+  ],
+  "gold_holdings": 0.0,
+  "cafe_stats": {
+    "totalGames": 0,
+    "totalWon": 0,
+    "totalLost": 0,
+    "perfectDrinks": 0,
+    "history": []
+  },
+  "fishing_stats": {
+    "totalGames": 0,
+    "totalCaught": 0,
+    "totalWon": 0,
+    "totalLost": 0,
+    "bestCatch": null,
+    "inventory": []
+  },
+  "billiards_stats": {
+    "totalGames": 0,
+    "wins": 0,
+    "history": []
+  },
+  "fighter_stats": {
+    "totalGames": 0,
+    "totalWon": 0,
+    "totalLost": 0,
+    "history": []
+  },
+  "flappy_stats": {
+    "totalGames": 0,
+    "totalWon": 0,
+    "totalLost": 0,
+    "highScore": 0,
+    "history": []
+  },
+  "racer_stats": {
+    "totalGames": 0,
+    "totalWon": 0,
+    "totalLost": 0,
+    "highScore": 0,
+    "coinsCollected": 0,
+    "history": []
+  },
+  "analytics_history": {
+    "dailyIncome": [
+      {
+        "day": 1,
+        "income": 0,
+        "expense": 70,
+        "net": -70,
+        "coins": 430
+      }
+    ],
+    "agentPerformance": [
+      {
+        "day": 1,
+        "count": 1,
+        "tasks": 0,
+        "avgMood": 86.7,
+        "avgEnergy": 99.8
+      }
+    ],
+    "contractHistory": [
+      {
+        "day": 1,
+        "completed": 0,
+        "failed": 0
+      }
+    ]
+  },
+  "agent_stats": {
+    "totalLinesWritten": 0,
+    "totalFilesModified": 0,
+    "totalErrors": 0,
+    "totalCommits": 0,
+    "uptime": 1
+  },
+  "agent_logs": [],
+  "agent_performance_history": [],
+  "agent_event_cooldown": 0,
+  "achievement_unlocked": [],
+  "tech_unlocked": [],
+  "tech_current_research": null,
+  "tech_research_progress": 0.0,
+  "shop_inventory": {},
+  "shop_equipped_items": {},
+  "shop_active_buffs": [],
+  "shop_global_bonuses": {},
+  "shop_daily_specials": [],
+  "shop_last_refresh_day": -1,
+  "shop_agent_buy_tracker": {},
+  "shop_stats": {
+    "totalPurchases": 0,
+    "totalSpent": 0,
+    "totalSold": 0,
+    "totalEarned": 0,
+    "itemsUsed": 0
+  },
+  "layout_map": [],
+  "layout_furniture": [],
+  "layout_desk_slots": [],
+  "layout_undo_stack": [],
+  "layout_redo_stack": [],
+  "layout_saved_at": null,
+  "unlocked_rooms": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "created_at": 1778581155.9948351,
+  "last_saved": 1778581155.9963403
+}

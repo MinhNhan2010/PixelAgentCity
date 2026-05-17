@@ -599,7 +599,7 @@ class AgentChatbox {
         });
     }
 
-    openWithAgent(agentId) {
+    async openWithAgent(agentId) {
         const agent = this.manager.getAgent(agentId);
         if (!agent) return;
 
@@ -611,11 +611,26 @@ class AgentChatbox {
         this.renderQuickAsks();
         this.syncInputState();
 
-        if (!this.messages.has(agentId)) {
-            this.messages.set(agentId, []);
-            const templates = this.roleResponses[agent.role] || this.roleResponses.default;
-            const greeting = templates.greeting[Math.floor(Math.random() * templates.greeting.length)];
-            this.addBotMessage(greeting);
+        if (window.__pixelAgentUsePythonCore && window.PythonBridge?.isServerMode?.()) {
+            try {
+                const result = await window.PythonBridge.openChat(agentId);
+                if (result && result.success && result.messages) {
+                    this.messages.set(agentId, result.messages.map(m => ({
+                        from: m.from || m.from_,
+                        text: m.text,
+                        time: m.time ? new Date(m.time) : new Date()
+                    })));
+                }
+            } catch (e) {
+                console.warn('PythonBridge openChat error:', e);
+            }
+        } else {
+            if (!this.messages.has(agentId)) {
+                this.messages.set(agentId, []);
+                const templates = this.roleResponses[agent.role] || this.roleResponses.default;
+                const greeting = templates.greeting[Math.floor(Math.random() * templates.greeting.length)];
+                this.addBotMessage(greeting);
+            }
         }
 
         this.renderMessages();
@@ -650,7 +665,7 @@ class AgentChatbox {
         this.handleUserInput(text);
     }
 
-    handleUserInput(text, key = null) {
+    async handleUserInput(text, key = null) {
         if (!this.activeAgentId) return;
         this.addUserMessage(text);
         this.renderMessages();
@@ -658,18 +673,46 @@ class AgentChatbox {
         this.scrollToBottom();
         this.showTyping();
 
-        const delay = 700 + Math.random() * 1100;
-        window.setTimeout(() => {
-            this.hideTyping();
-            const response = this.generateResponse(this.activeAgentId, text, key);
-            this.addBotMessage(response);
-            this.renderMessages();
-            this.renderHistory();
-            this.scrollToBottom();
+        if (window.__pixelAgentUsePythonCore && window.PythonBridge?.isServerMode?.()) {
+            const agentId = this.activeAgentId;
+            try {
+                const result = await window.PythonBridge.sendChat(agentId, text, key);
+                this.hideTyping();
+                if (result && result.success && result.response) {
+                    if (result.messages) {
+                        this.messages.set(agentId, result.messages.map(m => ({
+                            from: m.from || m.from_,
+                            text: m.text,
+                            time: m.time ? new Date(m.time) : new Date()
+                        })));
+                    } else {
+                        this.addBotMessage(result.response);
+                    }
+                    this.renderMessages();
+                    this.renderHistory();
+                    this.scrollToBottom();
 
-            const short = response.length > 28 ? `${response.substring(0, 28)}...` : response;
-            this.engine?.showSpeechBubble?.(this.activeAgentId, short, 4000);
-        }, delay);
+                    const short = result.response.length > 28 ? `${result.response.substring(0, 28)}...` : result.response;
+                    this.engine?.showSpeechBubble?.(agentId, short, 4000);
+                }
+            } catch (e) {
+                console.warn('PythonBridge sendChat error:', e);
+                this.hideTyping();
+            }
+        } else {
+            const delay = 700 + Math.random() * 1100;
+            window.setTimeout(() => {
+                this.hideTyping();
+                const response = this.generateResponse(this.activeAgentId, text, key);
+                this.addBotMessage(response);
+                this.renderMessages();
+                this.renderHistory();
+                this.scrollToBottom();
+
+                const short = response.length > 28 ? `${response.substring(0, 28)}...` : response;
+                this.engine?.showSpeechBubble?.(this.activeAgentId, short, 4000);
+            }, delay);
+        }
     }
 
     generateResponse(agentId, userText, key = null) {

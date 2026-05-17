@@ -232,17 +232,55 @@ class FighterGame {
         if (this._timerInterval) { clearInterval(this._timerInterval); this._timerInterval = null; }
 
         var win = this.playerWins > this.enemyWins;
+        var perfect = win && this.p1.hp === this.p1.maxHp;
+
+        if (this._pythonCoreActive()) {
+            this._submitResultPython(win, perfect);
+            return;
+        }
+
         var payout = 0;
         if (win) {
-            var perfBonus = this.p1.hp === this.p1.maxHp ? 2 : 1;
+            var perfBonus = perfect ? 2 : 1;
             payout = Math.floor(this.betAmount * (2 + perfBonus * 0.5));
         }
-        if (this.onGameEnd) this.onGameEnd({
+
+        this._completeGame({
             win: win, payout: payout, bet: this.betAmount,
             playerWins: this.playerWins, enemyWins: this.enemyWins,
             playerName: this.player.name, enemyName: this.enemy.name,
-            perfect: win && this.p1.hp === this.p1.maxHp
+            perfect: perfect
         });
+    }
+
+    _pythonCoreActive() {
+        return !!(window.__pixelAgentUsePythonCore && window.PythonBridge?.isServerMode?.() && window.PythonBridge.submitFighterScore);
+    }
+
+    async _submitResultPython(won, perfect) {
+        const fighterId = this.player.id;
+        const serverResult = await window.PythonBridge.submitFighterScore(this.betAmount, fighterId, won, perfect);
+        
+        if (!serverResult || serverResult.error) {
+            this._completeGame({
+                win: false, payout: 0, bet: this.betAmount,
+                playerWins: this.playerWins, enemyWins: this.enemyWins,
+                playerName: this.player.name, enemyName: this.enemy.name,
+                perfect: false, error: serverResult?.error || 'Lỗi máy chủ'
+            });
+            return;
+        }
+
+        this._completeGame({
+            win: serverResult.win, payout: serverResult.payout, bet: this.betAmount,
+            playerWins: this.playerWins, enemyWins: this.enemyWins,
+            playerName: this.player.name, enemyName: this.enemy.name,
+            perfect: serverResult.perfect
+        });
+    }
+
+    _completeGame(result) {
+        if (this.onGameEnd) this.onGameEnd(result);
         if (this.onStateChange) this.onStateChange('victory');
     }
 

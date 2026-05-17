@@ -238,6 +238,11 @@ class FishingGame {
 
     _endGame(won) {
         this.running = false;
+        if (this._pythonCoreActive()) {
+            this._submitResultPython(won);
+            return;
+        }
+
         const fish = this.hookedFish;
         const bet = this.currentBet;
         let payout = 0;
@@ -256,6 +261,44 @@ class FishingGame {
         const result = {
             win: won, bet, payout,
             fish: fish ? { name: fish.name, emoji: fish.emoji, weight: fish.actualWeight, color: fish.color } : null,
+            totalCaught: this.totalCaught
+        };
+        this.catchResult = result;
+        if (this.onGameOver) this.onGameOver(result);
+    }
+
+    _pythonCoreActive() {
+        return !!(window.__pixelAgentUsePythonCore && window.PythonBridge?.isServerMode?.() && window.PythonBridge.submitFishingScore);
+    }
+
+    async _submitResultPython(won) {
+        const fish = this.hookedFish;
+        const bet = this.currentBet;
+        const fishName = fish ? fish.name : "";
+        const weight = fish ? fish.actualWeight : 0.0;
+        
+        const serverResult = await window.PythonBridge.submitFishingScore(bet, fishName, won, weight);
+        if (!serverResult || serverResult.error) {
+            this.catchResult = { win: false, bet, payout: 0, fish: null, totalCaught: this.totalCaught, error: serverResult?.error || 'Lỗi máy chủ' };
+            if (this.onGameOver) this.onGameOver(this.catchResult);
+            return;
+        }
+
+        if (serverResult.win) {
+            this.totalCaught++;
+            this.totalValue += serverResult.payout;
+            this.totalWon += serverResult.payout;
+            this.inventory.push({ name: serverResult.fish.name, weight: serverResult.fish.weight, value: serverResult.payout });
+            if (!this.bestCatch || serverResult.payout > this.bestCatch.value) {
+                this.bestCatch = { name: serverResult.fish.name, weight: serverResult.fish.weight, value: serverResult.payout };
+            }
+        } else {
+            this.totalLost += bet;
+        }
+
+        const result = {
+            win: serverResult.win, bet, payout: serverResult.payout,
+            fish: serverResult.fish ? { name: serverResult.fish.name, emoji: serverResult.fish.emoji, weight: serverResult.fish.weight, color: serverResult.fish.color } : null,
             totalCaught: this.totalCaught
         };
         this.catchResult = result;

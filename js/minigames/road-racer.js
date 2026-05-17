@@ -238,7 +238,12 @@ class RoadRacer {
             try { localStorage.setItem('roadRacerHigh', String(this.highScore)); } catch(e) {}
         }
 
-        // Payout
+        if (this._pythonCoreActive()) {
+            this._submitScorePython();
+            return;
+        }
+
+        // Payout (Client-side fallback)
         var payout = 0, winName = '', win = false;
         if (this.score >= 80) {
             payout = this.currentBet * 8; winName = '🏆 LEGEND! +' + payout + 'Ⓒ'; win = true;
@@ -254,13 +259,38 @@ class RoadRacer {
             winName = '💥 Tai nạn! -' + this.currentBet + 'Ⓒ';
         }
 
-        if (win) this.totalWon += payout; else this.totalLost += this.currentBet;
-
-        var result = {
+        this._completeGameOver({
             score: this.score, highScore: this.highScore, bet: this.currentBet,
             payout: payout, win: win, name: winName,
             coinsCollected: this.coinsCollected
-        };
+        });
+    }
+
+    _pythonCoreActive() {
+        return !!(window.__pixelAgentUsePythonCore && window.PythonBridge?.isServerMode?.() && window.PythonBridge.submitRoadRacerScore);
+    }
+
+    async _submitScorePython() {
+        const serverResult = await window.PythonBridge.submitRoadRacerScore(this.currentBet, this.score, this.coinsCollected);
+        if (!serverResult || serverResult.error) {
+            this._completeGameOver({
+                score: this.score, highScore: this.highScore, bet: this.currentBet,
+                payout: 0, win: false, name: serverResult?.error || 'Lỗi máy chủ',
+                coinsCollected: this.coinsCollected
+            });
+            return;
+        }
+        
+        this._completeGameOver({
+            score: this.score, highScore: this.highScore, bet: this.currentBet,
+            payout: serverResult.payout, win: serverResult.win, name: serverResult.name,
+            coinsCollected: this.coinsCollected
+        });
+    }
+
+    _completeGameOver(result) {
+        if (result.win) this.totalWon += result.payout; else this.totalLost += result.bet;
+
         this.history.unshift(result);
         if (this.history.length > 10) this.history.pop();
         if (this.onGameOver) this.onGameOver(result);
